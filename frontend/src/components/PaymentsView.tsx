@@ -34,7 +34,7 @@ function NextPaymentCard() {
   );
 }
 
-export default function PaymentsView({ paymentHistory }) {
+export default function PaymentsView({ paymentHistory, domainName }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   // Configuración dinámica del mes actual
@@ -56,6 +56,14 @@ export default function PaymentsView({ paymentHistory }) {
 
   return (
     <div className="animate-[fadeIn_0.3s_ease-out]">
+      {/* Domain indicator */}
+      {domainName && (
+        <div className="mb-6 flex items-center gap-2 text-sm text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+          Pagos de <span className="font-semibold text-slate-700">{domainName}</span>
+        </div>
+      )}
+
       {/* Tarjetas Superiores */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <FinanceCard />

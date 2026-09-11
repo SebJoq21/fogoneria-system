@@ -50,7 +50,7 @@ function Terminos() {
               d="M10 19l-7-7m0 0l7-7m-7 7h18"
             />
           </svg>
-          Volver al inicio
+          Volver al Registro
         </Link>
 
         <div className="max-w-3xl mx-auto bg-white p-8 sm:p-12 rounded-2xl shadow-sm border border-slate-200">

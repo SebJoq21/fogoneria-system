@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function SettingsView({ onNotify }) {
-  const [businessData, setBusinessData] = useState({
-    tradeName: 'Mi Restaurante S.A.C.',
-    legalName: 'MI RESTAURANTE SOCIEDAD ANONIMA CERRADA',
-    taxId: '20123456789',
-    phone: '+51 987 654 321',
-    address: 'Av. Principal 123, Lima'
-  });
+const defaultBusinessData = {
+  tradeName: '',
+  legalName: '',
+  taxId: '',
+  phone: '',
+  address: ''
+};
+
+export default function SettingsView({ onNotify, domainId, domainName, accountName, setAccountName }) {
+  const [businessData, setBusinessData] = useState(defaultBusinessData);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [localAccountName, setLocalAccountName] = useState(accountName || 'Mi Restaurante S.A.C.');
+  const [showAccountSuccess, setShowAccountSuccess] = useState(false);
 
   const [securityData, setSecurityData] = useState({
     email: 'admin@mirestaurante.com',
@@ -15,11 +20,35 @@ export default function SettingsView({ onNotify }) {
     newPassword: ''
   });
 
-  const [securityStep, setSecurityStep] = useState(1); // 1 = Formulario, 2 = Código
+  const [securityStep, setSecurityStep] = useState(1);
+
+  // Load domain-specific data when domain changes
+  useEffect(() => {
+    // In a real app, this would fetch from an API
+    // For now, we use mock data per domain
+    const mockData = {
+      'dom-1': {
+        tradeName: 'Mi Restaurante S.A.C.',
+        legalName: 'MI RESTAURANTE SOCIEDAD ANONIMA CERRADA',
+        taxId: '20123456789',
+        phone: '+51 987 654 321',
+        address: 'Av. Principal 123, Lima'
+      },
+      'dom-2': {
+        tradeName: 'Café Lima E.I.R.L.',
+        legalName: 'CAFÉ LIMA EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA',
+        taxId: '20987654321',
+        phone: '+51 912 345 678',
+        address: 'Av. Larco 456, Miraflores'
+      }
+    };
+    setBusinessData(mockData[domainId] || defaultBusinessData);
+    setIsLoaded(true);
+  }, [domainId]);
 
   const handleSaveBusiness = (e) => {
     e.preventDefault();
-    onNotify('Datos actualizados', 'La información de tu restaurante se ha guardado correctamente.');
+    onNotify('Datos actualizados', `La información de ${domainName || 'tu restaurante'} se ha guardado correctamente.`);
   };
 
   const handleRequestSecurityUpdate = (e) => {
@@ -28,7 +57,6 @@ export default function SettingsView({ onNotify }) {
       alert("Debes ingresar tu contraseña actual para cambiarla.");
       return;
     }
-    // Si la validación pasa, avanzamos al paso de verificación
     setSecurityStep(2);
   };
 
@@ -36,11 +64,54 @@ export default function SettingsView({ onNotify }) {
     e.preventDefault();
     onNotify('Seguridad actualizada', 'Tus credenciales de acceso han sido modificadas exitosamente.');
     setSecurityData({ ...securityData, currentPassword: '', newPassword: '' });
-    setSecurityStep(1); // Regresamos al estado inicial
+    setSecurityStep(1);
   };
+
+  if (!isLoaded) return null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-[fadeIn_0.3s_ease-out]">
+
+      {/* Domain indicator */}
+      {domainName && (
+        <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
+          <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+          Configuración de <span className="font-semibold text-slate-700">{domainName}</span>
+        </div>
+      )}
+
+      {/* TARJETA 0: Nombre de la Cuenta */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3 bg-slate-50">
+          <div className="w-8 h-8 rounded-full bg-[#1E293B] text-white flex items-center justify-center">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Nombre de la Cuenta</h2>
+            <p className="text-xs text-slate-500">Aparece en la esquina superior derecha del dashboard</p>
+          </div>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); setAccountName(localAccountName); setShowAccountSuccess(true); setTimeout(() => setShowAccountSuccess(false), 2500); onNotify('Cuenta actualizada', 'El nombre de tu cuenta se ha guardado correctamente.'); }} className="p-6">
+          <div className="flex items-end gap-4">
+            <div className="flex-1 max-w-md">
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Nombre visible en el dashboard</label>
+              <input
+                type="text"
+                value={localAccountName}
+                onChange={(e) => setLocalAccountName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:border-[#1E293B] focus:ring-2 focus:ring-slate-200 outline-none transition-all"
+              />
+            </div>
+            <button type="submit" className="px-5 py-2.5 bg-[#1E293B] text-white font-semibold rounded-xl hover:bg-[#334155] transition-colors shadow-sm whitespace-nowrap">
+              Guardar Nombre
+            </button>
+          </div>
+          {showAccountSuccess && (
+            <p className="text-sm text-emerald-600 mt-2 font-medium animate-[fadeIn_0.2s_ease-out]">✓ Nombre actualizado</p>
+          )}
+        </form>
+      </div>
 
       {/* TARJETA 1: Información del Local */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -56,7 +127,7 @@ export default function SettingsView({ onNotify }) {
             {/* Logo Upload */}
             <div className="flex flex-col items-center gap-2 shrink-0">
               <div className="w-24 h-24 rounded-2xl bg-slate-100 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:border-indigo-400 transition-colors cursor-pointer overflow-hidden">
-                <span className="font-bold text-2xl">MR</span>
+                <span className="font-bold text-2xl">{businessData.tradeName ? businessData.tradeName.charAt(0) : 'MR'}</span>
               </div>
               <span className="text-xs text-indigo-600 font-medium cursor-pointer hover:underline">Cambiar logo</span>
             </div>
@@ -105,7 +176,6 @@ export default function SettingsView({ onNotify }) {
         <form onSubmit={securityStep === 1 ? handleRequestSecurityUpdate : handleConfirmSecurityUpdate} className="p-6">
 
           {securityStep === 1 ? (
-            /* PASO 1: Formulario estándar */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6 animate-[fadeIn_0.3s_ease-out]">
               <div className="sm:col-span-2">
                 <label className="block text-sm font-semibold text-slate-700 mb-1">Correo de Administración</label>
@@ -122,7 +192,6 @@ export default function SettingsView({ onNotify }) {
               </div>
             </div>
           ) : (
-            /* PASO 2: Código de Verificación */
             <div className="mb-6 animate-[fadeIn_0.3s_ease-out] max-w-sm">
               <label className="block text-sm font-semibold text-slate-700 mb-1 flex justify-between">
                 Código de verificación
@@ -139,7 +208,6 @@ export default function SettingsView({ onNotify }) {
             </div>
           )}
 
-          {/* Botones Dinámicos */}
           <div className="flex justify-end pt-4 border-t border-slate-100 gap-3">
             {securityStep === 2 && (
               <button

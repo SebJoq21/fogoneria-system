@@ -91,8 +91,8 @@ export default function SupportView({ tickets, setTickets, onNotify }) {
 
       {/* Modal de Nuevo Ticket */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]">
-          <div className="bg-white max-w-lg w-full rounded-2xl shadow-2xl overflow-hidden animate-[scaleUp_0.2s_ease-out] flex flex-col">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-[fadeIn_0.2s_ease-out]" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white max-w-lg w-full rounded-2xl shadow-2xl overflow-hidden animate-[scaleUp_0.2s_ease-out] flex flex-col" onClick={(e) => e.stopPropagation()}>
 
             <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="text-lg font-bold text-slate-900">Crear Ticket de Soporte</h3>

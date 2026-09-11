@@ -21,7 +21,7 @@ function Home() {
   }
 
   return (
-    <main className="bg-slate-50 min-h-screen w-[100vw] relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw]">
+    <main className="min-h-screen w-[100vw] relative left-[50%] right-[50%] -ml-[50vw] -mr-[50vw] bg-[#0F172A]">
       <Navbar
         onLogin={() => setAuthModal('login')}
         onRegister={() => setAuthModal('register')}
