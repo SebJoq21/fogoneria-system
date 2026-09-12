@@ -3,14 +3,12 @@
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   Line,
   LineChart,
   ResponsiveContainer,
   XAxis,
 } from "recharts";
-import { dataQR, dataReservas, dataVisitas, dataWsp } from "@/lib/dashboard";
+import { dataReservas, dataVisitas } from "@/lib/dashboard";
 import { Card } from "@/components/ui/Card";
 
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
@@ -60,32 +58,10 @@ export function MetricsCharts() {
         </div>
       </MetricCard>
 
-      <MetricCard title="Escaneos QR en mesa" value="850" delta="+8% este mes">
-        <div className="h-full w-full text-ink-600">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={dataQR} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} dy={10} />
-            <Bar dataKey="v" fill="currentColor" radius={[4, 4, 0, 0]} barSize={24} />
-          </BarChart>
-        </ResponsiveContainer>
-        </div>
-      </MetricCard>
-
       <MetricCard title="Clics en Reservar" value="112" delta="+5% este mes">
         <div className="h-full w-full text-primary">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={dataReservas} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} dy={10} />
-            <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={2} dot={{ r: 3, fill: "currentColor", strokeWidth: 2, stroke: "var(--c-surface)" }} />
-          </LineChart>
-        </ResponsiveContainer>
-        </div>
-      </MetricCard>
-
-      <MetricCard title="Clics a WhatsApp" value="45" delta="+15% este mes">
-        <div className="h-full w-full text-ink-400">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={dataWsp} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} dy={10} />
             <Line type="monotone" dataKey="v" stroke="currentColor" strokeWidth={2} dot={{ r: 3, fill: "currentColor", strokeWidth: 2, stroke: "var(--c-surface)" }} />
           </LineChart>

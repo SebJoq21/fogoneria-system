@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput } from "@/components/ui/fields";
@@ -9,6 +9,9 @@ import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import type { Customer } from "@/lib/erp";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniDonut } from "@/components/erp/summaries/charts";
+import { clientesSummary } from "@/components/erp/summaries/summary-selectors";
 
 const segmentTone = { VIP: "dark", Frecuente: "success", Nuevo: "neutral" } as const;
 
@@ -30,8 +33,18 @@ export function ClientesView() {
     setForm({ name: "", phone: "", segment: "Nuevo" });
   };
 
+  const summary = useMemo(() => clientesSummary(customers), [customers]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Clientes por segmento"
+        chartSubtitle="Quiénes sostienen tu franquicia"
+        ariaLabel="Resumen de clientes"
+      >
+        <MiniDonut data={summary.donut} label="Clientes por segmento" />
+      </ModuleSummary>
       <Toolbar
         left={<p className="text-sm text-ink-400">{customers.length} clientes registrados.</p>}
         right={
@@ -104,7 +117,7 @@ export function ClientesView() {
               </Field>
             </div>
             <div>
-              <Field label="Teléfono / WhatsApp">
+              <Field label="Teléfono">
                 <TextInput
                   type="tel"
                   value={form.phone}
