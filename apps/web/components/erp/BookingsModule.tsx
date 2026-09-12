@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  initialReservations,
-  type Reservation,
   type Table,
   type TableStatus,
 } from "@/lib/erp";
@@ -13,6 +11,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniDonut } from "@/components/erp/summaries/charts";
+import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
 
 const statusTone: Record<TableStatus, "success" | "danger" | "warning"> = {
   libre: "success",
@@ -56,9 +57,9 @@ function TableNode({
 }
 
 export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) {
-  const { tables, setTables } = useModules();
-  const [reservations] = useState<Reservation[]>(initialReservations);
+  const { tables, setTables, reservations } = useModules();
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const summary = useMemo(() => mesasSummary(tables), [tables]);
 
   const reservationFor = (tableId: number) =>
     reservations.find((r) => r.tableId === tableId);
@@ -72,6 +73,14 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
 
   return (
     <div>
+      <ModuleSummary
+        kpis={view === "mapa" ? summary.kpis : summary.kpis.slice(0, 3)}
+        chartTitle={view === "mapa" ? "Ocupación del salón" : "Mesas por estado"}
+        chartSubtitle="Primera vista de tu salón en tiempo real"
+        ariaLabel="Resumen de mesas"
+      >
+        <MiniDonut data={summary.donut} label="Distribución de mesas por estado" />
+      </ModuleSummary>
       {view === "agenda" && (
         <TableCard>
           <THead>

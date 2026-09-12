@@ -52,6 +52,7 @@ export function canSwitchBranch(role: AppRole): boolean {
 export function canViewPath(pathname: string, role: AppRole): boolean {
   if (role === "superadmin") return pathname.startsWith("/saas");
   if (pathname.startsWith("/saas")) return false;
+  if (pathname.startsWith("/app/mesas/maestro")) return role === "sucursal";
   if (pathname.startsWith("/app/cocina")) return role === "cocina" || role === "admin" || role === "sucursal";
   if (pathname.startsWith("/app/mozo")) return role === "mesero" || role === "admin" || role === "sucursal";
   if (role === "cocina" || role === "mesero") return false;

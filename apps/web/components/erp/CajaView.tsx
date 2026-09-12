@@ -1,27 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { KpiCard } from "@/components/ui/KpiCard";
 import { Field, Select, TextInput } from "@/components/ui/fields";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { cajaSummary } from "@/components/erp/summaries/summary-selectors";
 import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { canOperateCash } from "@/lib/permissions";
 
 /** Caja: saldo del turno, movimientos y cierre. */
 export function CajaView() {
-  const { cashMovements, setCashMovements, notify, isGeneral, branchOf } = useModules();
+  const { cashMovements, setCashMovements, notify, isGeneral, branchOf, currentUser } = useModules();
+  const canCash = canOperateCash(currentUser?.role);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ concept: "", kind: "Ingreso" as "Ingreso" | "Egreso", amount: "", method: "Efectivo" });
 
-  const ingresos = cashMovements.filter((m) => m.kind === "Ingreso").reduce((s, m) => s + m.amount, 0);
-  const egresos = cashMovements.filter((m) => m.kind === "Egreso").reduce((s, m) => s + m.amount, 0);
+  const summary = useMemo(() => cajaSummary(cashMovements), [cashMovements]);
+  const ingresos = summary.ingresos;
+  const egresos = summary.egresos;
 
   const save = () => {
-    if (!form.concept.trim() || !Number(form.amount)) return;
+    if (!canCash || !form.concept.trim() || !Number(form.amount)) return;
     setCashMovements([
       { id: Date.now(), datetime: "Ahora mismo", concept: form.concept, kind: form.kind, amount: Number(form.amount), method: form.method },
       ...cashMovements,
@@ -32,23 +36,32 @@ export function CajaView() {
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <KpiCard label="Saldo del turno" value={`$${(ingresos - egresos).toFixed(2)}`} hint="ingresos menos egresos" />
-        <KpiCard label="Ingresos" value={`$${ingresos.toFixed(2)}`} hint="ventas y fondos" />
-        <KpiCard label="Egresos" value={`$${egresos.toFixed(2)}`} hint="compras y gastos menores" />
-      </div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Ingresos por método"
+        chartSubtitle="Cómo cobra tu franquicia hoy"
+        ariaLabel="Resumen de caja"
+      >
+        <MiniBars data={summary.byMethod} label="Ingresos por método de pago" />
+      </ModuleSummary>
+
+      {!canCash && (
+        <p className="text-xs text-ink-400 mb-4">Vista de lectura: la caja la opera la sucursal.</p>
+      )}
 
       <Toolbar
         left={<h3 className="text-sm font-medium text-ink-900">Movimientos del turno</h3>}
         right={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => notify("Cierre de caja", `Turno cerrado con saldo $${(ingresos - egresos).toFixed(2)}.`)}>
-              Cerrar turno
-            </Button>
-            <Button onClick={() => setModalOpen(true)}>
-              + Registrar movimiento
-            </Button>
-          </div>
+          canCash ? (
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => notify("Cierre de caja", `Turno cerrado con saldo $${(ingresos - egresos).toFixed(2)}.`)}>
+                Cerrar turno
+              </Button>
+              <Button onClick={() => setModalOpen(true)}>
+                + Registrar movimiento
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
@@ -152,12 +165,6 @@ export function CajaView() {
           </div>
         </Modal>
       )}
-
-      <Card className="mt-4">
-        <p className="text-sm text-ink-600">
-          Las propinas del día se reparten desde <strong className="text-ink-900">Personal → Propinas</strong>.
-        </p>
-      </Card>
     </div>
   );
 }

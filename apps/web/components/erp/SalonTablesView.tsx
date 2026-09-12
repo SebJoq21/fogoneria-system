@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -9,6 +9,9 @@ import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD, RowActions } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import type { TableShape } from "@/lib/erp";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
 
 const zones = ["Salón", "Terraza", "Barra"];
 
@@ -18,6 +21,14 @@ export function SalonTablesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ label: "", zone: zones[0], seats: "4", shape: "rect" as TableShape });
+  const summary = useMemo(() => mesasSummary(tables), [tables]);
+  const byZone = useMemo(() => {
+    const acc: Record<string, number> = {};
+    tables.forEach((t) => {
+      acc[t.zone] = (acc[t.zone] ?? 0) + 1;
+    });
+    return Object.entries(acc).map(([name, v]) => ({ name: name.slice(0, 10), v }));
+  }, [tables]);
 
   const openCreate = () => {
     setEditingId(null);
@@ -61,6 +72,14 @@ export function SalonTablesView() {
 
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Mesas por zona"
+        chartSubtitle="Estructura del salón maestro"
+        ariaLabel="Resumen maestro de mesas"
+      >
+        <MiniBars data={byZone} label="Mesas por zona del salón" />
+      </ModuleSummary>
       <Toolbar
         left={
           <p className="text-sm text-ink-400">
