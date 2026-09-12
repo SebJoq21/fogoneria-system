@@ -3,28 +3,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
-/** Links de acceso rápido con badge de conteo (estilo workspace ERP). */
-export function QuickLink({
-  href,
-  label,
-  badge,
-}: {
-  href: string;
-  label: string;
-  badge?: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-2 text-sm text-ink-900 hover:underline w-max"
-    >
-      {label}
-      <ArrowUpRight size={14} className="text-ink-400 shrink-0" />
-      {badge}
-    </Link>
-  );
-}
-
 /** Link de columna Másteres/Transacciones/Informes. */
 export function ColumnLink({ href, label }: { href: string; label: string }) {
   return (

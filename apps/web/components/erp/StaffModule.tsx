@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  initialAttendance,
   initialEmployees,
   initialShifts,
   weekDays,
@@ -11,6 +12,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { personalSummary } from "@/components/erp/summaries/summary-selectors";
 
 const roleTone: Record<string, string> = {
   Mozo: "bg-primary/[0.05] text-ink-600",
@@ -35,8 +39,22 @@ export function StaffModule({ tab = "equipo" }: { tab?: "equipo" | "turnos" | "p
     );
   };
 
+  const summary = useMemo(() => {
+    const marks = initialAttendance.length;
+    const present = initialAttendance.filter((a) => a.present).length;
+    return personalSummary(initialEmployees, present, marks);
+  }, []);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle={tab === "propinas" ? "Pozo vs equipo" : tab === "turnos" ? "Cobertura de turnos" : "Equipo en turno"}
+        chartSubtitle="Primera vista de tu franquicia hoy"
+        ariaLabel="Resumen de personal"
+      >
+        <MiniBars data={summary.bars} label="Personal en turno y en descanso" />
+      </ModuleSummary>
       {tab === "equipo" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {initialEmployees.map((e) => (

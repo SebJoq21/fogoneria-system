@@ -1,7 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { initialAttendance, initialEmployees, weekDays } from "@/lib/erp";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { personalSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Trabajadores · Asistencia: control semanal de presentes por colaborador. */
 export function StaffAttendanceView() {
@@ -15,7 +19,27 @@ export function StaffAttendanceView() {
     return `${pct}%`;
   };
 
+  const summary = useMemo(() => {
+    const present = initialAttendance.filter((a) => a.present).length;
+    return personalSummary(initialEmployees, present, initialAttendance.length);
+  }, []);
+
   return (
+    <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Asistencia semanal"
+        chartSubtitle="Presentes sobre turnos marcados"
+        ariaLabel="Resumen de asistencia"
+      >
+        <MiniBars
+          data={weekDays.slice(0, 5).map((d, day) => ({
+            name: d,
+            v: initialAttendance.filter((a) => a.day === day && a.present).length,
+          }))}
+          label="Presentes por día"
+        />
+      </ModuleSummary>
     <TableCard>
       <THead>
         <tr>
@@ -55,5 +79,6 @@ export function StaffAttendanceView() {
         ))}
       </tbody>
     </TableCard>
+    </div>
   );
 }

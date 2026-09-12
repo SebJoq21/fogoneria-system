@@ -1,10 +1,9 @@
 "use client";
 
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
-import { initialReservations, initialTables } from "@/lib/erp";
-import { Badge } from "@/components/ui/Badge";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard, ColumnLink, LinkColumn, QuickLink } from "./workspace-ui";
+import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ChartCard, ColumnLink, LinkColumn } from "./workspace-ui";
 
 const bookingsByDay = [
   { name: "Lun", v: 4 }, { name: "Mar", v: 6 }, { name: "Mié", v: 5 },
@@ -12,17 +11,19 @@ const bookingsByDay = [
 ];
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
-/** Workspace Reservas: KPIs + gráfico + accesos + columnas. */
+/** Workspace Reservas: KPIs + gráfico + columnas. */
 export function BookingsWorkspace() {
-  const occupied = initialTables.filter((t) => t.status === "ocupada").length;
-  const free = initialTables.filter((t) => t.status === "libre").length;
-  const occupancy = Math.round((occupied / initialTables.length) * 100);
+  const { currentUser, tables, reservations } = useModules();
+  const isSucursal = currentUser?.role === "sucursal";
+  const occupied = tables.filter((t) => t.status === "ocupada").length;
+  const free = tables.filter((t) => t.status === "libre").length;
+  const occupancy = tables.length === 0 ? 0 : Math.round((occupied / tables.length) * 100);
 
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        <KpiCard label="Reservas hoy" value={String(initialReservations.length)} hint="2 por confirmar" />
-        <KpiCard label="Ocupación actual" value={`${occupancy}%`} hint={`${occupied} de ${initialTables.length} mesas`} />
+        <KpiCard label="Reservas hoy" value={String(reservations.length)} hint="por confirmar" />
+        <KpiCard label="Ocupación actual" value={`${occupancy}%`} hint={`${occupied} de ${tables.length} mesas`} />
         <KpiCard label="Mesas libres" value={String(free)} hint="ahora mismo" />
       </div>
 
@@ -37,29 +38,10 @@ export function BookingsWorkspace() {
         </div>
       </ChartCard>
 
-      <h3 className="text-sm font-medium text-ink-900 mb-3">Acceso rápido</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 mb-10">
-        <QuickLink
-          href="/app/mesas/maestro"
-          label="Mesas"
-          badge={<Badge tone="neutral">{initialTables.length}</Badge>}
-        />
-        <QuickLink
-          href="/app/mesas"
-          label="Mapa de mesas"
-          badge={<Badge tone="success" dot>{free} libres</Badge>}
-        />
-        <QuickLink
-          href="/app/modulos/reservas/agenda"
-          label="Agenda"
-          badge={<Badge tone="neutral">{initialReservations.length}</Badge>}
-        />
-      </div>
-
       <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
         <LinkColumn title="Salón">
-          <ColumnLink href="/app/mesas/maestro" label="Mesas" />
+          {isSucursal && <ColumnLink href="/app/mesas/maestro" label="Mesas" />}
           <ColumnLink href="/app/mesas" label="Mapa de mesas" />
           <ColumnLink href="/app/modulos/reservas/agenda" label="Agenda" />
         </LinkColumn>

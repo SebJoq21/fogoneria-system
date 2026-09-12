@@ -2,10 +2,8 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { initialAttendance, initialEmployees } from "@/lib/erp";
-import { Badge } from "@/components/ui/Badge";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ChartCard, ColumnLink, LinkColumn, QuickLink } from "./workspace-ui";
+import { ChartCard, ColumnLink, LinkColumn } from "./workspace-ui";
 
 const attendanceByDay = [
   { name: "Lun", v: 4 }, { name: "Mar", v: 3 }, { name: "Mié", v: 4 },
@@ -15,7 +13,6 @@ const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
 /** Workspace Trabajadores: KPIs + gráfico + accesos + columnas. */
 export function StaffWorkspace() {
-  const { roles } = useModules();
   const onShift = initialEmployees.filter((e) => e.onShift);
   const marks = initialAttendance.length;
   const present = initialAttendance.filter((a) => a.present).length;
@@ -39,27 +36,6 @@ export function StaffWorkspace() {
         </ResponsiveContainer>
         </div>
       </ChartCard>
-
-      <h3 className="text-sm font-medium text-ink-900 mb-3">Acceso rápido</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-3 mb-10">
-        <QuickLink
-          href="/app/modulos/trabajadores/directorio"
-          label="Directorio"
-          badge={
-            <Badge tone="success" dot>
-              {onShift.length} en turno
-            </Badge>
-          }
-        />
-        <QuickLink
-          href="/app/modulos/trabajadores/roles"
-          label="Roles"
-          badge={<Badge tone="neutral">{roles.length}</Badge>}
-        />
-        <QuickLink href="/app/modulos/trabajadores/turnos" label="Turnos" />
-        <QuickLink href="/app/modulos/trabajadores/asistencia" label="Asistencia" badge={<Badge tone="neutral">{rate}%</Badge>} />
-        <QuickLink href="/app/modulos/trabajadores/propinas" label="Propinas" />
-      </div>
 
       <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">

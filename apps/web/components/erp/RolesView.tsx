@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { initialEmployees } from "@/lib/erp";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,8 @@ import { Field, TextInput, Textarea } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD, RowActions } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
 
 /** Maestro de Roles: define los roles operativos del equipo. */
 export function RolesView() {
@@ -49,8 +51,32 @@ export function RolesView() {
     setRoles(roles.filter((r) => r.id !== id));
   };
 
+  const summary = useMemo(() => {
+    const on = initialEmployees.filter((e) => e.onShift).length;
+    return {
+      kpis: [
+        { label: "Roles", value: String(roles.length), hint: "operativos" },
+        { label: "Equipo", value: String(initialEmployees.length), hint: "personas" },
+        { label: "En turno", value: String(on), hint: "ahora mismo" },
+        { label: "Cobertura", value: roles.length === 0 ? "—" : `${Math.round((initialEmployees.length / roles.length) * 10) / 10}x`, hint: "personas por rol" },
+      ],
+      bars: roles.slice(0, 6).map((r) => ({
+        name: r.name.slice(0, 10),
+        v: initialEmployees.filter((e) => e.role === r.name).length,
+      })),
+    };
+  }, [roles]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Equipo por rol"
+        chartSubtitle="Cobertura operativa de tu franquicia"
+        ariaLabel="Resumen de roles"
+      >
+        <MiniBars data={summary.bars} label="Personas por rol" />
+      </ModuleSummary>
       <Toolbar
         left={<p className="text-sm text-ink-400">{roles.length} roles operativos.</p>}
         right={

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Progress } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -11,12 +11,22 @@ import { Toggle } from "@/components/ui/Toggle";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { initialPromos } from "@/lib/erp";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { promosSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Promociones: cupones con cupo + promociones programadas con vigencia. */
 export function PromocionesView() {
   const { coupons, setCoupons, notify } = useModules();
   const [promos, setPromos] = useState(initialPromos);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(() => {
+    try {
+      if (typeof window === "undefined") return false;
+      return new URLSearchParams(window.location.search).get("nuevo") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [form, setForm] = useState({ code: "", discount: "", limit: "", expires: "" });
 
   const createCoupon = () => {
@@ -30,8 +40,21 @@ export function PromocionesView() {
     setForm({ code: "", discount: "", limit: "", expires: "" });
   };
 
+  const summary = useMemo(
+    () => promosSummary(coupons, promos.filter((p) => p.active).length),
+    [coupons, promos],
+  );
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Canjes por cupón"
+        chartSubtitle="Qué promociones mueven tu franquicia"
+        ariaLabel="Resumen de promociones"
+      >
+        <MiniBars data={summary.bars} label="Canjes por cupón" />
+      </ModuleSummary>
       <Toolbar
         left={<h3 className="text-sm font-medium text-ink-900">Cupones activos</h3>}
         right={

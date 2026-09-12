@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
-import { Badge } from "@/components/ui/Badge";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ChartCard } from "@/components/erp/workspace-ui";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
@@ -93,16 +90,6 @@ export function AnaliticasView() {
               </TR>
             </tbody>
           </TableCard>
-          <Link
-            href="/app/productos/valorizado"
-            className="mt-3 inline-flex items-center gap-2 text-sm text-ink-900 font-medium hover:underline"
-          >
-            Ver valorizado de carta
-            <ArrowUpRight size={14} className="text-ink-400" />
-          </Link>
-          <div className="mt-2">
-            <Badge tone="neutral">Incluye propinas del día en Personal</Badge>
-          </div>
         </div>
       </div>
     </div>

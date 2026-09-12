@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput } from "@/components/ui/fields";
@@ -9,6 +9,9 @@ import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { expenseCategories } from "@/lib/erp";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { gastosSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Gastos: egresos operativos por categoría y proveedor. */
 export function GastosView() {
@@ -16,6 +19,7 @@ export function GastosView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ category: expenseCategories[0], supplier: "", amount: "", status: "Pagado" as "Pagado" | "Pendiente" });
 
+  const summary = useMemo(() => gastosSummary(expenses), [expenses]);
   const total = expenses.reduce((s, e) => s + Number(e.amount.replace("$", "")) || 0, 0);
 
   const save = () => {
@@ -31,6 +35,14 @@ export function GastosView() {
 
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Gastos por categoría"
+        chartSubtitle="Dónde se va el dinero de tu franquicia"
+        ariaLabel="Resumen de gastos"
+      >
+        <MiniBars data={summary.bars} label="Gastos por categoría" />
+      </ModuleSummary>
       <Toolbar
         left={
           <p className="text-sm text-ink-400">

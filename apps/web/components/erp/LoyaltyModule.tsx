@@ -1,24 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowUpRight } from "lucide-react";
-import { KpiCard } from "@/components/ui/KpiCard";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { TextInput } from "@/components/ui/fields";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { clientesSummary, promosSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Fidelización: KPIs + regla de puntos. Cupones y clientes viven en sus módulos. */
 export function LoyaltyModule() {
-  const { customers } = useModules();
+  const { customers, coupons } = useModules();
   const [pointsPerDollar, setPointsPerDollar] = useState(1);
+
+  const summary = useMemo(() => {
+    const c = clientesSummary(customers);
+    const p = promosSummary(coupons, 0);
+    const points = customers.reduce((s, x) => s + x.points, 0);
+    const redeemed = coupons.reduce((s, x) => s + x.used, 0);
+    return {
+      kpis: [
+        { label: "Puntos circulando", value: points.toLocaleString("es-PE"), hint: `en ${customers.length} clientes` },
+        { label: "Cupones canjeados", value: String(redeemed), hint: "acumulados" },
+        c.kpis[0],
+        p.kpis[0],
+      ],
+      bars: p.bars,
+    };
+  }, [customers, coupons]);
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <KpiCard label="Puntos circulando" value="12,480" hint={`en ${customers.length} clientes`} />
-        <KpiCard label="Cupones canjeados" value="135" hint="este mes" />
-        <KpiCard label="Clientes frecuentes" value={String(customers.length)} hint="registrados" />
-      </div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Canjes por cupón"
+        chartSubtitle="Qué premia la lealtad de tus clientes"
+        ariaLabel="Resumen de fidelización"
+      >
+        <MiniBars data={summary.bars} label="Canjes por cupón" />
+      </ModuleSummary>
 
       <Card className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
         <p className="text-sm text-ink-600 flex-1">
@@ -36,23 +56,6 @@ export function LoyaltyModule() {
           <span className="text-sm text-ink-600">punto{pointsPerDollar === 1 ? "" : "s"}</span>
         </div>
       </Card>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card
-          href="/app/clientes"
-          className="flex items-center justify-between hover:border-ink-900/30 transition-colors"
-        >
-          <span className="text-sm font-medium text-ink-900">Ver base de clientes</span>
-          <ArrowUpRight size={14} className="text-ink-400" />
-        </Card>
-        <Card
-          href="/app/promociones"
-          className="flex items-center justify-between hover:border-ink-900/30 transition-colors"
-        >
-          <span className="text-sm font-medium text-ink-900">Gestionar cupones</span>
-          <ArrowUpRight size={14} className="text-ink-400" />
-        </Card>
-      </div>
     </div>
   );
 }
