@@ -1,9 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
-node_modules
+node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
 # Local env files
 .env
@@ -11,28 +12,46 @@ node_modules
 .env.development.local
 .env.test.local
 .env.production.local
+.env.*
+!.env.example
 
-# Testing
-coverage
+# Testing / coverage
+coverage/
+test-results/
+playwright-report/
 
 # Turbo
-.turbo
+.turbo/
 
-# Vercel
-.vercel
+# Vercel / Netlify
+.vercel/
+.netlify/
 
 # Build Outputs
 .next/
 out/
-build
-dist
+build/
+dist/
 
-
-# Debug
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+pnpm-error.log*
+*.log
+
+# TypeScript / lint caches
+*.tsbuildinfo
+.eslintcache
+.prettiercache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors (solo personal, .vscode se comparte en equipo)
+.idea/
 
 # Misc
-.DS_Store
 *.pem

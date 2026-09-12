@@ -1,0 +1,146 @@
+"use client";
+
+import { useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Field, TextInput } from "@/components/ui/fields";
+import { Modal } from "@/components/ui/Modal";
+import { Toolbar } from "@/components/ui/Toolbar";
+import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
+import { useModules } from "@/components/dashboard/ModulesProvider";
+
+/** Comprobantes: boletas y facturas de venta con correlativo. */
+export function ComprobantesView() {
+  const { receipts, setReceipts, notify } = useModules();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [form, setForm] = useState({ customer: "", total: "", source: "" });
+
+  const nextNumber = `B001-${1043 + receipts.length}`;
+
+  const emit = () => {
+    if (!form.customer.trim() || !Number(form.total)) return;
+    setReceipts([
+      { id: nextNumber, date: "Ahora mismo", customer: form.customer, total: `$${Number(form.total).toFixed(2)}`, status: "Pagada", source: form.source || "Venta directa" },
+      ...receipts,
+    ]);
+    notify("Comprobante emitido", `${nextNumber} para ${form.customer}.`);
+    setModalOpen(false);
+    setForm({ customer: "", total: "", source: "" });
+  };
+
+  const annul = (id: string) => {
+    setReceipts(receipts.map((r) => (r.id === id ? { ...r, status: "Anulada" as const } : r)));
+  };
+
+  return (
+    <div>
+      <Toolbar
+        left={<p className="text-sm text-ink-400">{receipts.length} comprobantes emitidos.</p>}
+        right={
+          <Button onClick={() => setModalOpen(true)}>
+            + Emitir comprobante
+          </Button>
+        }
+      />
+
+      <TableCard>
+        <THead>
+          <tr>
+            <TH>Número</TH>
+            <TH>Fecha</TH>
+            <TH>Cliente</TH>
+            <TH>Origen</TH>
+            <TH>Total</TH>
+            <TH>Estado</TH>
+            <TH right>Acciones</TH>
+          </tr>
+        </THead>
+        <tbody>
+          {receipts.map((r) => (
+            <TR key={r.id}>
+              <TD tone="strong" nowrap className="tnum">{r.id}</TD>
+              <TD tone="muted" nowrap>
+                <span className="text-nav">{r.date}</span>
+              </TD>
+              <TD tone="strong">{r.customer}</TD>
+              <TD>{r.source}</TD>
+              <TD tone="strong" nowrap className="tnum">{r.total}</TD>
+              <TD>
+                <Badge tone={r.status === "Pagada" ? "success" : "danger"} dot>
+                  {r.status}
+                </Badge>
+              </TD>
+              <TD right nowrap>
+                {r.status === "Pagada" ? (
+                  <button
+                    type="button"
+                    onClick={() => annul(r.id)}
+                    className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
+                  >
+                    Anular
+                  </button>
+                ) : (
+                  <span className="text-nav text-ink-400">—</span>
+                )}
+              </TD>
+            </TR>
+          ))}
+        </tbody>
+      </TableCard>
+
+      {modalOpen && (
+        <Modal
+          onClose={() => setModalOpen(false)}
+          title={`Emitir comprobante · ${nextNumber}`}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={!form.customer.trim() || !Number(form.total)}
+                onClick={emit}
+              >
+                Emitir
+              </Button>
+            </>
+          }
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Field label="Cliente">
+                <TextInput
+                  type="text"
+                  value={form.customer}
+                  onChange={(e) => setForm({ ...form, customer: e.target.value })}
+                  placeholder="Ej. Mesa 4"
+                />
+              </Field>
+            </div>
+            <div>
+              <Field label="Total ($)">
+                <TextInput
+                  type="number"
+                  value={form.total}
+                  onChange={(e) => setForm({ ...form, total: e.target.value })}
+                  placeholder="0.00"
+                  className="tnum"
+                />
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="Origen">
+                <TextInput
+                  type="text"
+                  value={form.source}
+                  onChange={(e) => setForm({ ...form, source: e.target.value })}
+                  placeholder="Ej. Orden #PD-1043"
+                />
+              </Field>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

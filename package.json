@@ -1,5 +1,5 @@
 {
-  "name": "fogoneria",
+  "name": "fogoneria-system",
   "private": true,
   "scripts": {
     "build": "turbo run build",
