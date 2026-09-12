@@ -1,25 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { type Order, type OrderStatus } from "@/lib/erp";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { ordenesSummary } from "@/components/erp/summaries/summary-selectors";
+import { canConfirmRecepcion, canMarkListo, type OrdersMode } from "@/lib/permissions";
 
 const columns: { id: OrderStatus; label: string }[] = [
+  { id: "pendiente", label: "Por confirmar" },
   { id: "cocina", label: "En cocina" },
   { id: "listo", label: "Listo" },
   { id: "entregado", label: "Entregado" },
 ];
 
 const demoIncoming: Omit<Order, "id" | "time" | "elapsed" | "status">[] = [
-  { customer: "Mesa 5", items: [{ name: "Lomo Saltado", qty: 1 }], total: "$22.00", channel: "QR mesa" },
-  { customer: "Lucía Prado", items: [{ name: "Causa Limeña", qty: 2 }], total: "$24.00", channel: "Web" },
+  { customer: "Mesa 5", items: [{ productId: 3, name: "Lomo Saltado", qty: 1 }], total: "$22.00", channel: "Mesa" },
+  { customer: "Lucía Prado", items: [{ productId: 1, name: "Ceviche Clásico", qty: 2 }], total: "$30.00", channel: "Web" },
 ];
 
-export function OrdersView() {
-  const { notify, orders, setOrders, activeBranch, isGeneral, branchOf } = useModules();
+export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
+  const { notify, orders, setOrders, activeBranch, isGeneral, branchOf, currentUser } = useModules();
+  const canConfirm = canConfirmRecepcion(currentUser?.role, mode);
+  const canListo = canMarkListo(currentUser?.role, mode);
   const [live, setLive] = useState(true);
   const seq = useRef(1043);
 
@@ -33,7 +40,7 @@ export function OrdersView() {
         const now = new Date();
         const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
         setOrders((prev) => [
-          { ...tpl, id: `#PD-${next}`, time, elapsed: "ahora mismo", status: "cocina" },
+          { ...tpl, id: `#PD-${next}`, time, elapsed: "ahora mismo", status: "pendiente" },
           ...prev,
         ]);
         notify("Nueva comanda entrante", `${tpl.customer} · ${tpl.total}`);
@@ -41,43 +48,66 @@ export function OrdersView() {
     return () => clearInterval(timer);
   }, [live, notify, setOrders]);
 
-  const advance = (order: Order) => {
-    const next: OrderStatus | null =
-      order.status === "cocina" ? "listo" : order.status === "listo" ? "entregado" : null;
-    if (!next) return;
-    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
-    if (next === "listo") {
-      notify("Orden lista", `${order.id} · ${order.customer}${order.waiter ? ` · avisar a ${order.waiter}` : ""}`);
-    }
+  const summary = useMemo(() => (mode === "ordenes" ? ordenesSummary(orders) : null), [orders, mode]);
+
+  const confirm = (order: Order) => {
+    // Cocina confirma la recepción: pendiente → en cocina.
+    if (order.status !== "pendiente" || !canConfirm) return;
+    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: "cocina" as const } : o)));
+    notify("Pedido en cocina", `${order.id} · ${order.customer}`);
   };
+
+  const advance = (order: Order) => {
+    // En cocina se marca listo (el entregado lo hace el mesero).
+    if (order.status !== "cocina" || !canListo) return;
+    const next: OrderStatus = "listo";
+    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
+    notify("Orden lista", `${order.id} · ${order.customer}${order.waiter ? ` · avisar a ${order.waiter}` : ""}`);
+  };
+
+  const pendingCount = orders.filter((o) => o.status === "pendiente").length;
+  const cookingCount = orders.filter((o) => o.status === "cocina").length;
 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h2 className="text-section font-medium text-ink-900 flex items-center gap-2">
-            Órdenes
-            {live && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                En vivo
-              </span>
-            )}
+            {mode === "cocina" ? "Cocina" : "Órdenes"}
           </h2>
-          <p className="text-sm text-ink-400 mt-1">
-            Comandas de <strong className="text-ink-900">{activeBranch.name}</strong>.
-          </p>
+          {mode === "cocina" ? (
+            <p className="text-sm text-ink-400 mt-1">
+              {pendingCount} por confirmar · {cookingCount} en cocina
+            </p>
+          ) : (
+            <p className="text-sm text-ink-400 mt-1">
+              Comandas de <strong className="text-ink-900">{activeBranch.name}</strong>.
+            </p>
+          )}
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => setLive(!live)}
-          className="border-ink-900/20 hover:border-ink-900 w-max"
-        >
-          {live ? "Pausar en vivo" : "Reanudar en vivo"}
-        </Button>
+        {mode === "ordenes" && (
+          <Button
+            variant="secondary"
+            onClick={() => setLive(!live)}
+            className="border-ink-900/20 hover:border-ink-900 w-full sm:w-max min-h-12"
+          >
+            {live ? "Pausar en vivo" : "Reanudar en vivo"}
+          </Button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+      {mode === "ordenes" && summary && (
+        <ModuleSummary
+          kpis={summary.kpis}
+          chartTitle="Comandas por estado"
+          chartSubtitle="Resumen en vivo de la operación"
+          ariaLabel="Resumen de órdenes"
+        >
+          <MiniBars data={summary.bars} label="Comandas por estado: por confirmar, cocina, listo y entregado" />
+        </ModuleSummary>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
         {columns.map((col) => {
           const items = orders.filter((o) => o.status === col.id);
           return (
@@ -99,15 +129,17 @@ export function OrdersView() {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-ink-900">{o.id}</span>
-                      <span className="flex items-center gap-1.5">
-                        {isGeneral && branchOf("orders", o.id) && (
-                          <Badge tone="neutral">{branchOf("orders", o.id)?.short}</Badge>
-                        )}
-                        <Badge tone="neutral">{o.channel}</Badge>
-                      </span>
+                      {mode === "ordenes" && (
+                        <span className="flex items-center gap-1.5">
+                          {isGeneral && branchOf("orders", o.id) && (
+                            <Badge tone="neutral">{branchOf("orders", o.id)?.short}</Badge>
+                          )}
+                          <Badge tone="neutral">{o.channel}</Badge>
+                        </span>
+                      )}
                     </div>
                     <p className="text-nav text-ink-600 mb-2">
-                      {o.customer} · {o.time} ({o.elapsed})
+                      {mode === "cocina" ? o.customer : `${o.customer} · ${o.time}`}
                     </p>
                     <ul className="text-sm text-ink-900 mb-2">
                       {o.items.map((it, i) => (
@@ -116,14 +148,22 @@ export function OrdersView() {
                         </li>
                       ))}
                     </ul>
-                    <div className="flex items-center justify-between pt-3 border-t border-ink-900/[0.06]">
-                      <span className="text-sm font-medium text-ink-900">{o.total}</span>
-                      {o.status !== "entregado" && (
+                    <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 pt-3 border-t border-ink-900/[0.06]">
+                      <span className="text-sm font-medium text-ink-900 tnum flex-1">{o.total}</span>
+                      {o.status === "pendiente" && canConfirm && (
+                        <Button
+                          onClick={() => confirm(o)}
+                          className="px-5 min-h-12 w-full min-[420px]:w-auto text-sm"
+                        >
+                          Confirmar recepción
+                        </Button>
+                      )}
+                      {o.status === "cocina" && canListo && (
                         <Button
                           onClick={() => advance(o)}
-                          className="px-4 text-nav"
+                          className="px-5 min-h-12 w-full min-[420px]:w-auto text-sm"
                         >
-                          {o.status === "cocina" ? "Marcar listo" : "Marcar entregado"}
+                          Marcar listo
                         </Button>
                       )}
                     </div>

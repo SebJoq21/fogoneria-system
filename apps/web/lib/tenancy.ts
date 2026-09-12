@@ -53,13 +53,13 @@ export type BranchScope = {
 };
 
 const surcoOrders: Order[] = [
-  { id: "#PD-2088", customer: "Mesa 2", items: [{ name: "Ají de Gallina", qty: 2 }], total: "$36.00", time: "13:40", elapsed: "hace 8 min", status: "cocina", channel: "QR mesa" },
+  { id: "#PD-2088", customer: "Mesa 2", items: [{ name: "Ají de Gallina", qty: 2 }], total: "$36.00", time: "13:40", elapsed: "hace 8 min", status: "pendiente", channel: "Mesa" },
   { id: "#PD-2087", customer: "Rosa Paredes", items: [{ name: "Lomo Saltado", qty: 1 }, { name: "Chicha Morada", qty: 2 }], total: "$30.00", time: "13:22", elapsed: "hace 26 min", status: "listo", channel: "Web" },
-  { id: "#PD-2086", customer: "Mesa 5", items: [{ name: "Pisco Sour", qty: 2 }], total: "$20.00", time: "13:05", elapsed: "hace 43 min", status: "entregado", channel: "QR mesa" },
+  { id: "#PD-2086", customer: "Mesa 5", items: [{ name: "Pisco Sour", qty: 2 }], total: "$20.00", time: "13:05", elapsed: "hace 43 min", status: "entregado", channel: "Mesa" },
 ];
 
 const sanIsidroOrders: Order[] = [
-  { id: "#PD-3015", customer: "Mesa 1", items: [{ name: "Ceviche Clásico", qty: 1 }], total: "$15.00", time: "13:48", elapsed: "hace 2 min", status: "cocina", channel: "QR mesa" },
+  { id: "#PD-3015", customer: "Mesa 1", items: [{ name: "Ceviche Clásico", qty: 1 }], total: "$15.00", time: "13:48", elapsed: "hace 2 min", status: "pendiente", channel: "Mesa" },
   { id: "#PD-3014", customer: "Luis Vega", items: [{ name: "Tequeños de Lomo", qty: 1 }], total: "$8.00", time: "13:30", elapsed: "hace 20 min", status: "entregado", channel: "Web" },
 ];
 

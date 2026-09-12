@@ -3,5 +3,5 @@
 import { OrdersView } from "@/components/erp/OrdersView";
 
 export default function PedidosPage() {
-  return <OrdersView />;
+  return <OrdersView mode="ordenes" />;
 }

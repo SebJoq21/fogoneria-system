@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
@@ -8,19 +8,26 @@ import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniDonut } from "@/components/erp/summaries/charts";
+import { comprobantesSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Comprobantes: boletas y facturas de venta con correlativo. */
 export function ComprobantesView() {
   const { receipts, setReceipts, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ customer: "", total: "", source: "" });
+  const summary = useMemo(() => comprobantesSummary(receipts), [receipts]);
 
-  const nextNumber = `B001-${1043 + receipts.length}`;
+  const nextNumber = useMemo(() => {
+    const nums = receipts.map((r) => Number(String(r.id).split("-")[1]) || 0);
+    return `B001-${Math.max(1042, ...nums) + 1}`;
+  }, [receipts]);
 
   const emit = () => {
     if (!form.customer.trim() || !Number(form.total)) return;
     setReceipts([
-      { id: nextNumber, date: "Ahora mismo", customer: form.customer, total: `$${Number(form.total).toFixed(2)}`, status: "Pagada", source: form.source || "Venta directa" },
+      { id: nextNumber, date: "Ahora mismo", customer: form.customer, total: `$${Number(form.total).toFixed(2)}`, status: "Pagada", source: form.source.trim() ? (/^#PD-/i.test(form.source.trim()) ? form.source.trim() : `Manual · ${form.source.trim()}`) : "Venta directa" },
       ...receipts,
     ]);
     notify("Comprobante emitido", `${nextNumber} para ${form.customer}.`);
@@ -34,6 +41,14 @@ export function ComprobantesView() {
 
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Pagadas vs anuladas"
+        chartSubtitle="Estado de tu facturación"
+        ariaLabel="Resumen de comprobantes"
+      >
+        <MiniDonut data={summary.donut} label="Comprobantes pagados y anulados" />
+      </ModuleSummary>
       <Toolbar
         left={<p className="text-sm text-ink-400">{receipts.length} comprobantes emitidos.</p>}
         right={

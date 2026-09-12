@@ -1,5 +1,4 @@
 export type ModuleId =
-  | "whatsapp"
   | "fidelizacion"
   | "reservas"
   | "inventario"
@@ -14,18 +13,6 @@ export type ModuleMeta = {
 };
 
 export const MODULE_CATALOG: ModuleMeta[] = [
-  {
-    id: "whatsapp",
-    title: "Automatización de WhatsApp",
-    description:
-      "Envía recordatorios automáticos de reservas y confirmaciones de pedidos directamente al WhatsApp de tus clientes.",
-    price: "+$25.00/mes",
-    benefits: [
-      "Confirmaciones de pedido automáticas al instante",
-      "Recordatorios de reserva que reducen no-shows",
-      "Historial de envíos con estado de entrega",
-    ],
-  },
   {
     id: "fidelizacion",
     title: "Sistema de Fidelización",
@@ -78,43 +65,28 @@ export const MODULE_CATALOG: ModuleMeta[] = [
 
 /* ---------- Pedidos Web ---------- */
 
-export type OrderStatus = "cocina" | "listo" | "entregado";
+export type OrderStatus = "pendiente" | "cocina" | "listo" | "entregado";
+
+export type OrderItem = { productId?: number; name: string; qty: number };
 
 export type Order = {
   id: string;
   customer: string;
-  items: { name: string; qty: number }[];
+  items: OrderItem[];
   total: string;
   time: string;
   elapsed: string;
   status: OrderStatus;
-  channel: "Web" | "QR mesa";
+  channel: "Web" | "Mesa";
   /** Mesero que tomó la orden (para "mis órdenes") */
   waiter?: string;
 };
 
 export const initialOrders: Order[] = [
-  { id: "#PD-1042", customer: "Valeria Ríos", items: [{ name: "Lomo Saltado", qty: 2 }, { name: "Chicha Morada", qty: 2 }], total: "$52.00", time: "13:42", elapsed: "hace 6 min", status: "cocina", channel: "Web" },
-  { id: "#PD-1041", customer: "Mesa 7", items: [{ name: "Ceviche Clásico", qty: 1 }, { name: "Pisco Sour", qty: 2 }], total: "$35.00", time: "13:35", elapsed: "hace 13 min", status: "cocina", channel: "QR mesa", waiter: "Ana Beltrán" },
+  { id: "#PD-1042", customer: "Valeria Ríos", items: [{ name: "Lomo Saltado", qty: 2 }, { name: "Chicha Morada", qty: 2 }], total: "$52.00", time: "13:42", elapsed: "hace 6 min", status: "pendiente", channel: "Web" },
+  { id: "#PD-1041", customer: "Mesa 7", items: [{ name: "Ceviche Clásico", qty: 1 }, { name: "Pisco Sour", qty: 2 }], total: "$35.00", time: "13:35", elapsed: "hace 13 min", status: "cocina", channel: "Mesa", waiter: "Ana Beltrán" },
   { id: "#PD-1040", customer: "Diego Torres", items: [{ name: "Ají de Gallina", qty: 1 }], total: "$18.00", time: "13:28", elapsed: "hace 20 min", status: "listo", channel: "Web" },
-  { id: "#PD-1039", customer: "Mesa 3", items: [{ name: "Tequeños de Lomo", qty: 2 }, { name: "Chicha Morada", qty: 1 }], total: "$20.00", time: "13:15", elapsed: "hace 33 min", status: "entregado", channel: "QR mesa" },
-];
-
-/* ---------- WhatsApp ---------- */
-
-export type WhatsappLog = {
-  id: number;
-  datetime: string;
-  phone: string;
-  event: "Pedido" | "Reserva";
-  status: "Entregado" | "Fallido";
-};
-
-export const initialWhatsappLogs: WhatsappLog[] = [
-  { id: 1, datetime: "Hoy 13:44", phone: "+51 987 112 203", event: "Pedido", status: "Entregado" },
-  { id: 2, datetime: "Hoy 13:31", phone: "+51 955 804 117", event: "Reserva", status: "Entregado" },
-  { id: 3, datetime: "Hoy 12:58", phone: "+51 901 445 882", event: "Pedido", status: "Fallido" },
-  { id: 4, datetime: "Hoy 12:20", phone: "+51 988 230 541", event: "Reserva", status: "Entregado" },
+  { id: "#PD-1039", customer: "Mesa 3", items: [{ name: "Tequeños de Lomo", qty: 2 }, { name: "Chicha Morada", qty: 1 }], total: "$20.00", time: "13:15", elapsed: "hace 33 min", status: "entregado", channel: "Mesa" },
 ];
 
 /* ---------- Fidelización ---------- */
@@ -273,15 +245,6 @@ export const initialRoles: Role[] = [
   { id: "barman", name: "Barman", description: "Bebidas, coctelería y barra." },
   { id: "cajero", name: "Cajero", description: "Cobros, caja y cierre de turno." },
 ];
-
-/* ---------- WhatsApp: plantillas por evento ---------- */
-
-export type WaTemplates = { order: string; reminder: string };
-
-export const initialWaTemplates: WaTemplates = {
-  order: "Hola {nombre_cliente}, tu pedido {numero_pedido} está confirmado y ya entró a cocina.",
-  reminder: "Hola {nombre_cliente}, te recordamos tu reserva para {fecha_reserva}. ¡Te esperamos!",
-};
 
 /* ---------- Promociones programadas ---------- */
 
