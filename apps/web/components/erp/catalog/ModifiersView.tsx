@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Toggle } from "@/components/ui/Toggle";
@@ -9,6 +9,8 @@ import { Card } from "@/components/ui/Card";
 import { Field, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
 
 /** Maestro de modificadores: grupos (tamaño, extras…) con opciones y precio adicional. */
 export function ModifiersView() {
@@ -57,12 +59,33 @@ export function ModifiersView() {
     );
   };
 
+  const summary = useMemo(() => {
+    const totalOptions = modifierGroups.reduce((s, g) => s + g.options.length, 0);
+    return {
+      kpis: [
+        { label: "Grupos", value: String(modifierGroups.length), hint: "tamaños, extras…" },
+        { label: "Opciones", value: String(totalOptions), hint: "en total" },
+        { label: "Obligatorios", value: String(modifierGroups.filter((g) => g.required).length), hint: "requieren elección" },
+        { label: "En platos", value: String(products.filter((p) => p.modifierGroupIds.length > 0).length), hint: "con modificadores" },
+      ],
+      bars: modifierGroups.slice(0, 6).map((g) => ({ name: g.name.slice(0, 10), v: g.options.length })),
+    };
+  }, [modifierGroups, products]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Opciones por grupo"
+        chartSubtitle="Cómo personaliza tu carta"
+        ariaLabel="Resumen de modificadores"
+      >
+        <MiniBars data={summary.bars} label="Opciones por grupo de modificadores" />
+      </ModuleSummary>
       <Toolbar
         left={
           <p className="text-sm text-ink-400">
-            {modifierGroups.length} grupos · se asignan desde el maestro de productos.
+            {modifierGroups.length} grupos · se asignan desde el maestro de platos.
           </p>
         }
         right={
@@ -82,7 +105,7 @@ export function ModifiersView() {
                 <div>
                   <h3 className="text-sm font-medium text-ink-900">{g.name}</h3>
                   <p className="text-xs text-ink-400 mt-0.5">
-                    {usedBy} producto{usedBy === 1 ? "" : "s"} lo usan
+                    {usedBy} plato{usedBy === 1 ? "" : "s"} lo usan
                   </p>
                 </div>
                 <Badge tone="neutral">{g.multi ? "Múltiple" : "Único"}</Badge>

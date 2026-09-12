@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,9 @@ import { Card } from "@/components/ui/Card";
 import { Field, TextInput } from "@/components/ui/fields";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { priceListsSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Listas de precios: Carta / Delivery / Eventos con vigencia y precio por producto. */
 export function PriceListsView() {
@@ -19,6 +22,7 @@ export function PriceListsView() {
   const [newName, setNewName] = useState("");
 
   const selected = priceLists.find((l) => l.id === selectedId) ?? priceLists[0];
+  const summary = useMemo(() => priceListsSummary(priceLists, products), [priceLists, products]);
   if (!selected) return null;
 
   const setPrice = (productId: number, value: string) => {
@@ -54,6 +58,14 @@ export function PriceListsView() {
 
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Precio promedio por lista"
+        chartSubtitle="Carta vs Delivery vs Eventos"
+        ariaLabel="Resumen de listas de precios"
+      >
+        <MiniBars data={summary.bars} label="Precio promedio por lista" />
+      </ModuleSummary>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         {priceLists.map((l) => (
           <button
@@ -101,7 +113,7 @@ export function PriceListsView() {
         <THead>
           <tr>
             <TH>SKU</TH>
-            <TH>Producto</TH>
+            <TH>Plato</TH>
             <TH>Categoría</TH>
             <TH>Precio ({selected.name})</TH>
           </tr>
@@ -124,6 +136,7 @@ export function PriceListsView() {
                     value={selected.prices[p.id] ?? ""}
                     onChange={(e) => setPrice(p.id, e.target.value)}
                     aria-label={`Precio de ${p.name} en ${selected.name}`}
+                    placeholder="—"
                     className="px-3 tnum"
                   />
                 </div>

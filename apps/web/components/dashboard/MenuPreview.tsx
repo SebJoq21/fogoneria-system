@@ -2,19 +2,16 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui/Button";
 import type { MenuItem } from "@/lib/dashboard";
-
-const categories = ["Todos", "Entradas", "Fondos", "Bebidas"];
 
 export function MenuPreview({
   menuItems,
-  onEditMenu,
 }: {
   menuItems: MenuItem[];
-  onEditMenu: () => void;
+  onEditMenu?: () => void;
 }) {
   const [activeCategory, setActiveCategory] = useState("Todos");
+  const categories = ["Todos", ...Array.from(new Set(menuItems.map((i) => i.category)))];
   const filtered =
     activeCategory === "Todos"
       ? menuItems
@@ -22,21 +19,6 @@ export function MenuPreview({
 
   return (
     <div className="animate-[fadeIn_0.3s_ease-out]">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h2 className="text-section font-medium text-ink-900">Vista Previa del Menú</h2>
-          <p className="text-nav text-ink-400">Estos son los platos de tu carta.</p>
-        </div>
-
-        <Button
-          onClick={onEditMenu}
-          className="gap-2"
-        >
-          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-          Editar menú
-        </Button>
-      </div>
-
       <div className="flex gap-2 mb-8 overflow-x-auto no-scrollbar pb-2">
         {categories.map((cat) => (
           <button

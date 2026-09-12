@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -8,6 +8,9 @@ import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
 
 type Form = {
   id: number | null;
@@ -131,7 +134,7 @@ export function ProductsView({
       ),
     );
     notify(
-      form.id ? "Producto actualizado" : "Producto creado",
+      form.id ? "Plato actualizado" : "Plato creado",
       `"${form.name}" guardado en el maestro.`,
     );
     setModalOpen(false);
@@ -145,8 +148,18 @@ export function ProductsView({
     );
   };
 
+  const summary = useMemo(() => cartaSummary(products, categories, priceOf), [products, categories, priceOf]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Maestro por categoría"
+        chartSubtitle="Cómo está compuesto tu catálogo"
+        ariaLabel="Resumen de platos"
+      >
+        <MiniBars data={summary.bars} label="Platos por categoría" />
+      </ModuleSummary>
       <Toolbar
         left={
           <p className="text-sm text-ink-400">
@@ -158,7 +171,7 @@ export function ProductsView({
         }
         right={
           <Button onClick={openCreate}>
-            + Nuevo producto
+            + Nuevo plato
           </Button>
         }
       />
@@ -167,7 +180,7 @@ export function ProductsView({
         <THead>
           <tr>
             <TH>SKU</TH>
-            <TH>Producto</TH>
+            <TH>Plato</TH>
             <TH>Categoría</TH>
             <TH>Precio</TH>
             <TH>Modificadores</TH>
@@ -229,7 +242,7 @@ export function ProductsView({
       {modalOpen && (
         <Modal
           onClose={() => setModalOpen(false)}
-          title={form.id ? "Editar producto" : "Nuevo producto"}
+          title={form.id ? "Editar plato" : "Nuevo plato"}
           wide
           footer={
             <>
@@ -240,7 +253,7 @@ export function ProductsView({
                 disabled={!form.name.trim() || !form.categoryId}
                 onClick={save}
               >
-                Guardar producto
+                Guardar plato
               </Button>
             </>
           }

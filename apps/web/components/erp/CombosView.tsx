@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -8,6 +8,9 @@ import { Field, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { combosSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Combos: paquetes de productos con precio fijo. */
 export function CombosView() {
@@ -52,10 +55,23 @@ export function CombosView() {
     setModalOpen(false);
   };
 
-  const productName = (id: number) => products.find((p) => p.id === id)?.name ?? `#${id}`;
+  const productName = (id: number) => {
+    const p = products.find((x) => x.id === id);
+    return p ? p.name : `Plato retirado (#${id})`;
+  };
+
+  const summary = useMemo(() => combosSummary(combos), [combos]);
 
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Precio por combo"
+        chartSubtitle="Paquetes con precio fijo"
+        ariaLabel="Resumen de combos"
+      >
+        <MiniBars data={summary.bars} label="Precio por combo activo" />
+      </ModuleSummary>
       <Toolbar
         left={<p className="text-sm text-ink-400">{combos.filter((c) => c.status === "Activo").length} combos activos.</p>}
         right={
@@ -147,7 +163,7 @@ export function CombosView() {
             </div>
             <div className="sm:col-span-2">
               <span className="block text-nav font-medium text-ink-600 mb-2">
-                Productos incluidos ({form.productIds.length})
+                Platos incluidos ({form.productIds.length})
               </span>
               <div className="flex flex-wrap gap-2">
                 {products.filter((p) => p.status === "Activo").map((p) => {

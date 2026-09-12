@@ -1,20 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { initialMovements } from "@/lib/erp";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { kardexSummary } from "@/components/erp/summaries/summary-selectors";
+import { useModules } from "@/components/dashboard/ModulesProvider";
 
 const typeTone = { Entrada: "success", Salida: "neutral", Ajuste: "warning" } as const;
 
 /** Inventarios · Movimientos: kardex de entradas, salidas y ajustes. */
 export function InventoryMovementsView() {
-  const [filter, setFilter] = useState<"Todos" | "Entrada" | "Salida" | "Ajuste">("Todos");
+  const { movements } = useModules();
+  const [filter, setFilter] = useState<"Todos" | "Entrada" | "Salida" | "Ajuste">(() => {
+    try {
+      if (typeof window === "undefined") return "Todos";
+      const t = new URLSearchParams(window.location.search).get("tipo");
+      return t === "Entrada" || t === "Salida" || t === "Ajuste" ? t : "Todos";
+    } catch {
+      return "Todos";
+    }
+  });
 
   const rows =
-    filter === "Todos" ? initialMovements : initialMovements.filter((m) => m.type === filter);
+    filter === "Todos" ? movements : movements.filter((m) => m.type === filter);
+
+  const summary = useMemo(() => kardexSummary(movements), [movements]);
 
   return (
+    <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Kardex por tipo"
+        chartSubtitle="Entradas, salidas y ajustes"
+        ariaLabel="Resumen de movimientos"
+      >
+        <MiniBars data={summary.bars} label="Movimientos por tipo" />
+      </ModuleSummary>
     <TableCard
       header={(["Todos", "Entrada", "Salida", "Ajuste"] as const).map((f) => (
         <button
@@ -58,5 +81,6 @@ export function InventoryMovementsView() {
         ))}
       </tbody>
     </TableCard>
+    </div>
   );
 }

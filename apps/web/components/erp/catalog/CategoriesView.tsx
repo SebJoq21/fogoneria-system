@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD, RowActions } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Maestro de categorías de producto. */
 export function CategoriesView() {
@@ -40,8 +43,18 @@ export function CategoriesView() {
     setCategories(categories.filter((c) => c.id !== id));
   };
 
+  const summary = useMemo(() => cartaSummary(products, categories, () => 0), [products, categories]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis.slice(0, 3).map((k, i) => (i === 2 ? { ...k, label: "Categorías", value: String(categories.length), hint: "en maestro" } : k))}
+        chartTitle="Platos por categoría"
+        chartSubtitle="Distribución del maestro"
+        ariaLabel="Resumen de categorías"
+      >
+        <MiniBars data={summary.bars} label="Platos por categoría" />
+      </ModuleSummary>
       <Toolbar
         left={<p className="text-sm text-ink-400">{categories.length} categorías en el maestro.</p>}
         right={
@@ -62,7 +75,7 @@ export function CategoriesView() {
           <tr>
             <TH>Orden</TH>
             <TH>Nombre</TH>
-            <TH>Productos</TH>
+            <TH>Platos</TH>
             <TH right>Acciones</TH>
           </tr>
         </THead>
@@ -86,7 +99,7 @@ export function CategoriesView() {
                     }}
                     onDelete={() => remove(c.id)}
                     deleteDisabled={count > 0}
-                    deleteTitle={count > 0 ? "Tiene productos asociados" : "Eliminar"}
+                    deleteTitle={count > 0 ? "Tiene platos asociados" : "Eliminar"}
                   />
                 </TD>
               </TR>

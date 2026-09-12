@@ -15,19 +15,19 @@ const tabs = [
   {
     id: "panel",
     label: "Panel",
-    title: "Maestro de Productos",
-    description: "Accesos rápidos, másteres e informes del catálogo.",
+    title: "Maestro de Platos",
+    description: "Resumen, másteres e informes del catálogo.",
   },
   {
     id: "productos",
-    label: "Productos",
-    title: "Maestro de Productos",
+    label: "Platos",
+    title: "Maestro de Platos",
     description: "El dato único que alimenta carta, pedidos y reportes.",
   },
   {
     id: "categorias",
     label: "Categorías",
-    title: "Categorías de producto",
+    title: "Categorías de platos",
     description: "Agrupan la carta y ordenan el maestro.",
   },
   {
@@ -46,7 +46,7 @@ const tabs = [
     id: "valorizado",
     label: "Valorizado",
     title: "Valorizado de carta",
-    description: "Detalle por producto con total.",
+    description: "Detalle por plato con total.",
   },
   {
     id: "resumen",
@@ -108,26 +108,6 @@ export default function ProductosLayout({ children }: { children: React.ReactNod
       </div>
       <div hidden={active !== "resumen"}>
         <ValorizadoView section="resumen" />
-      </div>
-
-      {/* Navegación entre secciones: solo abajo del contenido */}
-      <div className="flex gap-6 overflow-x-auto no-scrollbar border-t border-ink-900/10 mt-8 pt-1" role="tablist">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={active === t.id}
-            onClick={() => setActive(t.id)}
-            className={`pt-2.5 -mt-px text-sm font-medium whitespace-nowrap transition-colors border-t-2 cursor-pointer ${
-              active === t.id
-                ? "border-ink-900 text-ink-900"
-                : "border-transparent text-ink-400 hover:text-ink-900"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
       </div>
     </div>
   );

@@ -2,9 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
-  initialMenuData,
   initialTickets,
-  type MenuItem,
   type Notification,
   type Payment,
   type Ticket,
@@ -13,18 +11,22 @@ import {
   initialCoupons,
   initialCustomers,
   initialExpenses,
+  initialIngredients,
+  initialMovements,
   initialReceipts,
+  initialReservations,
   initialRoles,
-  initialWaTemplates,
   type CashMovement,
   type Coupon,
   type Customer,
   type Expense,
+  type Ingredient,
   type Order,
   type Receipt,
+  type Reservation,
   type Role,
+  type StockMovement,
   type Table,
-  type WaTemplates,
 } from "@/lib/erp";
 import {
   ALL_BRANCHES,
@@ -44,13 +46,11 @@ import {
   categoryName,
   initialCategories,
   initialCombos,
-  initialMenus,
   initialModifierGroups,
   initialPriceLists,
   initialProducts,
   priceOf,
   type Combo,
-  type Menu,
   type ModifierGroup,
   type PriceList,
   type Product,
@@ -62,8 +62,6 @@ type ModulesContext = {
   tickets: Ticket[];
   addTicket: (subject: string) => void;
   setTickets: (tickets: Ticket[]) => void;
-  menuItems: MenuItem[];
-  setMenuItems: (items: MenuItem[]) => void;
   /* Maestros de catálogo (ERP): el precio vive en la lista activa */
   products: Product[];
   setProducts: (p: Product[]) => void;
@@ -91,8 +89,13 @@ type ModulesContext = {
   setTables: React.Dispatch<React.SetStateAction<Table[]>>;
   roles: Role[];
   setRoles: (r: Role[]) => void;
-  waTemplates: WaTemplates;
-  setWaTemplates: (t: WaTemplates) => void;
+  /* Reservas e inventario (persisten al navegar) */
+  reservations: Reservation[];
+  setReservations: (r: Reservation[]) => void;
+  ingredients: Ingredient[];
+  setIngredients: (i: Ingredient[]) => void;
+  movements: StockMovement[];
+  setMovements: (m: StockMovement[]) => void;
   /* Fidelización y clientes */
   customers: Customer[];
   setCustomers: (c: Customer[]) => void;
@@ -107,8 +110,6 @@ type ModulesContext = {
   setExpenses: (e: Expense[]) => void;
   combos: Combo[];
   setCombos: (c: Combo[]) => void;
-  menus: Menu[];
-  setMenus: (m: Menu[]) => void;
   notifications: Notification[];
   hasUnread: boolean;
   notify: (title: string, message: string) => void;
@@ -177,7 +178,6 @@ export function ModulesProvider({
 }) {
   const [payments] = useState<Payment[]>(initialPayments);
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuData);
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [categories, setCategories] = useState<ProductCategory[]>(initialCategories);
   const [modifierGroups, setModifierGroups] =
@@ -187,7 +187,9 @@ export function ModulesProvider({
   const [activeBranchId, setActiveBranchId] = useState<string>("todas");
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [roles, setRoles] = useState<Role[]>(initialRoles);
-  const [waTemplates, setWaTemplates] = useState<WaTemplates>(initialWaTemplates);
+  const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
+  const [ingredients, setIngredients] = useState<Ingredient[]>(initialIngredients);
+  const [movements, setMovements] = useState<StockMovement[]>(initialMovements);
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
 
@@ -284,7 +286,6 @@ export function ModulesProvider({
   const [receipts, setReceipts] = useState<Receipt[]>(initialReceipts);
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [combos, setCombos] = useState<Combo[]>(initialCombos);
-  const [menus, setMenus] = useState<Menu[]>(initialMenus);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
 
@@ -330,8 +331,6 @@ export function ModulesProvider({
       tickets,
       addTicket,
       setTickets: setTickets,
-      menuItems,
-      setMenuItems,
       products,
       setProducts,
       categories,
@@ -356,8 +355,12 @@ export function ModulesProvider({
       setTables,
       roles,
       setRoles,
-      waTemplates,
-      setWaTemplates,
+      reservations,
+      setReservations,
+      ingredients,
+      setIngredients,
+      movements,
+      setMovements,
       customers,
       setCustomers,
       coupons,
@@ -370,8 +373,6 @@ export function ModulesProvider({
       setExpenses,
       combos,
       setCombos,
-      menus,
-      setMenus,
       notifications,
       hasUnread,
       notify,
@@ -385,7 +386,6 @@ export function ModulesProvider({
       tickets,
       addTicket,
       setTickets,
-      menuItems,
       products,
       categories,
       modifierGroups,
@@ -401,14 +401,15 @@ export function ModulesProvider({
       setTables,
       activeScope,
       roles,
-      waTemplates,
+      reservations,
+      ingredients,
+      movements,
       customers,
       coupons,
       setCashMovements,
       receipts,
       expenses,
       combos,
-      menus,
       notifications,
       hasUnread,
       notify,

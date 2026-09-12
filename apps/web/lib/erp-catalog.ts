@@ -129,18 +129,4 @@ export const initialCombos: Combo[] = [
   { id: 2, name: "Almuerzo Ejecutivo", description: "Fondo + bebida del día.", productIds: [3, 6], price: 24.0, status: "Activo" },
 ];
 
-/* ---------- Menús publicados: almuerzo, cena, fin de semana ---------- */
 
-export type Menu = {
-  id: number;
-  name: string;
-  validity: string;
-  productIds: number[];
-  published: boolean;
-};
-
-export const initialMenus: Menu[] = [
-  { id: 1, name: "Almuerzo", validity: "Lun–Vie · 12:00–15:00", productIds: [3, 4, 6], published: true },
-  { id: 2, name: "Cena", validity: "Lun–Sáb · 19:00–23:00", productIds: [1, 2, 3, 5], published: true },
-  { id: 3, name: "Fin de semana", validity: "Sáb–Dom · 12:00–22:00", productIds: [1, 3, 5], published: false },
-];

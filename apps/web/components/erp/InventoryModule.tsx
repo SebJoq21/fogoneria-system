@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  initialIngredients,
-  type Ingredient,
   type StockState,
 } from "@/lib/erp";
 import { Badge } from "@/components/ui/Badge";
@@ -13,6 +11,9 @@ import { Field, Select, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
+import { inventarioSummary } from "@/components/erp/summaries/summary-selectors";
 
 const stateTone: Record<StockState, "success" | "warning" | "danger"> = {
   Óptimo: "success",
@@ -26,16 +27,25 @@ function deriveState(stock: number, min: number): StockState {
   return "Óptimo";
 }
 
-export function InventoryModule() {
-  const { menuItems, notify } = useModules();
-  const [ingredients, setIngredients] = useState<Ingredient[]>(initialIngredients);
+export function InventoryModule({ onlyCritical = false }: { onlyCritical?: boolean } = {}) {
+  const { products, notify, ingredients, setIngredients, movements, setMovements } = useModules();
+  const [criticalOnly] = useState(() => {
+    if (onlyCritical) return true;
+    try {
+      if (typeof window === "undefined") return false;
+      return new URLSearchParams(window.location.search).get("filtro") === "critico";
+    } catch {
+      return false;
+    }
+  });
   const [adjustId, setAdjustId] = useState<number | null>(null);
   const [adjustQty, setAdjustQty] = useState("");
   const [recipeOpen, setRecipeOpen] = useState(false);
-  const [recipeDish, setRecipeDish] = useState(menuItems[0]?.name ?? "");
+  const [recipeDish, setRecipeDish] = useState(products[0]?.name ?? "");
   const [recipeLines, setRecipeLines] = useState<{ ingredientId: number; qty: string }[]>([
-    { ingredientId: initialIngredients[0].id, qty: "" },
+    { ingredientId: ingredients[0]?.id ?? 1, qty: "" },
   ]);
+  const visible = criticalOnly ? ingredients.filter((i) => i.state !== "Óptimo") : ingredients;
 
   const critical = ingredients.filter((i) => i.state !== "Óptimo").length;
   const adjusting = ingredients.find((i) => i.id === adjustId);
@@ -43,20 +53,35 @@ export function InventoryModule() {
   const applyAdjust = () => {
     const qty = Number(adjustQty);
     if (!adjusting || Number.isNaN(qty)) return;
+    const next = Math.max(0, adjusting.stock + qty);
     setIngredients(
       ingredients.map((i) =>
         i.id === adjusting.id
-          ? { ...i, stock: Math.max(0, i.stock + qty), state: deriveState(Math.max(0, i.stock + qty), i.min) }
+          ? { ...i, stock: next, state: deriveState(next, i.min) }
           : i,
       ),
     );
-    notify("Stock ajustado", `${adjusting.name}: nuevo stock ${Math.max(0, adjusting.stock + qty)} ${adjusting.unit}.`);
+    setMovements([
+      { id: Math.max(0, ...movements.map((m) => m.id)) + 1, datetime: "Ahora mismo", type: "Ajuste", ingredient: adjusting.name, qty: `${qty > 0 ? "+" : ""}${qty} ${adjusting.unit}`, reason: "Ajuste manual de stock" },
+      ...movements,
+    ]);
+    notify("Stock ajustado", `${adjusting.name}: nuevo stock ${next} ${adjusting.unit}.`);
     setAdjustId(null);
     setAdjustQty("");
   };
 
+  const summary = useMemo(() => inventarioSummary(ingredients), [ingredients]);
+
   return (
     <div>
+      <ModuleSummary
+        kpis={summary.kpis}
+        chartTitle="Stock por estado"
+        chartSubtitle="Óptimo, bajo y agotado de un vistazo"
+        ariaLabel="Resumen de inventario"
+      >
+        <MiniBars data={summary.bars} label="Insumos por estado de stock" />
+      </ModuleSummary>
       {critical > 0 && (
         <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
           <span className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
@@ -93,7 +118,7 @@ export function InventoryModule() {
           </tr>
         </THead>
         <tbody>
-          {ingredients.map((i) => (
+          {visible.map((i) => (
             <TR key={i.id}>
               <TD tone="strong">{i.name}</TD>
               <TD>{i.category}</TD>
@@ -179,7 +204,7 @@ export function InventoryModule() {
                 value={recipeDish}
                 onChange={(e) => setRecipeDish(e.target.value)}
               >
-                {menuItems.map((m) => (
+                {products.map((m) => (
                   <option key={m.id} value={m.name}>
                     {m.name}
                   </option>

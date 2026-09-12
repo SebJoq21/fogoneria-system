@@ -2,6 +2,8 @@
 
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
+import { MiniBars } from "@/components/erp/summaries/charts";
 
 /** Informe valorizado: detalle por producto y/o resumen por categoría. */
 export function ValorizadoView({ section }: { section: "detalle" | "resumen" }) {
@@ -23,11 +25,25 @@ export function ValorizadoView({ section }: { section: "detalle" | "resumen" }) 
 
   if (section === "resumen") {
     return (
+      <div>
+      <ModuleSummary
+        kpis={[
+          { label: "Platos valorizados", value: String(activos.length), hint: active?.name ?? "" },
+          { label: "Total carta", value: `$${total.toFixed(2)}`, hint: "lista activa" },
+          { label: "Categorías", value: String(Object.keys(byCategory).length), hint: "con platos" },
+          { label: "Precio prom.", value: activos.length === 0 ? "—" : `$${(total / activos.length).toFixed(2)}`, hint: "por plato" },
+        ]}
+        chartTitle="Subtotal por categoría"
+        chartSubtitle={`Valorizado en lista ${active?.name ?? "—"}`}
+        ariaLabel="Resumen valorizado"
+      >
+        <MiniBars data={Object.values(byCategory).map((c) => ({ name: c.name.slice(0, 10), v: Math.round(c.total) }))} label="Subtotal por categoría" />
+      </ModuleSummary>
       <TableCard>
         <THead>
           <tr>
             <TH>Categoría</TH>
-            <TH>Productos</TH>
+            <TH>Platos</TH>
             <TH right>Subtotal ({active?.name ?? "—"})</TH>
           </tr>
         </THead>
@@ -43,15 +59,30 @@ export function ValorizadoView({ section }: { section: "detalle" | "resumen" }) 
           ))}
         </tbody>
       </TableCard>
+      </div>
     );
   }
 
   return (
+    <div>
+      <ModuleSummary
+        kpis={[
+          { label: "Platos valorizados", value: String(activos.length), hint: active?.name ?? "" },
+          { label: "Total carta", value: `$${total.toFixed(2)}`, hint: "lista activa" },
+          { label: "Categorías", value: String(Object.keys(byCategory).length), hint: "con platos" },
+          { label: "Precio prom.", value: activos.length === 0 ? "—" : `$${(total / activos.length).toFixed(2)}`, hint: "por plato" },
+        ]}
+        chartTitle="Detalle valorizado"
+        chartSubtitle={`Lista ${active?.name ?? "—"} · total $${total.toFixed(2)}`}
+        ariaLabel="Resumen detalle valorizado"
+      >
+        <MiniBars data={Object.values(byCategory).map((c) => ({ name: c.name.slice(0, 10), v: Math.round(c.total) }))} label="Subtotal por categoría" />
+      </ModuleSummary>
     <TableCard>
       <THead>
         <tr>
-          <TH>SKU</TH>
-          <TH>Producto</TH>
+            <TH>SKU</TH>
+            <TH>Plato</TH>
           <TH>Categoría</TH>
           <TH right>Precio ({active?.name ?? "—"})</TH>
         </tr>
@@ -83,5 +114,6 @@ export function ValorizadoView({ section }: { section: "detalle" | "resumen" }) 
         </tr>
       </tfoot>
     </TableCard>
+    </div>
   );
 }
