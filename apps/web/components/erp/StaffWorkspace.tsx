@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { initialAttendance, initialEmployees } from "@/lib/erp";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard, ColumnLink, LinkColumn } from "./workspace-ui";
+import { ChartCard, HubBlocks, type HubLink } from "./workspace-ui";
 
 const attendanceByDay = [
   { name: "Lun", v: 4 }, { name: "Mar", v: 3 }, { name: "Mié", v: 4 },
@@ -11,12 +11,23 @@ const attendanceByDay = [
 ];
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
-/** Workspace Trabajadores: KPIs + gráfico + accesos + columnas. */
+/** Workspace Personal: KPIs + gráfico + accesos + columnas. */
 export function StaffWorkspace() {
   const onShift = initialEmployees.filter((e) => e.onShift);
   const marks = initialAttendance.length;
   const present = initialAttendance.filter((a) => a.present).length;
   const rate = marks === 0 ? 0 : Math.round((present / marks) * 100);
+
+  const acceso: HubLink[] = [
+    { label: "Marcar asistencia", href: "/app/modulos/personal/asistencia" },
+    { label: "Repartir propinas", href: "/app/modulos/personal/propinas" },
+  ];
+  const informes: HubLink[] = [
+    { label: "Directorio", href: "/app/modulos/personal/directorio" },
+    { label: "Roles", href: "/app/modulos/personal/roles" },
+    { label: "Turnos", href: "/app/modulos/personal/turnos" },
+    { label: "Asistencia semanal", href: "/app/modulos/personal/asistencia" },
+  ];
 
   return (
     <div>
@@ -37,21 +48,7 @@ export function StaffWorkspace() {
         </div>
       </ChartCard>
 
-      <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        <LinkColumn title="Equipo">
-          <ColumnLink href="/app/modulos/trabajadores/directorio" label="Directorio" />
-          <ColumnLink href="/app/modulos/trabajadores/roles" label="Roles" />
-          <ColumnLink href="/app/modulos/trabajadores/turnos" label="Turnos" />
-        </LinkColumn>
-        <LinkColumn title="Transacciones">
-          <ColumnLink href="/app/modulos/trabajadores/asistencia" label="Marcar asistencia" />
-          <ColumnLink href="/app/modulos/trabajadores/propinas" label="Repartir propinas" />
-        </LinkColumn>
-        <LinkColumn title="Informes">
-          <ColumnLink href="/app/modulos/trabajadores/asistencia" label="Asistencia semanal" />
-        </LinkColumn>
-      </div>
+      <HubBlocks acceso={acceso} informes={informes} />
     </div>
   );
 }

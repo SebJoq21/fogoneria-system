@@ -3,36 +3,72 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
-/** Link de columna Másteres/Transacciones/Informes. */
-export function ColumnLink({ href, label }: { href: string; label: string }) {
+import { Card } from "@/components/ui/Card";
+
+/** Link de bloque de hub: navega (href) o selecciona tab (onSelect). */
+export type HubLink = {
+  label: string;
+  href?: string;
+  onSelect?: () => void;
+};
+
+function HubLinkItem({ link }: { link: HubLink }) {
+  const inner = (
+    <>
+      {link.label}
+      <ArrowUpRight size={14} className="text-ink-400 shrink-0" />
+    </>
+  );
+  if (link.onSelect) {
+    return (
+      <button
+        type="button"
+        onClick={link.onSelect}
+        className="flex items-center gap-2 text-sm text-ink-600 hover:text-ink-900 transition-colors w-max cursor-pointer"
+      >
+        {inner}
+      </button>
+    );
+  }
   return (
     <Link
-      href={href}
+      href={link.href ?? "#"}
       className="flex items-center gap-2 text-sm text-ink-600 hover:text-ink-900 transition-colors w-max"
     >
-      {label}
-      <ArrowUpRight size={14} className="text-ink-400 shrink-0" />
+      {inner}
     </Link>
   );
 }
 
-/** Columna de links del workspace. */
-export function LinkColumn({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+/**
+ * Norma de hub operable por dueño: resumen arriba, luego `Acceso rápido`
+ * (acciones) e `Informes y másteres` (maestros + reportes), ambos 18px semibold.
+ * Si un bloque llega vacío, no se pinta (ej: Analíticas sin acceso).
+ */
+export function HubBlocks({ acceso, informes }: { acceso: HubLink[]; informes: HubLink[] }) {
   return (
-    <div>
-      <h4 className="text-sm font-medium text-ink-900 mb-3">{title}</h4>
-      <div className="flex flex-col gap-2.5">{children}</div>
-    </div>
+    <>
+      {acceso.length > 0 && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-ink-900 mb-6">Acceso rápido</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {acceso.map((l) => (
+              <HubLinkItem key={l.label} link={l} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div>
+        <h3 className="text-lg font-semibold text-ink-900 mb-6">Informes y másteres</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          {informes.map((l) => (
+            <HubLinkItem key={l.label} link={l} />
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
-
-import { Card } from "@/components/ui/Card";
 
 /** Tarjeta de gráfico del workspace. */
 export function ChartCard({

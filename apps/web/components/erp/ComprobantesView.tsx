@@ -5,18 +5,23 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniDonut } from "@/components/erp/summaries/charts";
 import { comprobantesSummary } from "@/components/erp/summaries/summary-selectors";
+import { HubBlocks } from "@/components/erp/workspace-ui";
+import { Tabs } from "@/components/ui/Tabs";
 
 /** Comprobantes: boletas y facturas de venta con correlativo. */
 export function ComprobantesView() {
   const { receipts, setReceipts, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ customer: "", total: "", source: "" });
+  const [pendingAnnul, setPendingAnnul] = useState<{ id: string; total: string } | null>(null);
+  const [tab, setTab] = useState<"panel" | "gestion">("panel");
   const summary = useMemo(() => comprobantesSummary(receipts), [receipts]);
 
   const nextNumber = useMemo(() => {
@@ -37,10 +42,33 @@ export function ComprobantesView() {
 
   const annul = (id: string) => {
     setReceipts(receipts.map((r) => (r.id === id ? { ...r, status: "Anulada" as const } : r)));
+    setPendingAnnul(null);
+    notify("Comprobante anulado", `${id} marcado como Anulada.`);
+  };
+
+  const goTabla = () => {
+    setTab("gestion");
+    requestAnimationFrame(() => {
+      document.getElementById("comp-emitidos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   };
 
   return (
     <div>
+      <div className="mb-6">
+        <Tabs
+          options={[
+            { id: "panel", label: "Panel" },
+            { id: "gestion", label: "Emitir comprobante" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === "panel" && (
+      <>
+      <div id="comp-resumen" className="scroll-mt-4">
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Pagadas vs anuladas"
@@ -49,6 +77,21 @@ export function ComprobantesView() {
       >
         <MiniDonut data={summary.donut} label="Comprobantes pagados y anulados" />
       </ModuleSummary>
+      </div>
+      <div className="mt-8">
+      <HubBlocks
+        acceso={[{ label: "Emitir comprobante", onSelect: () => setTab("gestion") }]}
+        informes={[
+          { label: "Pagadas vs anuladas", href: "#comp-resumen" },
+          { label: "Emitidos", onSelect: goTabla },
+        ]}
+      />
+      </div>
+      </>
+      )}
+
+      {tab === "gestion" && (
+      <>
       <Toolbar
         left={<p className="text-sm text-ink-400">{receipts.length} comprobantes emitidos.</p>}
         right={
@@ -58,6 +101,7 @@ export function ComprobantesView() {
         }
       />
 
+      <div id="comp-emitidos" className="scroll-mt-4">
       <TableCard>
         <THead>
           <tr>
@@ -89,7 +133,7 @@ export function ComprobantesView() {
                 {r.status === "Pagada" ? (
                   <button
                     type="button"
-                    onClick={() => annul(r.id)}
+                    onClick={() => setPendingAnnul({ id: r.id, total: r.total })}
                     className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
                   >
                     Anular
@@ -102,6 +146,23 @@ export function ComprobantesView() {
           ))}
         </tbody>
       </TableCard>
+      </div>
+      </>
+      )}
+
+      <ConfirmDialog
+        open={pendingAnnul !== null}
+        title="Anular comprobante"
+        message={
+          pendingAnnul
+            ? `¿Anular el comprobante ${pendingAnnul.id} (${pendingAnnul.total})? Es irreversible y tiene efecto tributario.`
+            : ""
+        }
+        confirmLabel="Anular"
+        danger
+        onConfirm={() => pendingAnnul && annul(pendingAnnul.id)}
+        onCancel={() => setPendingAnnul(null)}
+      />
 
       {modalOpen && (
         <Modal

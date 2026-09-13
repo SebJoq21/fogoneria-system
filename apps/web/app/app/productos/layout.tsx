@@ -4,6 +4,8 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ProductsView } from "@/components/erp/catalog/ProductsView";
 import { ProductosHub, type CatalogSection } from "@/components/erp/catalog/ProductosHub";
+import { CartaVirtualView } from "@/components/erp/catalog/CartaVirtualView";
+import { Tabs } from "@/components/ui/Tabs";
 import { CategoriesView } from "@/components/erp/catalog/CategoriesView";
 import { ModifiersView } from "@/components/erp/catalog/ModifiersView";
 import { PriceListsView } from "@/components/erp/catalog/PriceListsView";
@@ -15,13 +17,13 @@ const tabs = [
   {
     id: "panel",
     label: "Panel",
-    title: "Maestro de Platos",
+    title: "Platos",
     description: "Resumen, másteres e informes del catálogo.",
   },
   {
-    id: "productos",
-    label: "Platos",
-    title: "Maestro de Platos",
+    id: "platos",
+    label: "Maestro",
+    title: "Platos",
     description: "El dato único que alimenta carta, pedidos y reportes.",
   },
   {
@@ -54,6 +56,12 @@ const tabs = [
     title: "Resumen por categoría",
     description: "Subtotales agrupados por categoría.",
   },
+  {
+    id: "carta",
+    label: "Carta virtual",
+    title: "Carta virtual",
+    description: "Vista previa de la lista activa, solo lectura. Se edita en Maestro.",
+  },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -65,12 +73,12 @@ type TabId = (typeof tabs)[number]["id"];
 export default function ProductosLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [active, setActive] = useState<TabId>("panel");
-  // Señal para abrir el modal de alta sin navegar (hub "Nuevo producto")
+  // Señal para abrir el modal de alta sin navegar (hub "Nuevo plato")
   const [createSignal, setCreateSignal] = useState(0);
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
 
   const goNewProduct = () => {
-    setActive("productos");
+    setActive("platos");
     setCreateSignal((c) => c + 1);
   };
 
@@ -85,13 +93,17 @@ export default function ProductosLayout({ children }: { children: React.ReactNod
         <p className="text-sm text-ink-400 mt-1">{current.description}</p>
       </div>
 
+      <div className="mb-6">
+        <Tabs options={tabs.map((t) => ({ id: t.id, label: t.label }))} value={active} onChange={setActive} />
+      </div>
+
       {active === "panel" && (
         <ProductosHub
           onSelectSection={(s: CatalogSection) => setActive(s)}
           onNewProduct={goNewProduct}
         />
       )}
-      <div hidden={active !== "productos"}>
+      <div hidden={active !== "platos"}>
         <ProductsView createSignal={createSignal} />
       </div>
       <div hidden={active !== "categorias"}>
@@ -108,6 +120,9 @@ export default function ProductosLayout({ children }: { children: React.ReactNod
       </div>
       <div hidden={active !== "resumen"}>
         <ValorizadoView section="resumen" />
+      </div>
+      <div hidden={active !== "carta"}>
+        <CartaVirtualView />
       </div>
     </div>
   );

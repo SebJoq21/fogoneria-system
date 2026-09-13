@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ChartCard, ColumnLink, LinkColumn } from "./workspace-ui";
+import { ChartCard, HubBlocks, type HubLink } from "./workspace-ui";
 
 const bookingsByDay = [
   { name: "Lun", v: 4 }, { name: "Mar", v: 6 }, { name: "Mié", v: 5 },
@@ -18,6 +18,16 @@ export function BookingsWorkspace() {
   const occupied = tables.filter((t) => t.status === "ocupada").length;
   const free = tables.filter((t) => t.status === "libre").length;
   const occupancy = tables.length === 0 ? 0 : Math.round((occupied / tables.length) * 100);
+
+  const acceso: HubLink[] = [
+    { label: "Mapa de mesas", href: "/app/mesas" },
+    { label: "Confirmar reservas", href: "/app/modulos/reservas/agenda" },
+  ];
+  const informes: HubLink[] = [
+    ...(isSucursal ? [{ label: "Maestro de mesas", href: "/app/mesas/maestro" } as HubLink] : []),
+    { label: "Agenda", href: "/app/modulos/reservas/agenda" },
+    { label: "Reservas por día", href: "/app/modulos/reservas/agenda" },
+  ];
 
   return (
     <div>
@@ -38,20 +48,7 @@ export function BookingsWorkspace() {
         </div>
       </ChartCard>
 
-      <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        <LinkColumn title="Salón">
-          {isSucursal && <ColumnLink href="/app/mesas/maestro" label="Mesas" />}
-          <ColumnLink href="/app/mesas" label="Mapa de mesas" />
-          <ColumnLink href="/app/modulos/reservas/agenda" label="Agenda" />
-        </LinkColumn>
-        <LinkColumn title="Transacciones">
-          <ColumnLink href="/app/modulos/reservas/agenda" label="Confirmar reservas" />
-        </LinkColumn>
-        <LinkColumn title="Informes">
-          <ColumnLink href="/app/modulos/reservas/agenda" label="Reservas por día" />
-        </LinkColumn>
-      </div>
+      <HubBlocks acceso={acceso} informes={informes} />
     </div>
   );
 }

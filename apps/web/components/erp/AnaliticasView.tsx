@@ -33,6 +33,7 @@ export function AnaliticasView() {
         <KpiCard label="Gastos registrados" value={`$${totalExpenses.toFixed(2)}`} hint="ver detalle en Gastos" />
       </div>
 
+      <div className="scroll-mt-4">
       <ChartCard title="Ventas por día" subtitle="Últimos 7 días">
         <div className="h-full w-full text-primary">
           <ResponsiveContainer width="100%" height="100%">
@@ -43,9 +44,10 @@ export function AnaliticasView() {
           </ResponsiveContainer>
         </div>
       </ChartCard>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div>
+        <div className="scroll-mt-4">
           <h3 className="text-sm font-medium text-ink-900 mb-3">Platos más vendidos</h3>
           <TableCard>
             <THead>
@@ -64,7 +66,7 @@ export function AnaliticasView() {
             </tbody>
           </TableCard>
         </div>
-        <div>
+        <div className="scroll-mt-4">
           <h3 className="text-sm font-medium text-ink-900 mb-3">Gastos vs ingresos</h3>
           <TableCard>
             <THead>

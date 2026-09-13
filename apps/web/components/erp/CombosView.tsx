@@ -11,6 +11,7 @@ import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { combosSummary } from "@/components/erp/summaries/summary-selectors";
+import { HubBlocks } from "@/components/erp/workspace-ui";
 
 /** Combos: paquetes de productos con precio fijo. */
 export function CombosView() {
@@ -64,6 +65,7 @@ export function CombosView() {
 
   return (
     <div>
+      <div id="combos-resumen" className="scroll-mt-4">
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Precio por combo"
@@ -72,6 +74,7 @@ export function CombosView() {
       >
         <MiniBars data={summary.bars} label="Precio por combo activo" />
       </ModuleSummary>
+      </div>
       <Toolbar
         left={<p className="text-sm text-ink-400">{combos.filter((c) => c.status === "Activo").length} combos activos.</p>}
         right={
@@ -81,7 +84,7 @@ export function CombosView() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div id="combos-maestro" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 scroll-mt-4">
         {combos.map((c) => (
           <Card key={c.id} className="flex flex-col">
             <div className="flex items-start justify-between gap-2 mb-1">
@@ -108,6 +111,16 @@ export function CombosView() {
             </div>
           </Card>
         ))}
+      </div>
+
+      <div className="mt-8">
+      <HubBlocks
+        acceso={[{ label: "Nuevo combo", onSelect: openCreate }]}
+        informes={[
+          { label: "Precio por combo", href: "#combos-resumen" },
+          { label: "Maestro de combos", href: "#combos-maestro" },
+        ]}
+      />
       </div>
 
       {modalOpen && (

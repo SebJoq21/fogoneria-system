@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ChartCard, ColumnLink, LinkColumn } from "./workspace-ui";
+import { ChartCard, HubBlocks, type HubLink } from "./workspace-ui";
 
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
@@ -17,6 +17,17 @@ export function InventoryWorkspace() {
     return acc;
   }, {});
   const chartData = Object.entries(byCategory).map(([name, v]) => ({ name, v }));
+
+  const acceso: HubLink[] = [
+    { label: "Entradas", href: "/app/modulos/inventario/movimientos?tipo=Entrada" },
+    { label: "Salidas y ajustes", href: "/app/modulos/inventario/movimientos?tipo=Salida" },
+  ];
+  const informes: HubLink[] = [
+    { label: "Insumos", href: "/app/modulos/inventario/stock" },
+    { label: "Escandallos", href: "/app/modulos/inventario/stock" },
+    { label: "Kardex", href: "/app/modulos/inventario/movimientos" },
+    { label: "Stock crítico", href: "/app/modulos/inventario/stock?filtro=critico" },
+  ];
 
   return (
     <div>
@@ -37,21 +48,7 @@ export function InventoryWorkspace() {
         </div>
       </ChartCard>
 
-      <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        <LinkColumn title="Catálogo">
-          <ColumnLink href="/app/modulos/inventario/stock" label="Insumos" />
-          <ColumnLink href="/app/modulos/inventario/stock" label="Escandallos" />
-        </LinkColumn>
-        <LinkColumn title="Transacciones">
-          <ColumnLink href="/app/modulos/inventario/movimientos?tipo=Entrada" label="Entradas" />
-          <ColumnLink href="/app/modulos/inventario/movimientos?tipo=Salida" label="Salidas y ajustes" />
-        </LinkColumn>
-        <LinkColumn title="Informes">
-          <ColumnLink href="/app/modulos/inventario/movimientos" label="Kardex" />
-          <ColumnLink href="/app/modulos/inventario/stock?filtro=critico" label="Stock crítico" />
-        </LinkColumn>
-      </div>
+      <HubBlocks acceso={acceso} informes={informes} />
     </div>
   );
 }

@@ -12,12 +12,15 @@ import { expenseCategories } from "@/lib/erp";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { gastosSummary } from "@/components/erp/summaries/summary-selectors";
+import { HubBlocks } from "@/components/erp/workspace-ui";
+import { Tabs } from "@/components/ui/Tabs";
 
 /** Gastos: egresos operativos por categoría y proveedor. */
 export function GastosView() {
   const { expenses, setExpenses, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ category: expenseCategories[0], supplier: "", amount: "", status: "Pagado" as "Pagado" | "Pendiente" });
+  const [tab, setTab] = useState<"panel" | "gestion">("panel");
 
   const summary = useMemo(() => gastosSummary(expenses), [expenses]);
   const total = expenses.reduce((s, e) => s + Number(e.amount.replace("$", "")) || 0, 0);
@@ -33,8 +36,29 @@ export function GastosView() {
     setForm({ category: expenseCategories[0], supplier: "", amount: "", status: "Pagado" });
   };
 
+  const goTabla = () => {
+    setTab("gestion");
+    requestAnimationFrame(() => {
+      document.getElementById("gastos-tabla")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   return (
     <div>
+      <div className="mb-6">
+        <Tabs
+          options={[
+            { id: "panel", label: "Panel" },
+            { id: "gestion", label: "Registrar gasto" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      </div>
+
+      {tab === "panel" && (
+      <>
+      <div id="gastos-resumen" className="scroll-mt-4">
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Gastos por categoría"
@@ -43,6 +67,21 @@ export function GastosView() {
       >
         <MiniBars data={summary.bars} label="Gastos por categoría" />
       </ModuleSummary>
+      </div>
+      <div className="mt-8">
+      <HubBlocks
+        acceso={[{ label: "Registrar gasto", onSelect: () => setTab("gestion") }]}
+        informes={[
+          { label: "Gastos por categoría", href: "#gastos-resumen" },
+          { label: "Gastos registrados", onSelect: goTabla },
+        ]}
+      />
+      </div>
+      </>
+      )}
+
+      {tab === "gestion" && (
+      <>
       <Toolbar
         left={
           <p className="text-sm text-ink-400">
@@ -56,6 +95,7 @@ export function GastosView() {
         }
       />
 
+      <div id="gastos-tabla" className="scroll-mt-4">
       <TableCard>
         <THead>
           <tr>
@@ -88,6 +128,9 @@ export function GastosView() {
           ))}
         </tbody>
       </TableCard>
+      </div>
+      </>
+      )}
 
       {modalOpen && (
         <Modal

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Progress } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, TextInput } from "@/components/ui/fields";
@@ -14,6 +15,7 @@ import { initialPromos } from "@/lib/erp";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { promosSummary } from "@/components/erp/summaries/summary-selectors";
+import { HubBlocks } from "@/components/erp/workspace-ui";
 
 /** Promociones: cupones con cupo + promociones programadas con vigencia. */
 export function PromocionesView() {
@@ -28,6 +30,7 @@ export function PromocionesView() {
     }
   });
   const [form, setForm] = useState({ code: "", discount: "", limit: "", expires: "" });
+  const [pendingToggle, setPendingToggle] = useState<{ id: number; name: string; toActive: boolean } | null>(null);
 
   const createCoupon = () => {
     if (!form.code || !form.discount) return;
@@ -47,6 +50,7 @@ export function PromocionesView() {
 
   return (
     <div>
+      <div id="promos-resumen" className="scroll-mt-4">
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Canjes por cupón"
@@ -55,6 +59,7 @@ export function PromocionesView() {
       >
         <MiniBars data={summary.bars} label="Canjes por cupón" />
       </ModuleSummary>
+      </div>
       <Toolbar
         left={<h3 className="text-sm font-medium text-ink-900">Cupones activos</h3>}
         right={
@@ -64,7 +69,7 @@ export function PromocionesView() {
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div id="promos-cupones" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 scroll-mt-4">
         {coupons.map((c) => (
           <Card key={c.code}>
             <div className="flex items-center justify-between mb-1">
@@ -87,6 +92,7 @@ export function PromocionesView() {
         ))}
       </div>
 
+      <div id="promos-programadas" className="scroll-mt-4">
       <Toolbar
         left={<h3 className="text-sm font-medium text-ink-900">Programadas por horario</h3>}
       />
@@ -111,9 +117,7 @@ export function PromocionesView() {
               <TD right>
                 <Toggle
                   checked={p.active}
-                  onChange={() =>
-                    setPromos(promos.map((x) => (x.id === p.id ? { ...x, active: !x.active } : x)))
-                  }
+                  onChange={() => setPendingToggle({ id: p.id, name: p.name, toActive: !p.active })}
                   label={`Activar ${p.name}`}
                 />
               </TD>
@@ -121,6 +125,39 @@ export function PromocionesView() {
           ))}
         </tbody>
       </TableCard>
+      </div>
+
+      <div className="mt-8">
+      <HubBlocks
+        acceso={[{ label: "Crear cupón", onSelect: () => setModalOpen(true) }]}
+        informes={[
+          { label: "Canjes por cupón", href: "#promos-resumen" },
+          { label: "Cupones", href: "#promos-cupones" },
+          { label: "Programadas por horario", href: "#promos-programadas" },
+        ]}
+      />
+      </div>
+
+      <ConfirmDialog
+        open={pendingToggle !== null}
+        title={pendingToggle?.toActive ? "Activar promoción" : "Pausar promoción"}
+        message={
+          pendingToggle
+            ? pendingToggle.toActive
+              ? `¿Activar "${pendingToggle.name}"? Empezará a aplicar según su vigencia.`
+              : `¿Pausar "${pendingToggle.name}"? Dejará de aplicar hasta reactivarla.`
+            : ""
+        }
+        confirmLabel={pendingToggle?.toActive ? "Activar" : "Pausar"}
+        onConfirm={() => {
+          if (!pendingToggle) return;
+          const t = pendingToggle;
+          setPromos(promos.map((x) => (x.id === t.id ? { ...x, active: t.toActive } : x)));
+          setPendingToggle(null);
+          notify(t.toActive ? "Promoción activada" : "Promoción pausada", `"${t.name}".`);
+        }}
+        onCancel={() => setPendingToggle(null)}
+      />
 
       {modalOpen && (
         <Modal

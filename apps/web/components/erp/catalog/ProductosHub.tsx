@@ -1,58 +1,22 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
+import { HubBlocks, type HubLink } from "@/components/erp/workspace-ui";
 
 export type CatalogSection =
-  | "productos"
+  | "platos"
   | "categorias"
   | "modificadores"
   | "precios"
   | "valorizado"
-  | "resumen";
+  | "resumen"
+  | "carta";
 
-function ColumnLink({
-  href,
-  label,
-  onSelect,
-}: {
-  href?: string;
-  label: string;
-  onSelect?: () => void;
-}) {
-  const inner = (
-    <>
-      {label}
-      <ArrowUpRight size={14} className="text-ink-400 shrink-0" />
-    </>
-  );
-  if (onSelect) {
-    return (
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex items-center gap-2 text-sm text-ink-600 hover:text-ink-900 transition-colors w-max cursor-pointer"
-      >
-        {inner}
-      </button>
-    );
-  }
-  return (
-    <Link
-      href={href ?? "#"}
-      className="flex items-center gap-2 text-sm text-ink-600 hover:text-ink-900 transition-colors w-max"
-    >
-      {inner}
-    </Link>
-  );
-}
-
-/** Workspace del módulo Productos (estilo hub ERP): resumen + másteres e informes. */
+/** Panel de Platos: resumen + Acceso rápido + Informes y másteres (norma de hub). */
 export function ProductosHub({
   onSelectSection,
   onNewProduct,
@@ -63,6 +27,30 @@ export function ProductosHub({
   const { products, categories, priceOf } = useModules();
 
   const summary = useMemo(() => cartaSummary(products, categories, priceOf), [products, categories, priceOf]);
+  const sel = onSelectSection;
+  const tab = (s: CatalogSection, href: string, label: string): HubLink => ({
+    label,
+    href,
+    ...(sel ? { onSelect: () => sel(s) } : {}),
+  });
+
+  const acceso: HubLink[] = [
+    {
+      label: "Nuevo plato",
+      href: "/app/productos/platos/nuevo",
+      ...(onNewProduct ? { onSelect: onNewProduct } : {}),
+    },
+    tab("precios", "/app/productos/precios", "Actualizar precios"),
+    tab("carta", "/app/productos", "Ver carta virtual"),
+  ];
+  const informes: HubLink[] = [
+    tab("platos", "/app/productos/platos", "Maestro"),
+    tab("categorias", "/app/productos/categorias", "Categorías"),
+    tab("modificadores", "/app/productos/modificadores", "Modificadores"),
+    tab("precios", "/app/productos/precios", "Listas de precios"),
+    tab("valorizado", "/app/productos/valorizado", "Valorizado de carta"),
+    tab("resumen", "/app/productos/resumen-categoria", "Resumen por categoría"),
+  ];
 
   return (
     <div>
@@ -75,34 +63,7 @@ export function ProductosHub({
         <MiniBars data={summary.bars} label="Platos por categoría" />
       </ModuleSummary>
 
-      {/* Másteres e informes */}
-      <h3 className="text-sm font-medium text-ink-900 mb-4">Másteres e informes</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-        <div>
-          <h4 className="text-sm font-medium text-ink-900 mb-3">Catálogo de platos</h4>
-          <div className="flex flex-col gap-2.5">
-            <ColumnLink label="Platos" onSelect={onSelectSection ? () => onSelectSection("productos") : undefined} href="/app/productos/articulos" />
-            <ColumnLink label="Categorías" onSelect={onSelectSection ? () => onSelectSection("categorias") : undefined} href="/app/productos/categorias" />
-            <ColumnLink label="Modificadores" onSelect={onSelectSection ? () => onSelectSection("modificadores") : undefined} href="/app/productos/modificadores" />
-            <ColumnLink label="Listas de precios" onSelect={onSelectSection ? () => onSelectSection("precios") : undefined} href="/app/productos/precios" />
-          </div>
-        </div>
-        <div>
-          <h4 className="text-sm font-medium text-ink-900 mb-3">Transacciones</h4>
-          <div className="flex flex-col gap-2.5">
-            <ColumnLink href="/app/productos/articulos/nuevo" label="Nuevo plato" onSelect={onNewProduct} />
-            <ColumnLink label="Actualizar precios" onSelect={onSelectSection ? () => onSelectSection("precios") : undefined} href="/app/productos/precios" />
-            <ColumnLink href="/app/carta" label="Ver carta virtual" />
-          </div>
-        </div>
-        <div>
-          <h4 className="text-sm font-medium text-ink-900 mb-3">Informes</h4>
-          <div className="flex flex-col gap-2.5">
-            <ColumnLink label="Valorizado de carta" onSelect={onSelectSection ? () => onSelectSection("valorizado") : undefined} href="/app/productos/valorizado" />
-            <ColumnLink label="Resumen por categoría" onSelect={onSelectSection ? () => onSelectSection("resumen") : undefined} href="/app/productos/resumen-categoria" />
-          </div>
-        </div>
-      </div>
+      <HubBlocks acceso={acceso} informes={informes} />
     </div>
   );
 }
