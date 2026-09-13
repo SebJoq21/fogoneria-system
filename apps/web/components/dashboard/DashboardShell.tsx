@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useModules } from "./ModulesProvider";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopBar } from "./AppTopBar";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
+import { trailFor } from "@/lib/breadcrumbs";
 
 import { canSwitchBranch, type AppRole } from "@/lib/auth";
 
@@ -12,16 +14,16 @@ const mobileLinks: { href: string; label: string; roles: AppRole[] }[] = [
   { href: "/app", label: "Inicio", roles: ["admin", "sucursal"] },
   { href: "/app/ordenes", label: "Órdenes", roles: ["admin", "sucursal"] },
   { href: "/app/mesas", label: "Mesas", roles: ["admin", "sucursal"] },
-  { href: "/app/carta", label: "Carta", roles: ["admin", "sucursal"] },
-  { href: "/app/cocina", label: "Cocina", roles: ["cocina", "admin", "sucursal"] },
-  { href: "/app/mozo", label: "Mis órdenes", roles: ["mesero", "admin", "sucursal"] },
+  { href: "/app/productos", label: "Platos", roles: ["admin", "sucursal"] },
+  { href: "/app/cocina", label: "Cocina", roles: ["cocina"] },
+  { href: "/app/mozo", label: "Mis órdenes", roles: ["mesero"] },
 ];
 
 function MobileBranchSelect() {
   const { branches, activeBranch, setActiveBranch, currentUser } = useModules();
   if (currentUser && !canSwitchBranch(currentUser.role)) {
     return (
-      <span className="px-3 h-10 inline-flex items-center rounded-full text-nav font-medium text-ink-600 border border-ink-900/15 whitespace-nowrap shrink-0">
+      <span className="px-3 h-10 inline-flex items-center rounded-full text-sm font-medium text-ink-600 border border-ink-900/15 whitespace-nowrap shrink-0">
         {activeBranch.name}
       </span>
     );
@@ -31,7 +33,7 @@ function MobileBranchSelect() {
       value={activeBranch.id}
       onChange={(e) => setActiveBranch(e.target.value)}
       aria-label="Sucursal activa"
-      className="px-3 h-10 rounded-full text-nav font-medium bg-surface text-ink-900 border border-ink-900/15 outline-none cursor-pointer shrink-0"
+      className="px-3 h-10 rounded-full text-sm font-medium bg-surface text-ink-900 border border-ink-900/15 outline-none cursor-pointer shrink-0"
     >
       {branches.map((b) => (
         <option key={b.id} value={b.id}>
@@ -68,7 +70,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={l.href}
                   href={l.href}
-                  className={`px-4 h-10 inline-flex items-center rounded-full text-nav font-medium whitespace-nowrap ${
+                  className={`px-4 h-10 inline-flex items-center rounded-full text-sm font-medium whitespace-nowrap ${
                     active
                       ? "bg-primary text-white"
                       : "text-ink-600 border border-ink-900/15"
@@ -81,6 +83,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </nav>
           )}
           <main className="flex-1 overflow-y-auto p-4 no-scrollbar">
+            {!isTabletView && <Breadcrumb items={trailFor(pathname)} />}
             {children}
           </main>
         </div>
