@@ -66,7 +66,7 @@ export function PlanModal({
               </div>
             </div>
             <div className="mb-3">
-              <span className="text-section font-medium text-ink-900">{plan.price}</span>
+              <span className="text-display font-medium text-ink-900">{plan.price}</span>
               <span className="text-nav text-ink-400">/mes</span>
             </div>
             <p className="text-sm text-ink-600">{plan.desc}</p>

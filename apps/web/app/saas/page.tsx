@@ -69,7 +69,7 @@ export default function SaasPage() {
 
       <main className="p-4 sm:p-6 max-w-6xl mx-auto">
         <div className="mb-6">
-          <h2 className="text-section font-medium text-ink-900">Empresas</h2>
+          <h2 className="text-display font-medium text-ink-900">Empresas</h2>
           <p className="text-sm text-ink-400 mt-1">Tenants que adquirieron Fogonería como SaaS.</p>
         </div>
 

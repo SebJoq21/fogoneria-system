@@ -40,7 +40,7 @@ export function SettingsView({
           <div className="flex flex-col sm:flex-row gap-4 mb-6 items-start">
             <div className="flex flex-col items-center gap-2 shrink-0">
               <div className="w-24 h-24 rounded-2xl bg-primary/[0.04] border-2 border-dashed border-ink-900/15 flex items-center justify-center text-ink-900">
-                <span className="font-medium text-section">MR</span>
+                <span className="font-medium text-display">MR</span>
               </div>
               <span className="text-xs text-ink-900 font-medium cursor-pointer hover:underline">Cambiar logo</span>
             </div>

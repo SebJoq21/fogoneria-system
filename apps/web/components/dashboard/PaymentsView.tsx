@@ -29,7 +29,7 @@ export function PaymentsView({ paymentHistory }: { paymentHistory: Payment[] }) 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         <Card className="flex flex-col justify-between">
           <p className="text-xs font-medium text-ink-400 mb-2 uppercase">Deuda actual</p>
-          <p className="text-section font-medium text-ink-900 mb-2">$0.00</p>
+          <p className="text-display font-medium text-ink-900 mb-2">$0.00</p>
           <span className="inline-flex w-max items-center gap-1.5 bg-primary text-white text-xs font-medium px-2.5 py-1 rounded-full">
             <span className="w-1.5 h-1.5 bg-surface rounded-full animate-pulse" />
             Todo al día
@@ -40,7 +40,7 @@ export function PaymentsView({ paymentHistory }: { paymentHistory: Payment[] }) 
             Próximo pago
           </span>
           <h3 className="text-sm font-medium text-ink-900 mb-1">1 de Noviembre, 2026</h3>
-          <p className="text-section font-medium text-ink-900 mb-6">$70.00</p>
+          <p className="text-display font-medium text-ink-900 mb-6">$70.00</p>
           <div className="mt-auto">
             <button type="button" disabled className="w-full bg-primary/[0.05] text-ink-400 text-sm font-medium h-10 rounded-full cursor-not-allowed border border-ink-900/10">
               Pagar ahora

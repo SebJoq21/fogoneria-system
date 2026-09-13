@@ -40,7 +40,7 @@ export default function TerminosPage() {
         </Link>
 
         <div className="bg-surface p-4 rounded-2xl border border-ink-900/10">
-          <h1 className="text-section font-medium text-ink-900 mb-8">
+          <h1 className="text-display font-medium text-ink-900 mb-8">
             Términos y Condiciones de Servicio
           </h1>
 

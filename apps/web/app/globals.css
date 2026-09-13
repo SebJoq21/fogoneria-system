@@ -30,11 +30,14 @@
   --color-primary-hover: var(--c-primary-hover);
   --color-surface: var(--c-surface);
 
-  /* Escala tipográfica permitida: 12 / 13 / 14 / 24 */
+  /* Escala tipográfica permitida: 12 / 13 / 14 / 16 / 18 / 24 */
   --text-xs: 12px;
   --text-nav: 13px;
   --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
   --text-section: 24px;
+  --text-display: 24px;
 }
 
 :root {

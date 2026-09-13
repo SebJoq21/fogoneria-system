@@ -29,7 +29,7 @@ function MetricCard({
       <div className="mb-4">
         <h3 className="text-nav font-medium text-ink-600 mb-2">{title}</h3>
         <div className="flex items-end gap-3">
-          <span className="text-section font-medium text-ink-900">{value}</span>
+          <span className="text-display font-medium text-ink-900">{value}</span>
           <span className="text-xs font-medium text-ink-600 mb-1">{delta}</span>
         </div>
       </div>

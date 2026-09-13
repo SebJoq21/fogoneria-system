@@ -13,7 +13,7 @@ export function KpiCard({
       <p className="text-xs font-medium text-ink-400 mb-2 uppercase">
         {label}
       </p>
-      <p className="text-section font-medium text-ink-900">{value}</p>
+      <p className="text-display font-medium text-ink-900">{value}</p>
       {hint && <p className="text-xs text-ink-600 mt-1">{hint}</p>}
     </div>
   );

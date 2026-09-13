@@ -40,7 +40,7 @@ export function LoginContent() {
       </Link>
 
       <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-4 border border-ink-900/10">
-        <h1 className="text-section font-medium text-ink-900 mb-2 text-center">
+        <h1 className="text-display font-medium text-ink-900 mb-2 text-center">
           Bienvenido de nuevo
         </h1>
         <p className="text-sm text-ink-600 text-center mb-6">

@@ -57,7 +57,7 @@ function Stepper({ current }: { current: number }) {
 function StepIdentity() {
   return (
     <div>
-      <h2 className="text-section font-medium text-ink-900 mb-4">
+      <h2 className="text-display font-medium text-ink-900 mb-4">
         Conozcamos tu restaurante
       </h2>
       <Field label="Historia o Quiénes Somos" htmlFor="story">
@@ -74,7 +74,7 @@ function StepIdentity() {
 function StepMenu() {
   return (
     <div>
-      <h2 className="text-section font-medium text-ink-900 mb-2">
+      <h2 className="text-display font-medium text-ink-900 mb-2">
         Tu catálogo de sabores
       </h2>
       <p className="text-sm text-ink-600 mb-4">
@@ -88,7 +88,7 @@ function StepMenu() {
 function StepPayment() {
   return (
     <div>
-      <h2 className="text-section font-medium text-ink-900 mb-2">
+      <h2 className="text-display font-medium text-ink-900 mb-2">
         Último paso: Activa tu web
       </h2>
       <p className="text-sm text-ink-600 mb-4">

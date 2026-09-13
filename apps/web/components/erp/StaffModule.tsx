@@ -143,7 +143,7 @@ export function StaffModule({ tab = "equipo" }: { tab?: "equipo" | "turnos" | "p
           <p className="text-xs font-medium uppercase text-ink-400 mb-2">
             Pozo total de hoy
           </p>
-          <p className="text-section font-medium text-ink-900 mb-1">
+          <p className="text-display font-medium text-ink-900 mb-1">
             S/ {tipsPool.toFixed(2)}
           </p>
           <p className="text-nav text-ink-400 mb-6">

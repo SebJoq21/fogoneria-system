@@ -44,7 +44,7 @@ export function SupportView({
   return (
     <div className="animate-[fadeIn_0.3s_ease-out]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <h2 className="text-section font-medium text-ink-900">Centro de Ayuda y Tickets</h2>
+        <h2 className="text-display font-medium text-ink-900">Centro de Ayuda y Tickets</h2>
         <Button onClick={() => setIsModalOpen(true)} className="gap-2">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
           Crear nuevo ticket
