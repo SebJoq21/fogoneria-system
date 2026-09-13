@@ -10,6 +10,7 @@ import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { ordenesSummary } from "@/components/erp/summaries/summary-selectors";
 import { canConfirmRecepcion, canMarkListo, type OrdersMode } from "@/lib/permissions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const columns: { id: OrderStatus; label: string }[] = [
   { id: "pendiente", label: "Por confirmar" },
@@ -28,6 +29,8 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
   const canConfirm = canConfirmRecepcion(currentUser?.role, mode);
   const canListo = canMarkListo(currentUser?.role, mode);
   const [live, setLive] = useState(true);
+  const [pendingConfirm, setPendingConfirm] = useState<Order | null>(null);
+  const [pendingListo, setPendingListo] = useState<Order | null>(null);
   const seq = useRef(1043);
 
   // Comandas entrantes simuladas en vivo
@@ -54,6 +57,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
     // Cocina confirma la recepción: pendiente → en cocina.
     if (order.status !== "pendiente" || !canConfirm) return;
     setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: "cocina" as const } : o)));
+    setPendingConfirm(null);
     notify("Pedido en cocina", `${order.id} · ${order.customer}`);
   };
 
@@ -62,6 +66,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
     if (order.status !== "cocina" || !canListo) return;
     const next: OrderStatus = "listo";
     setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
+    setPendingListo(null);
     notify("Orden lista", `${order.id} · ${order.customer}${order.waiter ? ` · avisar a ${order.waiter}` : ""}`);
   };
 
@@ -152,7 +157,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                       <span className="text-sm font-medium text-ink-900 tnum flex-1">{o.total}</span>
                       {o.status === "pendiente" && canConfirm && (
                         <Button
-                          onClick={() => confirm(o)}
+                          onClick={() => setPendingConfirm(o)}
                           className="px-5 min-h-12 w-full min-[420px]:w-auto text-sm"
                         >
                           Confirmar recepción
@@ -160,7 +165,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                       )}
                       {o.status === "cocina" && canListo && (
                         <Button
-                          onClick={() => advance(o)}
+                          onClick={() => setPendingListo(o)}
                           className="px-5 min-h-12 w-full min-[420px]:w-auto text-sm"
                         >
                           Marcar listo
@@ -174,6 +179,30 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title="Confirmar recepción"
+        message={
+          pendingConfirm
+            ? `¿Confirmar la recepción de ${pendingConfirm.id}? Pasará a En cocina.`
+            : ""
+        }
+        confirmLabel="Confirmar"
+        onConfirm={() => pendingConfirm && confirm(pendingConfirm)}
+        onCancel={() => setPendingConfirm(null)}
+      />
+      <ConfirmDialog
+        open={pendingListo !== null}
+        title="Marcar listo"
+        message={
+          pendingListo
+            ? `¿Marcar ${pendingListo.id} como listo? Se avisará al mesero.`
+            : ""
+        }
+        confirmLabel="Marcar listo"
+        onConfirm={() => pendingListo && advance(pendingListo)}
+        onCancel={() => setPendingListo(null)}
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Drawer } from "@/components/ui/Drawer";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { canChangeTableStatus } from "@/lib/permissions";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
@@ -57,14 +59,17 @@ function TableNode({
 }
 
 export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) {
-  const { tables, setTables, reservations } = useModules();
+  const { tables, setTables, reservations, currentUser } = useModules();
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+  const [confirmTable, setConfirmTable] = useState<Table | null>(null);
+  const canOperate = canChangeTableStatus(currentUser?.role);
   const summary = useMemo(() => mesasSummary(tables), [tables]);
 
   const reservationFor = (tableId: number) =>
     reservations.find((r) => r.tableId === tableId);
 
   const cycleStatus = (table: Table) => {
+    if (!canOperate) return;
     const next: TableStatus =
       table.status === "libre" ? "ocupada" : table.status === "ocupada" ? "reservada" : "libre";
     setTables(tables.map((t) => (t.id === table.id ? { ...t, status: next } : t)));
@@ -171,15 +176,35 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                 </dl>
               );
             })()}
-            <Button
-              onClick={() => cycleStatus(selectedTable)}
-              className="mt-2"
-            >
-              Cambiar estado de mesa
-            </Button>
+            {canOperate ? (
+              <Button
+                onClick={() => setConfirmTable(selectedTable)}
+                className="mt-2"
+              >
+                Cambiar estado de mesa
+              </Button>
+            ) : (
+              <p className="text-xs text-ink-400">
+                Vista de lectura: solo la sucursal puede cambiar estados.
+              </p>
+            )}
           </div>
         )}
       </Drawer>
+      <ConfirmDialog
+        open={confirmTable !== null}
+        title="Cambiar estado de mesa"
+        message={
+          confirmTable
+            ? `¿Cambiar "${confirmTable.label}" de ${statusLabel[confirmTable.status]} al siguiente estado?`
+            : ""
+        }
+        onConfirm={() => {
+          if (confirmTable) cycleStatus(confirmTable);
+          setConfirmTable(null);
+        }}
+        onCancel={() => setConfirmTable(null)}
+      />
     </div>
   );
 }

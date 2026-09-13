@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
@@ -19,6 +20,7 @@ const zones = ["Salón", "Terraza", "Barra"];
 export function SalonTablesView() {
   const { tables, setTables, notify, isGeneral, branchOf } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState({ label: "", zone: zones[0], seats: "4", shape: "rect" as TableShape });
   const summary = useMemo(() => mesasSummary(tables), [tables]);
@@ -68,6 +70,8 @@ export function SalonTablesView() {
 
   const remove = (id: number) => {
     setTables(tables.filter((t) => t.id !== id));
+    setPendingDeleteId(null);
+    notify("Mesa eliminada", "La mesa se retiró del salón.");
   };
 
   return (
@@ -122,12 +126,22 @@ export function SalonTablesView() {
                 </Badge>
               </TD>
               <TD right nowrap>
-                <RowActions onEdit={() => openEdit(t.id)} onDelete={() => remove(t.id)} />
+                <RowActions onEdit={() => openEdit(t.id)} onDelete={() => setPendingDeleteId(t.id)} />
               </TD>
             </TR>
           ))}
         </tbody>
       </TableCard>
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Eliminar mesa"
+        message="¿Eliminar esta mesa del salón? Esta acción no se puede deshacer."
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => pendingDeleteId !== null && remove(pendingDeleteId)}
+        onCancel={() => setPendingDeleteId(null)}
+      />
 
       {modalOpen && (
         <Modal

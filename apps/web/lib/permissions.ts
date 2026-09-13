@@ -27,6 +27,11 @@ export function canCreateOrder(role: AppRole | undefined): boolean {
   return role === "mesero";
 }
 
+/** Solo la sucursal opera el salón (cambia estados de mesa). El dueño mira en lectura. */
+export function canChangeTableStatus(role: AppRole | undefined): boolean {
+  return role === "sucursal";
+}
+
 /** La caja la opera la sucursal. El administrador mira en lectura. */
 export function canOperateCash(role: AppRole | undefined): boolean {
   return role === "sucursal";

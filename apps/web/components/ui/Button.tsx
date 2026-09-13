@@ -1,7 +1,7 @@
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import { cn } from "./cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "light";
+type Variant = "primary" | "secondary" | "ghost" | "light" | "danger";
 
 const styles: Record<Variant, string> = {
   primary: "bg-primary text-white hover:bg-primary-hover",
@@ -10,6 +10,7 @@ const styles: Record<Variant, string> = {
   ghost: "text-ink-600 hover:text-ink-900 hover:bg-primary-hover/[0.04]",
   light:
     "bg-surface/10 text-white border border-white/20 backdrop-blur-sm hover:bg-surface/20",
+  danger: "bg-persimmon-600 text-white hover:bg-persimmon-700",
 };
 
 type Common = {

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { initialEmployees } from "@/lib/erp";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput, Textarea } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
@@ -17,6 +18,7 @@ export function RolesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", description: "" });
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const openCreate = () => {
     setEditingId(null);
@@ -49,6 +51,8 @@ export function RolesView() {
     const role = roles.find((r) => r.id === id);
     if (role && initialEmployees.some((e) => e.role === role.name)) return;
     setRoles(roles.filter((r) => r.id !== id));
+    setPendingDelete(null);
+    notify("Rol eliminado", "Se retiró del maestro.");
   };
 
   const summary = useMemo(() => {
@@ -108,7 +112,7 @@ export function RolesView() {
                 <TD right nowrap>
                   <RowActions
                     onEdit={() => openEdit(r.id)}
-                    onDelete={() => remove(r.id)}
+                    onDelete={() => setPendingDelete({ id: r.id, name: r.name })}
                     deleteDisabled={count > 0}
                     deleteTitle={count > 0 ? "Tiene equipo asignado" : "Eliminar"}
                   />
@@ -118,6 +122,20 @@ export function RolesView() {
           })}
         </tbody>
       </TableCard>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Eliminar rol"
+        message={
+          pendingDelete
+            ? `¿Eliminar el rol "${pendingDelete.name}"? Esta acción no se puede deshacer.`
+            : ""
+        }
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => pendingDelete && remove(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       {modalOpen && (
         <Modal

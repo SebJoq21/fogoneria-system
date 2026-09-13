@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Toggle } from "@/components/ui/Toggle";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -18,6 +19,7 @@ export function ModifiersView() {
   const [groupModal, setGroupModal] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [optionDrafts, setOptionDrafts] = useState<Record<string, { name: string; extra: string }>>({});
+  const [pendingRemove, setPendingRemove] = useState<{ groupId: string; optionId: string; name: string } | null>(null);
 
   const addGroup = () => {
     if (!groupName.trim()) return;
@@ -57,6 +59,8 @@ export function ModifiersView() {
         g.id === groupId ? { ...g, options: g.options.filter((o) => o.id !== optionId) } : g,
       ),
     );
+    setPendingRemove(null);
+    notify("Opción quitada", "Se retiró del grupo de modificadores.");
   };
 
   const summary = useMemo(() => {
@@ -135,7 +139,7 @@ export function ModifiersView() {
                       </span>
                       <button
                         type="button"
-                        onClick={() => removeOption(g.id, o.id)}
+                        onClick={() => setPendingRemove({ groupId: g.id, optionId: o.id, name: o.name })}
                         aria-label={`Quitar ${o.name}`}
                         className="text-ink-400 hover:text-ink-900 p-2 cursor-pointer"
                       >
@@ -178,6 +182,20 @@ export function ModifiersView() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title="Quitar opción"
+        message={
+          pendingRemove
+            ? `¿Quitar "${pendingRemove.name}" del grupo? Los platos que la usan dejarán de ofrecerla.`
+            : ""
+        }
+        confirmLabel="Quitar"
+        danger
+        onConfirm={() => pendingRemove && removeOption(pendingRemove.groupId, pendingRemove.optionId)}
+        onCancel={() => setPendingRemove(null)}
+      />
 
       {groupModal && (
         <Modal

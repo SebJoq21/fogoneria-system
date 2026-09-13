@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, Select, TextInput } from "@/components/ui/fields";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import type { Order } from "@/lib/erp";
 import { canAnularPendiente, canCreateOrder, canMarkEntregado } from "@/lib/permissions";
@@ -17,6 +18,9 @@ export function MozoView() {
   const [mesaId, setMesaId] = useState("");
   const [customer, setCustomer] = useState("");
   const [picked, setPicked] = useState<number[]>([]);
+  const [pendingAnular, setPendingAnular] = useState<Order | null>(null);
+  const [pendingDeliver, setPendingDeliver] = useState<Order | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
 
   const me = currentUser?.name ?? "Mesero";
   const canOrder = canCreateOrder(currentUser?.role);
@@ -38,6 +42,7 @@ export function MozoView() {
   const anular = (order: Order) => {
     if (!canAnularPendiente(currentUser?.role, order, me)) return;
     setOrders(orders.filter((o) => o.id !== order.id));
+    setPendingAnular(null);
     notify("Pedido anulado", `${order.id} · ${order.customer}`);
   };
 
@@ -60,6 +65,7 @@ export function MozoView() {
       ]);
     }
     notify("Orden entregada", `${order.id} · ${order.customer} · caja y comprobante generados`);
+    setPendingDeliver(null);
   };
 
   const submit = () => {
@@ -83,6 +89,7 @@ export function MozoView() {
     };
     setOrders([order, ...orders]);
     notify("Pedido enviado", `${order.id} · ${order.customer} · espera confirmación de cocina`);
+    setPendingSubmit(false);
     setMesaId("");
     setCustomer("");
     setPicked([]);
@@ -164,7 +171,7 @@ export function MozoView() {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-3 border-t border-ink-900/[0.06] sticky bottom-0 bg-surface py-3">
           <span className="text-sm font-medium text-ink-900 tnum flex-1">Total ${total.toFixed(2)}</span>
-          <Button disabled={!canOrder || !mesaId || picked.length === 0} onClick={submit} className="w-full sm:w-auto min-h-12">
+          <Button disabled={!canOrder || !mesaId || picked.length === 0} onClick={() => setPendingSubmit(true)} className="w-full sm:w-auto min-h-12">
             Enviar a cocina
           </Button>
         </div>
@@ -196,14 +203,14 @@ export function MozoView() {
               {o.status === "pendiente" && canAnularPendiente(currentUser?.role, o, me) && (
                 <button
                   type="button"
-                  onClick={() => anular(o)}
+                  onClick={() => setPendingAnular(o)}
                   className="mt-3 text-nav font-medium text-ink-400 hover:text-ink-900 cursor-pointer min-h-12 w-full text-left"
                 >
                   Anular pedido
                 </button>
               )}
               {o.status === "listo" && canDeliver && (
-                <Button onClick={() => markDelivered(o)} className="mt-3 w-full min-h-12 text-sm">
+                <Button onClick={() => setPendingDeliver(o)} className="mt-3 w-full min-h-12 text-sm">
                   Marcar entregado
                 </Button>
               )}
@@ -213,6 +220,39 @@ export function MozoView() {
       )}
       </>
       )}
+      <ConfirmDialog
+        open={pendingSubmit}
+        title="Enviar a cocina"
+        message={`¿Enviar el pedido a cocina? ${picked.length} plato(s) · Total $${total.toFixed(2)}.`}
+        confirmLabel="Enviar"
+        onConfirm={submit}
+        onCancel={() => setPendingSubmit(false)}
+      />
+      <ConfirmDialog
+        open={pendingDeliver !== null}
+        title="Marcar entregado"
+        message={
+          pendingDeliver
+            ? `¿Marcar ${pendingDeliver.id} como entregado? Se generará el movimiento de caja y el comprobante.`
+            : ""
+        }
+        confirmLabel="Marcar entregado"
+        onConfirm={() => pendingDeliver && markDelivered(pendingDeliver)}
+        onCancel={() => setPendingDeliver(null)}
+      />
+      <ConfirmDialog
+        open={pendingAnular !== null}
+        title="Anular pedido"
+        message={
+          pendingAnular
+            ? `¿Anular el pedido ${pendingAnular.id}? Se eliminará de la cola y no se puede deshacer.`
+            : ""
+        }
+        confirmLabel="Anular"
+        danger
+        onConfirm={() => pendingAnular && anular(pendingAnular)}
+        onCancel={() => setPendingAnular(null)}
+      />
     </div>
   );
 }

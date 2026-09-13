@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, TextInput } from "@/components/ui/fields";
@@ -20,23 +21,42 @@ export function PriceListsView() {
   );
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [pendingActive, setPendingActive] = useState<{ id: string; name: string } | null>(null);
+  // Borradores de precio: se confirman con Enter o al salir del campo (no por tecla).
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
 
   const selected = priceLists.find((l) => l.id === selectedId) ?? priceLists[0];
   const summary = useMemo(() => priceListsSummary(priceLists, products), [priceLists, products]);
   if (!selected) return null;
 
-  const setPrice = (productId: number, value: string) => {
+  const commitPrice = (productId: number, raw: string, productName: string) => {
+    const value = raw.trim();
+    // Vacío o inválido: revierte al precio guardado en vez de dejar 0.
+    if (value === "" || Number.isNaN(Number(value))) {
+      setDrafts((d) => {
+        const next = { ...d };
+        delete next[productId];
+        return next;
+      });
+      return;
+    }
     const price = Number(value);
-    if (Number.isNaN(price)) return;
     setPriceLists(
       priceLists.map((l) =>
         l.id === selected.id ? { ...l, prices: { ...l.prices, [productId]: price } } : l,
       ),
     );
+    setDrafts((d) => {
+      const next = { ...d };
+      delete next[productId];
+      return next;
+    });
+    notify("Precio actualizado", `"${productName}" · $${price.toFixed(2)} en ${selected.name}.`);
   };
 
   const setActive = (id: string) => {
     setPriceLists(priceLists.map((l) => ({ ...l, active: l.id === id })));
+    setPendingActive(null);
     notify(
       "Lista activa actualizada",
       `La Carta Virtual ahora muestra precios de "${priceLists.find((l) => l.id === id)?.name}".`,
@@ -103,7 +123,7 @@ export function PriceListsView() {
           </p>
         </div>
         {!selected.active && (
-          <Button onClick={() => setActive(selected.id)} className="w-max">
+          <Button onClick={() => setPendingActive({ id: selected.id, name: selected.name })} className="w-max">
             Activar en carta
           </Button>
         )}
@@ -133,8 +153,12 @@ export function PriceListsView() {
                   <span className="text-sm text-ink-400">$</span>
                   <TextInput
                     type="number"
-                    value={selected.prices[p.id] ?? ""}
-                    onChange={(e) => setPrice(p.id, e.target.value)}
+                    value={drafts[p.id] ?? (selected.prices[p.id] ?? "")}
+                    onChange={(e) => setDrafts({ ...drafts, [p.id]: e.target.value })}
+                    onBlur={(e) => commitPrice(p.id, e.target.value, p.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    }}
                     aria-label={`Precio de ${p.name} en ${selected.name}`}
                     placeholder="—"
                     className="px-3 tnum"
@@ -145,6 +169,19 @@ export function PriceListsView() {
           ))}
         </tbody>
       </TableCard>
+
+      <ConfirmDialog
+        open={pendingActive !== null}
+        title="Activar lista en carta"
+        message={
+          pendingActive
+            ? `¿Activar la lista "${pendingActive.name}"? La Carta Virtual mostrará sus precios.`
+            : ""
+        }
+        confirmLabel="Activar"
+        onConfirm={() => pendingActive && setActive(pendingActive.id)}
+        onCancel={() => setPendingActive(null)}
+      />
 
       {modalOpen && (
         <Modal

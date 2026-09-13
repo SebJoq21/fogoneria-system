@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
@@ -17,6 +18,7 @@ export function CategoriesView() {
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const sorted = [...categories].sort((a, b) => a.position - b.position);
 
@@ -41,6 +43,8 @@ export function CategoriesView() {
   const remove = (id: string) => {
     if (products.some((p) => p.categoryId === id)) return;
     setCategories(categories.filter((c) => c.id !== id));
+    setPendingDelete(null);
+    notify("Categoría eliminada", "Se retiró del maestro.");
   };
 
   const summary = useMemo(() => cartaSummary(products, categories, () => 0), [products, categories]);
@@ -48,7 +52,7 @@ export function CategoriesView() {
   return (
     <div>
       <ModuleSummary
-        kpis={summary.kpis.slice(0, 3).map((k, i) => (i === 2 ? { ...k, label: "Categorías", value: String(categories.length), hint: "en maestro" } : k))}
+        kpis={summary.kpis.slice(0, 3).map((k, i) => (i === 1 ? { ...k, value: String(categories.length), hint: "en maestro" } : k))}
         chartTitle="Platos por categoría"
         chartSubtitle="Distribución del maestro"
         ariaLabel="Resumen de categorías"
@@ -97,7 +101,7 @@ export function CategoriesView() {
                       setName(c.name);
                       setModalOpen(true);
                     }}
-                    onDelete={() => remove(c.id)}
+                    onDelete={() => setPendingDelete({ id: c.id, name: c.name })}
                     deleteDisabled={count > 0}
                     deleteTitle={count > 0 ? "Tiene platos asociados" : "Eliminar"}
                   />
@@ -107,6 +111,20 @@ export function CategoriesView() {
           })}
         </tbody>
       </TableCard>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Eliminar categoría"
+        message={
+          pendingDelete
+            ? `¿Eliminar la categoría "${pendingDelete.name}"? Esta acción no se puede deshacer.`
+            : ""
+        }
+        confirmLabel="Eliminar"
+        danger
+        onConfirm={() => pendingDelete && remove(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       {modalOpen && (
         <Modal

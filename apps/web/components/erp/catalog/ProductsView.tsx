@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
@@ -55,6 +56,7 @@ export function ProductsView({
     notify,
   } = useModules();
   const [modalOpen, setModalOpen] = useState(startCreating);
+  const [pendingToggle, setPendingToggle] = useState<{ id: number; name: string; toActive: boolean } | null>(null);
   const [form, setForm] = useState<Form>(emptyForm(categories[0]?.id ?? ""));
   const handledSignal = useRef(0);
 
@@ -146,6 +148,7 @@ export function ProductsView({
         p.id === id ? { ...p, status: p.status === "Activo" ? "Inactivo" : "Activo" } : p,
       ),
     );
+    setPendingToggle(null);
   };
 
   const summary = useMemo(() => cartaSummary(products, categories, priceOf), [products, categories, priceOf]);
@@ -228,7 +231,10 @@ export function ProductsView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => toggleStatus(p.id)}
+                  onClick={() => {
+                    const toActive = p.status !== "Activo";
+                    setPendingToggle({ id: p.id, name: p.name, toActive });
+                  }}
                   className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
                 >
                   {p.status === "Activo" ? "Desactivar" : "Activar"}
@@ -238,6 +244,21 @@ export function ProductsView({
           ))}
         </tbody>
       </TableCard>
+
+      <ConfirmDialog
+        open={pendingToggle !== null}
+        title={pendingToggle?.toActive ? "Activar plato" : "Desactivar plato"}
+        message={
+          pendingToggle
+            ? pendingToggle.toActive
+              ? `¿Activar "${pendingToggle.name}"? Volverá a aparecer en la carta.`
+              : `¿Desactivar "${pendingToggle.name}"? Dejará de aparecer en la carta.`
+            : ""
+        }
+        confirmLabel={pendingToggle?.toActive ? "Activar" : "Desactivar"}
+        onConfirm={() => pendingToggle && toggleStatus(pendingToggle.id)}
+        onCancel={() => setPendingToggle(null)}
+      />
 
       {modalOpen && (
         <Modal
