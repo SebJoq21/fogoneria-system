@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { ModulesProvider } from "@/components/dashboard/ModulesProvider";
@@ -27,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="es" className={`h-full antialiased ${inter.variable}`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
           <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
         </ThemeProvider>
