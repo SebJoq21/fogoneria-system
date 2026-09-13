@@ -10,5 +10,5 @@ export const moduleIcons: Record<ModuleId, typeof Gift> = {
   fidelizacion: Gift,
   reservas: CalendarDays,
   inventario: Package,
-  trabajadores: Users,
+  personal: Users,
 };

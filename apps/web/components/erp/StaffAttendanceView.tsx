@@ -7,7 +7,7 @@ import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { personalSummary } from "@/components/erp/summaries/summary-selectors";
 
-/** Trabajadores · Asistencia: control semanal de presentes por colaborador. */
+/** Personal · Asistencia: control semanal de presentes por colaborador. */
 export function StaffAttendanceView() {
   const present = (employeeId: number, day: number) =>
     initialAttendance.some((a) => a.employeeId === employeeId && a.day === day && a.present);

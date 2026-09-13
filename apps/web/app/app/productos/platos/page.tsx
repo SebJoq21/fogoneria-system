@@ -2,7 +2,7 @@
 
 import { ProductsView } from "@/components/erp/catalog/ProductsView";
 
-export default function ArticulosPage() {
+export default function PlatosPage() {
   return (
     <div>
       <div className="mb-6">

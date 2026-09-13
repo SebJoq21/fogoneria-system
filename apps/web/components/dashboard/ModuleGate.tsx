@@ -35,7 +35,7 @@ export function ModuleBody({ id }: { id: string }) {
       {meta.id === "fidelizacion" && <LoyaltyWorkspace />}
       {meta.id === "reservas" && <BookingsWorkspace />}
       {meta.id === "inventario" && <InventoryWorkspace />}
-      {meta.id === "trabajadores" && <StaffWorkspace />}
+      {meta.id === "personal" && <StaffWorkspace />}
     </div>
   );
 }

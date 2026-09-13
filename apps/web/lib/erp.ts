@@ -2,7 +2,7 @@ export type ModuleId =
   | "fidelizacion"
   | "reservas"
   | "inventario"
-  | "trabajadores";
+  | "personal";
 
 export type ModuleMeta = {
   id: ModuleId;
@@ -15,7 +15,7 @@ export type ModuleMeta = {
 export const MODULE_CATALOG: ModuleMeta[] = [
   {
     id: "fidelizacion",
-    title: "Sistema de Fidelización",
+    title: "Fidelización",
     description:
       "Crea cupones de descuento y acumulación de puntos para premiar a tus clientes más frecuentes.",
     price: "+$20.00/mes",
@@ -27,7 +27,7 @@ export const MODULE_CATALOG: ModuleMeta[] = [
   },
   {
     id: "reservas",
-    title: "Gestión de Reservas",
+    title: "Reservas",
     description:
       "Permite a tus clientes reservar mesas online con confirmación instantánea y mapa interactivo del local.",
     price: "+$15.00/mes",
@@ -39,7 +39,7 @@ export const MODULE_CATALOG: ModuleMeta[] = [
   },
   {
     id: "inventario",
-    title: "Gestor de Inventarios",
+    title: "Inventario",
     description:
       "Controla el stock de tus ingredientes en tiempo real, con alertas automáticas de insumos por agotarse.",
     price: "+$30.00/mes",
@@ -50,8 +50,8 @@ export const MODULE_CATALOG: ModuleMeta[] = [
     ],
   },
   {
-    id: "trabajadores",
-    title: "Gestor de Trabajadores",
+    id: "personal",
+    title: "Personal",
     description:
       "Administra horarios, turnos, propinas y desempeño de tu equipo de mozos y personal de cocina.",
     price: "+$25.00/mes",
@@ -163,7 +163,7 @@ export const initialIngredients: Ingredient[] = [
 
 export type RecipeLine = { ingredientId: number; qty: number };
 
-/* ---------- Trabajadores ---------- */
+/* ---------- Personal ---------- */
 
 export type Employee = {
   id: number;
@@ -235,7 +235,7 @@ export const initialMovements: StockMovement[] = [
   { id: 5, datetime: "Ayer 10:15", type: "Entrada", ingredient: "Limón sutil", qty: "+5 kg", reason: "Recepción OC-030 · Frutas Lima" },
 ];
 
-/* ---------- Trabajadores: roles ---------- */
+/* ---------- Personal: roles ---------- */
 
 export type Role = { id: string; name: string; description: string };
 
@@ -316,7 +316,7 @@ export const initialExpenses: Expense[] = [
   { id: 3, date: "Ayer", category: "Personal", supplier: "Planilla semanal", amount: "$950.00", status: "Pendiente" },
 ];
 
-/* ---------- Trabajadores: asistencia semanal ---------- */
+/* ---------- Personal: asistencia semanal ---------- */
 
 export type AttendanceMark = { employeeId: number; day: number; present: boolean };
 

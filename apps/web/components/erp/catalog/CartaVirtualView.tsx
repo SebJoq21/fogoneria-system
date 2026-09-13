@@ -9,10 +9,10 @@ import { MiniBars } from "@/components/erp/summaries/charts";
 import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
 
 /**
- * Carta Virtual (solo lectura): deriva los platos del Maestro de Productos
- * + la lista de precios activa. La edición vive en /app/productos.
+ * Carta Virtual (solo lectura): deriva los platos del maestro
+ * + la lista de precios activa. Vive dentro de Platos, no es ruta propia.
  */
-export default function CartaPage() {
+export function CartaVirtualView() {
   const {
     products,
     categories,

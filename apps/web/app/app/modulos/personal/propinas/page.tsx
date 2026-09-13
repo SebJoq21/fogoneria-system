@@ -1,9 +1,9 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
 import { StaffModule } from "@/components/erp/StaffModule";
 
-export default function TrabajadoresPropinasPage() {
+export default function PersonalPropinasPage() {
   return (
-    <ModuleGuard id="trabajadores">
+    <ModuleGuard id="personal">
       <div>
         <div className="mb-6">
           <h2 className="text-section font-medium text-ink-900">Propinas</h2>
