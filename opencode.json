@@ -1,0 +1,9 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["docs/arquitectura.md", "docs/decisiones.md", "docs/SESION.md", "apps/*/AGENTS.md"],
+  "compaction": {
+    "auto": true,
+    "prune": false,
+    "reserved": 10000
+  }
+}
