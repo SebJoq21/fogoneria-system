@@ -34,6 +34,13 @@ export function MozoView() {
 
   const total = picked.reduce((s, id) => s + priceOf(id), 0);
 
+  /** Precio unitario de un ítem desde PriceList; null si no se puede resolver. */
+  const unitPriceOf = (it: Order["items"][number]): number | null => {
+    if (it.productId != null) return priceOf(it.productId);
+    const found = products.find((p) => p.name === it.name);
+    return found ? priceOf(found.id) : null;
+  };
+
   const nextReceiptNumber = () => {
     const nums = receipts.map((r) => Number(String(r.id).split("-")[1]) || 0);
     return `B001-${Math.max(1042, ...nums) + 1}`;
@@ -194,12 +201,17 @@ export function MozoView() {
                 {o.customer} · {o.time}
               </p>
               <ul className="text-sm text-ink-900">
-                {o.items.map((it, i) => (
-                  <li key={i}>
-                    <span className="font-medium">{it.qty}×</span> {it.name}
-                  </li>
-                ))}
+                {o.items.map((it, i) => {
+                  const unit = unitPriceOf(it);
+                  return (
+                    <li key={i}>
+                      <span className="font-medium">{it.qty}×</span> {it.name}
+                      {unit != null && <span className="text-ink-400"> · ${unit.toFixed(2)}</span>}
+                    </li>
+                  );
+                })}
               </ul>
+              <p className="text-sm font-medium text-ink-900 tnum mt-2">Total {o.total}</p>
               {o.status === "pendiente" && canAnularPendiente(currentUser?.role, o, me) && (
                 <button
                   type="button"
@@ -233,7 +245,7 @@ export function MozoView() {
         title="Marcar entregado"
         message={
           pendingDeliver
-            ? `¿Marcar ${pendingDeliver.id} como entregado? Se generará el movimiento de caja y el comprobante.`
+            ? `¿Marcar ${pendingDeliver.id} como entregado por ${pendingDeliver.total}? Se generará el movimiento de caja y el comprobante.`
             : ""
         }
         confirmLabel="Marcar entregado"

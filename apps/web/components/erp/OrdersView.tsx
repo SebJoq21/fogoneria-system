@@ -46,7 +46,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
           { ...tpl, id: `#PD-${next}`, time, elapsed: "ahora mismo", status: "pendiente" },
           ...prev,
         ]);
-        notify("Nueva comanda entrante", `${tpl.customer} · ${tpl.total}`);
+        notify("Nueva comanda entrante", tpl.customer);
     }, 45000);
     return () => clearInterval(timer);
   }, [live, notify, setOrders]);
@@ -154,7 +154,9 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                       ))}
                     </ul>
                     <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 pt-3 border-t border-ink-900/[0.06]">
-                      <span className="text-sm font-medium text-ink-900 tnum flex-1">{o.total}</span>
+                      {mode !== "cocina" && (
+                        <span className="text-sm font-medium text-ink-900 tnum flex-1">{o.total}</span>
+                      )}
                       {o.status === "pendiente" && canConfirm && (
                         <Button
                           onClick={() => setPendingConfirm(o)}
