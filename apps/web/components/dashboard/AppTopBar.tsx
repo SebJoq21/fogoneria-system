@@ -16,8 +16,6 @@ const exactTitles: Record<string, string> = {
   "/app/productos/categorias": "Categorías",
   "/app/productos/modificadores": "Modificadores",
   "/app/productos/precios": "Listas de precios",
-  "/app/productos/valorizado": "Valorizado de carta",
-  "/app/productos/resumen-categoria": "Resumen por categoría",
   "/app/modulos/fidelizacion": "Fidelización",
   "/app/clientes": "Comensales",
   "/app/promociones": "Promociones",

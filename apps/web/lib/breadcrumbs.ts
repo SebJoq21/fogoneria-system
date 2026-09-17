@@ -48,16 +48,6 @@ const exactTrails: Record<string, Crumb[]> = {
     { label: "Platos", href: "/app/productos" },
     { label: "Listas de precios" },
   ],
-  "/app/productos/valorizado": [
-    { label: "Inicio", href: "/app" },
-    { label: "Platos", href: "/app/productos" },
-    { label: "Valorizado de carta" },
-  ],
-  "/app/productos/resumen-categoria": [
-    { label: "Inicio", href: "/app" },
-    { label: "Platos", href: "/app/productos" },
-    { label: "Resumen por categoría" },
-  ],
   "/app/modulos/reservas": [{ label: "Inicio", href: "/app" }, { label: "Reservas" }],
   "/app/modulos/reservas/agenda": [
     { label: "Inicio", href: "/app" },
