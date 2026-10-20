@@ -950,7 +950,7 @@ COMMENT ON TABLE auditoria IS 'Movimientos auditados por usuario (landing roles)
 
 -- Empresa demo + sucursales (tenancy.ts) --------------------------------------
 INSERT INTO empresas (id, nombre_legal, nombre_comercial, ruc, limite_sucursales, modulos_habilitados, estado, plan_actual, mrr_monto, trial_inicio, trial_fin)
-VALUES ('11111111-1111-1111-1111-111111111111','Mi Restaurante S.A.C.','Fogoneria Demo','20123456789',3,'["pedidos","carta","inventario","caja","asistencia","roles"]','ACTIVE','PROFESIONAL',99.00, now() - INTERVAL '20 days', now() - INTERVAL '6 days')
+VALUES ('11111111-1111-1111-1111-111111111111','Mi Restaurante S.A.C.','Fogoneria Demo','20123456786',3,'["pedidos","carta","inventario","caja","asistencia","roles"]','ACTIVE','PROFESIONAL',99.00, now() - INTERVAL '20 days', now() - INTERVAL '6 days')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO sucursales (id, empresa_id, nombre, nombre_corto, direccion, telefono, aforo, es_matriz, estado) VALUES

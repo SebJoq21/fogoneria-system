@@ -1,6 +1,10 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import * as bcrypt from 'bcryptjs';
 import { PrismaClient } from '../src/generated/prisma/client.js';
+
+/** Contraseña única de los usuarios demo (ver README de la API). */
+const DEMO_PASSWORD_HASH = bcrypt.hashSync('Fogoneria123!', 12);
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -104,7 +108,7 @@ async function main() {
         id: EMPRESA,
         nombre_legal: 'Mi Restaurante S.A.C.',
         nombre_comercial: 'Fogoneria Demo',
-        ruc: '20123456789',
+        ruc: '20123456786',
         limite_sucursales: 3,
         modulos_habilitados: [
           'pedidos',
@@ -169,7 +173,7 @@ async function main() {
         id: SUPERADMIN,
         nombre: 'Equipo Fogonería',
         email: 'super@fogoneria.com',
-        password_hash: '$2b$12$HASH_SUPERADMIN_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'SUPERADMIN',
         estado: 'ACTIVO',
       },
@@ -178,7 +182,7 @@ async function main() {
         empresa_id: EMPRESA,
         nombre: 'Martín Quispe',
         email: 'admin@mirestaurante.com',
-        password_hash: '$2b$12$HASH_ADMIN_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'ADMIN_GLOBAL',
         estado: 'ACTIVO',
       },
@@ -188,7 +192,7 @@ async function main() {
         sucursal_id: MIRAFLORES,
         nombre: 'Rosa Quispe',
         email: 'sucursal@mirestaurante.com',
-        password_hash: '$2b$12$HASH_SUCURSAL_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'GERENTE_SUCURSAL',
         estado: 'ACTIVO',
       },
@@ -198,7 +202,7 @@ async function main() {
         sucursal_id: MIRAFLORES,
         nombre: 'Luis Huamán',
         email: 'cocina@mirestaurante.com',
-        password_hash: '$2b$12$HASH_COCINA_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'COCINERO',
         estado: 'ACTIVO',
       },
@@ -208,7 +212,7 @@ async function main() {
         sucursal_id: MIRAFLORES,
         nombre: 'Ana Beltrán',
         email: 'mesero@mirestaurante.com',
-        password_hash: '$2b$12$HASH_MESERO_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'MESERO',
         estado: 'ACTIVO',
       },
@@ -218,7 +222,7 @@ async function main() {
         sucursal_id: MIRAFLORES,
         nombre: 'Pedro León',
         email: 'caja@mirestaurante.com',
-        password_hash: '$2b$12$HASH_CAJERO_DEMO',
+        password_hash: DEMO_PASSWORD_HASH,
         rol: 'CAJERO',
         estado: 'ACTIVO',
       },
