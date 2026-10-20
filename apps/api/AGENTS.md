@@ -9,7 +9,8 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 - `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`.
 - `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
 - `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.
-- `src/modules/` — `auth`, `tenant`, `orders`, `catalog`, `pricing`, `saas`, `billing`, `audit`. Cada uno con controller/service/dto.
+- `src/modules/` — `auth`, `tenant`, `orders`, `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto.
+- `src/main.ts` — body parser propio a 4 MB (`bodyParser: false` + `json/urlencoded`) para el logo del onboarding en data URL.
 - `test/app.e2e-spec.ts` y `test/auth.e2e-spec.ts` — e2e con Prisma mockeado. Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `oxlint.json`, `nest-cli.json`.
 
 ## Reglas api

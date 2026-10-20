@@ -105,6 +105,7 @@ export class CatalogService {
         include: {
           categorias: { select: { id: true, nombre: true } },
           precios_platos: true,
+          platos_grupos_modificadores: { select: { grupo_id: true } },
         },
       }),
       this.prisma.scoped.platos.count({ where }),

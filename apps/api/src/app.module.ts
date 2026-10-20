@@ -19,6 +19,7 @@ import { CatalogModule } from './modules/catalog/catalog.module.js';
 import { PricingModule } from './modules/pricing/pricing.module.js';
 import { SaasModule } from './modules/saas/saas.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
+import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { BillingModule } from './modules/billing/billing.module.js';
     PricingModule,
     SaasModule,
     BillingModule,
+    OnboardingModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
