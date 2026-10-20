@@ -9,6 +9,7 @@
     { "key": "token", "value": "" },
     { "key": "empresaId", "value": "" },
     { "key": "sucursalId", "value": "" },
+    { "key": "categoriaId", "value": "" },
     { "key": "platoId", "value": "" },
     { "key": "listaId", "value": "" },
     { "key": "tenantId", "value": "" }
@@ -168,7 +169,18 @@
               "host": ["{{baseUrl}}"],
               "path": ["catalog", "categories"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('categoriaId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
         },
         {
           "name": "GET platos",
@@ -203,7 +215,18 @@
               "host": ["{{baseUrl}}"],
               "path": ["catalog", "dishes"]
             }
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('platoId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
