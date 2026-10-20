@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { type Order, type OrderStatus } from "@/lib/erp";
+import { elapsedLabel, fmtMoney } from "@/lib/domain";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -11,6 +12,7 @@ import { MiniBars } from "@/components/erp/summaries/charts";
 import { ordenesSummary } from "@/components/erp/summaries/summary-selectors";
 import { canConfirmRecepcion, canMarkListo, type OrdersMode } from "@/lib/permissions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useNow } from "@/components/useNow";
 
 const columns: { id: OrderStatus; label: string }[] = [
   { id: "pendiente", label: "Por confirmar" },
@@ -19,37 +21,20 @@ const columns: { id: OrderStatus; label: string }[] = [
   { id: "entregado", label: "Entregado" },
 ];
 
-const demoIncoming: Omit<Order, "id" | "time" | "elapsed" | "status">[] = [
-  { customer: "Mesa 5", items: [{ productId: 3, name: "Lomo Saltado", qty: 1 }], total: "$22.00", channel: "Mesa" },
-  { customer: "Lucía Prado", items: [{ productId: 1, name: "Ceviche Clásico", qty: 2 }], total: "$30.00", channel: "Web" },
-];
+/** Urgencia de la comanda: >10 min alerta, >20 min crítica. */
+function timerTone(createdAt: string): "neutral" | "warning" | "danger" {
+  const mins = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
+  return mins > 20 ? "danger" : mins > 10 ? "warning" : "neutral";
+}
 
 export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
-  const { notify, orders, setOrders, activeBranch, isGeneral, branchOf, currentUser } = useModules();
+  const { orders, setOrders, activeBranch, isGeneral, branchOf, currentUser, notify } = useModules();
+  useNow(30000);
   const canConfirm = canConfirmRecepcion(currentUser?.role, mode);
   const canListo = canMarkListo(currentUser?.role, mode);
-  const [live, setLive] = useState(true);
   const [pendingConfirm, setPendingConfirm] = useState<Order | null>(null);
   const [pendingListo, setPendingListo] = useState<Order | null>(null);
-  const seq = useRef(1043);
 
-  // Comandas entrantes simuladas en vivo
-  useEffect(() => {
-    if (!live) return;
-    const timer = setInterval(() => {
-      seq.current -= 1;
-      const next = seq.current;
-      const tpl = demoIncoming[next % demoIncoming.length];
-        const now = new Date();
-        const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-        setOrders((prev) => [
-          { ...tpl, id: `#PD-${next}`, time, elapsed: "ahora mismo", status: "pendiente" },
-          ...prev,
-        ]);
-        notify("Nueva comanda entrante", tpl.customer);
-    }, 45000);
-    return () => clearInterval(timer);
-  }, [live, notify, setOrders]);
 
   const summary = useMemo(() => (mode === "ordenes" ? ordenesSummary(orders) : null), [orders, mode]);
 
@@ -90,15 +75,6 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
             </p>
           )}
         </div>
-        {mode === "ordenes" && (
-          <Button
-            variant="secondary"
-            onClick={() => setLive(!live)}
-            className="border-ink-900/20 hover:border-ink-900 w-full sm:w-max min-h-12"
-          >
-            {live ? "Pausar en vivo" : "Reanudar en vivo"}
-          </Button>
-        )}
       </div>
 
       {mode === "ordenes" && summary && (
@@ -134,14 +110,17 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium text-ink-900">{o.id}</span>
-                      {mode === "ordenes" && (
-                        <span className="flex items-center gap-1.5">
-                          {isGeneral && branchOf("orders", o.id) && (
-                            <Badge tone="neutral">{branchOf("orders", o.id)?.short}</Badge>
-                          )}
-                          <Badge tone="neutral">{o.channel}</Badge>
-                        </span>
-                      )}
+                      <span className="flex items-center gap-1.5">
+                        <Badge tone={timerTone(o.createdAt)}>{elapsedLabel(o.createdAt)}</Badge>
+                        {mode === "ordenes" && (
+                          <>
+                            {isGeneral && branchOf("orders", o.id) && (
+                              <Badge tone="neutral">{branchOf("orders", o.id)?.short}</Badge>
+                            )}
+                            <Badge tone="neutral">{o.channel}</Badge>
+                          </>
+                        )}
+                      </span>
                     </div>
                     <p className="text-nav text-ink-600 mb-2">
                       {mode === "cocina" ? o.customer : `${o.customer} · ${o.time}`}
@@ -155,7 +134,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                     </ul>
                     <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 pt-3 border-t border-ink-900/[0.06]">
                       {mode !== "cocina" && (
-                        <span className="text-sm font-medium text-ink-900 tnum flex-1">{o.total}</span>
+                        <span className="text-sm font-medium text-ink-900 tnum flex-1">{fmtMoney(o.amount)}</span>
                       )}
                       {o.status === "pendiente" && canConfirm && (
                         <Button

@@ -1,0 +1,38 @@
+# Fogonería — infraestructura local (PostgreSQL 16).
+# Solo Postgres: la API corre en apps/api (3001) y la web en apps/web (3000).
+# Uso:
+#   pnpm --filter api db:up
+#   pnpm --filter api db:deploy
+#   pnpm --filter api db:seed
+# Se publica en 5433 por defecto para no chocar con el Postgres de otros
+# proyectos locales (p. ej. dydalo usa 5432). Sobreescribe POSTGRES_PORT en un
+# .env de la raíz si necesitas otro puerto, y actualiza DATABASE_URL/
+# SHADOW_DATABASE_URL en apps/api/.env.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fogoneria-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-fogoneria_db}
+      POSTGRES_USER: ${POSTGRES_USER:-fogoneria_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fogoneria_app}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-fogoneria_app} -d $${POSTGRES_DB:-fogoneria_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  pgdata:

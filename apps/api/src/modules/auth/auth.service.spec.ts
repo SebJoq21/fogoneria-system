@@ -1,0 +1,144 @@
+import {
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import type { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AuthService } from './auth.service.js';
+import type { PrismaService } from '../../prisma/prisma.service.js';
+
+const PASSWORD = 'Fogoneria123!';
+const passwordHash = bcrypt.hashSync(PASSWORD, 4);
+
+function buildPrisma() {
+  return {
+    raw: {
+      usuarios: {
+        findFirst: vi.fn(),
+        update: vi.fn().mockResolvedValue({}),
+      },
+    },
+  };
+}
+
+function buildService(prisma: ReturnType<typeof buildPrisma>) {
+  const jwt = { signAsync: vi.fn().mockResolvedValue('jwt-token') };
+  const config = {
+    get: vi.fn((key: string) => (key === 'JWT_EXPIRES_IN' ? '8h' : undefined)),
+  };
+  const service = new AuthService(
+    prisma as unknown as PrismaService,
+    jwt as unknown as JwtService,
+    config as unknown as ConfigService,
+  );
+  return { service, jwt };
+}
+
+const usuarioBase = {
+  id: 'u1',
+  empresa_id: 'e1',
+  sucursal_id: 's1',
+  nombre: 'Ana',
+  email: 'ana@fuego.pe',
+  password_hash: passwordHash,
+  rol: 'ADMIN_GLOBAL' as const,
+  estado: 'ACTIVO' as const,
+  deleted_at: null,
+  empresas: {
+    id: 'e1',
+    nombre_legal: 'El Fuego S.A.C.',
+    nombre_comercial: 'El Fuego',
+    estado: 'ACTIVE' as const,
+    plan_actual: 'PROFESIONAL' as const,
+    trial_fin: null,
+    deleted_at: null,
+  },
+  sucursales: null,
+};
+
+describe('AuthService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('devuelve token y tenant con credenciales válidas', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue(usuarioBase);
+    const { service } = buildService(prisma);
+
+    const result = await service.login({
+      email: 'ana@fuego.pe',
+      password: PASSWORD,
+    });
+
+    expect(result.accessToken).toBe('jwt-token');
+    expect(result.user).toMatchObject({ id: 'u1', rol: 'ADMIN_GLOBAL' });
+    expect(result.tenant).toMatchObject({ id: 'e1', estado: 'ACTIVE' });
+    expect(prisma.raw.usuarios.update).toHaveBeenCalledOnce();
+  });
+
+  it('rechaza contraseña incorrecta', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue(usuarioBase);
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'ana@fuego.pe', password: 'incorrecta' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rechaza usuario inexistente', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue(null);
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'nadie@fuego.pe', password: PASSWORD }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rechaza tenant suspendido', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue({
+      ...usuarioBase,
+      empresas: { ...usuarioBase.empresas, estado: 'SUSPENDED' },
+    });
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'ana@fuego.pe', password: PASSWORD }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rechaza trial vencido', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue({
+      ...usuarioBase,
+      empresas: {
+        ...usuarioBase.empresas,
+        estado: 'TRIAL',
+        trial_fin: new Date('2020-01-01T00:00:00.000Z'),
+      },
+    });
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'ana@fuego.pe', password: PASSWORD }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rechaza usuario no activo', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findFirst.mockResolvedValue({
+      ...usuarioBase,
+      estado: 'SUSPENDIDO',
+    });
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'ana@fuego.pe', password: PASSWORD }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});

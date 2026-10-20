@@ -13,17 +13,27 @@ import type { TableShape } from "@/lib/erp";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniBars } from "@/components/erp/summaries/charts";
 import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
+import { deriveTableStatus } from "@/lib/domain";
 
-const zones = ["Salón", "Terraza", "Barra"];
+const OTHER_ZONE = "__otra__";
 
 /** Maestro de Mesas: estructura del salón que consume el mapa. */
 export function SalonTablesView() {
-  const { tables, setTables, notify, isGeneral, branchOf } = useModules();
+  const { tables, setTables, accounts, reservations, notify, isGeneral, branchOf } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ label: "", zone: zones[0], seats: "4", shape: "rect" as TableShape });
-  const summary = useMemo(() => mesasSummary(tables), [tables]);
+  const [form, setForm] = useState({ label: "", zone: "", newZone: "", seats: "4", shape: "rect" as TableShape });
+
+  const zones = useMemo(
+    () => [...new Set(tables.map((t) => t.zone))],
+    [tables],
+  );
+  const derivedTables = useMemo(
+    () => tables.map((t) => ({ ...t, status: deriveTableStatus(t, accounts, reservations) })),
+    [tables, accounts, reservations],
+  );
+  const summary = useMemo(() => mesasSummary(derivedTables), [derivedTables]);
   const byZone = useMemo(() => {
     const acc: Record<string, number> = {};
     tables.forEach((t) => {
@@ -34,7 +44,7 @@ export function SalonTablesView() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm({ label: `Mesa ${Math.max(0, ...tables.map((t) => t.id)) + 1}`, zone: zones[0], seats: "4", shape: "rect" });
+    setForm({ label: `Mesa ${Math.max(0, ...tables.map((t) => t.id)) + 1}`, zone: zones[0] ?? "", newZone: "", seats: "4", shape: "rect" });
     setModalOpen(true);
   };
 
@@ -42,17 +52,19 @@ export function SalonTablesView() {
     const t = tables.find((x) => x.id === id);
     if (!t) return;
     setEditingId(id);
-    setForm({ label: t.label, zone: t.zone, seats: String(t.seats), shape: t.shape });
+    setForm({ label: t.label, zone: zones.includes(t.zone) ? t.zone : OTHER_ZONE, newZone: zones.includes(t.zone) ? "" : t.zone, seats: String(t.seats), shape: t.shape });
     setModalOpen(true);
   };
 
   const save = () => {
     if (!form.label.trim()) return;
+    const zone = form.zone === OTHER_ZONE ? form.newZone.trim() : form.zone.trim();
+    if (!zone) return;
     if (editingId) {
       setTables(
         tables.map((t) =>
           t.id === editingId
-            ? { ...t, label: form.label, zone: form.zone, seats: Number(form.seats) || t.seats, shape: form.shape }
+            ? { ...t, label: form.label, zone, seats: Number(form.seats) || t.seats, shape: form.shape }
             : t,
         ),
       );
@@ -61,7 +73,7 @@ export function SalonTablesView() {
       const id = Math.max(0, ...tables.map((t) => t.id)) + 1;
       setTables([
         ...tables,
-        { id, label: form.label, zone: form.zone, seats: Number(form.seats) || 2, shape: form.shape, status: "libre" },
+        { id, label: form.label, zone, seats: Number(form.seats) || 2, shape: form.shape, status: "libre" },
       ]);
       notify("Mesa creada", `"${form.label}" añadida al salón.`);
     }
@@ -110,7 +122,7 @@ export function SalonTablesView() {
           </tr>
         </THead>
         <tbody>
-          {tables.map((t) => (
+          {derivedTables.map((t) => (
             <TR key={t.id}>
               <TD tone="strong">{t.label}</TD>
               {isGeneral && <TD tone="muted">{branchOf("tables", t.id)?.short}</TD>}
@@ -152,7 +164,10 @@ export function SalonTablesView() {
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button disabled={!form.label.trim()} onClick={save}>
+              <Button
+                disabled={!form.label.trim() || (form.zone === OTHER_ZONE && !form.newZone.trim())}
+                onClick={save}
+              >
                 Guardar
               </Button>
             </>
@@ -166,13 +181,26 @@ export function SalonTablesView() {
             </div>
             <div>
               <Field label="Zona">
-                <Select value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}>
+                <Select value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value, newZone: "" })}>
                   {zones.map((z) => (
                     <option key={z} value={z}>{z}</option>
                   ))}
+                  <option value={OTHER_ZONE}>+ Nueva zona…</option>
                 </Select>
               </Field>
             </div>
+            {form.zone === OTHER_ZONE && (
+              <div>
+                <Field label="Nombre de la zona">
+                  <TextInput
+                    type="text"
+                    value={form.newZone}
+                    onChange={(e) => setForm({ ...form, newZone: e.target.value })}
+                    placeholder="Ej. Mezzanine"
+                  />
+                </Field>
+              </div>
+            )}
             <div>
               <Field label="Asientos">
                 <TextInput type="number" value={form.seats} onChange={(e) => setForm({ ...form, seats: e.target.value })} className="tnum" />

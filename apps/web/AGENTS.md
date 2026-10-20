@@ -28,9 +28,9 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 - Solo pesos `400/500`, salvo etiquetas de hub (`Másteres e informes` 18px y títulos de columna 16px) que van en `semibold` (600) por decisión de diseño. Escala `12/13/14/16/18/24`, tokens `@theme` en `app/globals.css`.
 - RSC delgados que delegan a client; sin `fetch`/Server Actions aún (mocks en `ModulesProvider` + `localStorage`).
 - Toda acción de 1 click que mute estado usa `ui/ConfirmDialog` (Aceptar/Cancelar; `danger` en destructivas). Los formularios con `Guardar` no la necesitan. Precios se confirman con Enter/blur, nunca por tecla.
-- Solo `sucursal` opera salón (`canChangeTableStatus`) y caja (`canOperateCash`); cocina/mozo solo su panel (`lib/permissions.ts`).
+- El mesero abre cuenta y atiende (`canOpenAccount`); solo `sucursal` cobra y opera caja (`canCheckout`, `canOperateCash`); cocina solo su KDS. Estados de mesa derivados de cuenta/reserva (`deriveTableStatus`); bloqueo manual de mesa solo sucursal.
 - Norma de hub (dueño): resumen arriba → `Acceso rápido` → `Informes y másteres` (ambos 18px semibold, componente `HubBlocks` en `erp/workspace-ui.tsx`). Si un bloque va vacío no se pinta (ej: Analíticas).
-- Breadcrumb automático en `DashboardShell` desde `lib/breadcrumbs.ts:trailFor` (Inicio / Sección / Subfunción). Nombres = sidebar; al renombrar una ruta actualizar mapa + `AppTopBar`.
+- Nombres = sidebar; al renombrar una ruta actualizar `AppTopBar`.
 
 ## Comandos
 

@@ -4,15 +4,22 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 
 ## Dónde está qué
 
-- `src/main.ts` — bootstrap, puerto `3001`. `src/app.module.ts|app.controller.ts|app.service.ts` — scaffold `Hello World`.
-- `test/app.e2e-spec.ts` — e2e. Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `oxlint.json`, `nest-cli.json`.
+- `src/main.ts` + `src/bootstrap.ts` + `src/swagger.ts` — bootstrap, prefijo `/api/v1`, CORS, `ValidationPipe`, Swagger en `/api/docs`. Puerto `3001`.
+- `src/app.module.ts` — wiring de módulos, guards globales (`JwtAuthGuard`, `RolesGuard`) e interceptor de tenant.
+- `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`.
+- `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
+- `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.
+- `src/modules/` — `auth`, `tenant`, `orders`, `catalog`, `pricing`, `saas`, `billing`, `audit`. Cada uno con controller/service/dto.
+- `test/app.e2e-spec.ts` y `test/auth.e2e-spec.ts` — e2e con Prisma mockeado. Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `oxlint.json`, `nest-cli.json`.
 
 ## Reglas api
 
 - Imports internos SIEMPRE con sufijo `.js` (ej: `./app.module.js`). Sin eso rompe `nodenext`.
-- Estructura por dominio al crecer: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts}`. No acumular en `app.*`.
-- Al agregar endpoint con DTO: activar `ValidationPipe` global + `class-validator/class-transformer` (hoy ausente).
-- No hay DB/auth/config aún (decisión: Postgres + Prisma en fase 3, ver `docs/decisiones.md`). No inventar otro ORM sin actualizar decisiones.
+- Estructura por dominio: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts,*.spec.ts}`. No acumular en `app.*`.
+- Todo endpoint con body/query usa DTO + `class-validator`; el `ValidationPipe` es global (`whitelist`, `forbidNonWhitelisted`, `transform`).
+- Toda ruta privada usa `@Roles(...)` si no es para cualquier autenticado; `@Public()` solo para login, health e info.
+- Las queries de negocio usan `prisma.scoped` (filtro automático de tenant); auth y consola SaaS usan `prisma.raw`. `findUnique/update/delete/upsert` no se auto-filtran: validar pertenencia con `findFirst`/`updateMany`.
+- DB = PostgreSQL + Prisma 7 (decisión vigente, ver `docs/decisiones.md`). No introducir otro ORM.
 - `strictPropertyInitialization: false` en `tsconfig.json` — no confiarse, inicializar igual.
 
 ## Comandos
