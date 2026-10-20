@@ -33,6 +33,9 @@ out/
 build/
 dist/
 
+# Prisma Client generado
+apps/api/src/generated/prisma/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
