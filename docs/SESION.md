@@ -8,7 +8,7 @@
   - Migración `20261019000000_init` desde el DDL, con CHECKs, 22 triggers y 4 vistas; verificada en base limpia.
   - Seed demo idempotente (`apps/api/prisma/seed.ts`): empresa, 3 sucursales, usuarios, catálogo, inventario, caja y RRHH.
   - Documentación: `docs/modelo-datos.md`, README de API, `TAREAS-SEMANAS-5-8.md` (global 37%, Sonny 72%).
-- Pendiente: PR de `feat/prisma-schema` a `development`.
+- PR #1 abierto: https://github.com/SebJoq21/fogoneria-system/pull/1 (`feat/prisma-schema` → `development`).
 - Próximo paso: David retoma 44/48 sobre el schema y el seed ya listos.
 - Verificado: `api check-types`, `api lint`, `api build`, `api test`, `api test:e2e`, `pnpm lint` raíz, `migrate deploy`, seed 2 veces sin duplicar.
 - Extra: se agregó `@babel/preset-typescript` a la raíz para que `@repo/ui` lint resuelva el preset en pnpm estricto (falla preexistente).
