@@ -16,7 +16,7 @@ SaaS ERP gastronómico multitenant (1 empresa → N sucursales). Monorepo `pnpm 
 - Módulos: `auth` (JWT/Passport, login valida estado del tenant), `tenant` (contexto y sucursales), `orders` (órdenes + transiciones), `catalog` (categorías/platos/modificadores), `pricing` (listas y precios), `saas` (alta/listado/suspensión/MRR), `billing` (cron diario de morosidad) y `audit`.
 - Aislamiento multitenant: `TenantContextService` (AsyncLocalStorage) + extensión Prisma que inyecta `empresa_id`/`sucursal_id`; `SUPERADMIN` opera con bypass. Modelos hijos heredan el filtro del padre. `findUnique/update/delete/upsert` se validan en el servicio.
 - Datos: `prisma/schema.prisma` (41 modelos, 27 enums), migración `20261019000000_init`, seed demo idempotente (contraseña demo `Fogoneria123!`) y cliente Prisma 7 con `@prisma/adapter-pg`. Ver `docs/modelo-datos.md` y `apps/api/README.md`.
-- Tests: Vitest unitario + e2e con Prisma mockeado (no requieren PostgreSQL). Pendiente verificación contra base real (Docker/CI, tarea 58).
+- Tests: Vitest unitario + e2e con Prisma mockeado. Verificación real contra PostgreSQL 16 con `docker compose` (`localhost:5433`): `db:deploy`, `db:seed`, login, CRUD, SaaS y aislamiento con 2 empresas. Dockerfiles y CI siguen pendientes (tarea 58).
 
 ## packages/* (starter sin usar)
 

@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-20 — Docker Compose + verificación real de PostgreSQL
+
+- Objetivo: levantar una base local para probar la API como en `dydalo` y cerrar la verificación pendiente de las tareas 44/48/53/60/61.
+- Hecho:
+  - `docker-compose.yml` raíz con PostgreSQL 16 en `localhost:5433` (evita el 5432 de `dydalo`), healthcheck, volumen `pgdata` y `docker/initdb/01-shadow.sql` para `fogoneria_shadow`.
+  - Scripts `db:up`, `db:down`, `db:logs`, `db:status` y `db:psql` en `apps/api/package.json`; `.env.example` y `env.validation.ts` alineados a 5433; README de la API actualizado.
+  - `db:deploy` aplicó `20261019000000_init` y `db:seed` cargó el demo en la base real.
+  - Bug real encontrado: `PrismaService extends PrismaClient` dejaba `raw.usuarios` en `undefined` con Prisma 7 (el constructor devuelve un proxy). Corregido a **composición** en `apps/api/src/prisma/prisma.service.ts`.
+  - Verificado contra Postgres: health, login de los 6 usuarios demo, JWT, `/tenant`, `/catalog`, `/pricing`, `/orders`, CRUD real de catálogo/precios, alta de tenant, `/saas/metrics`, suspensión (login 403) y reactivación; aislamiento con 2 empresas (la B ve 1 sucursal y 0 órdenes de A).
+- Verificado: `api check-types`, `api lint`, 25 unit y 7 e2e verdes.
+- Pendiente: Dockerfiles api/web + CI (tarea 58), conectar UIs 63/65, RLS nativo (62) y sincronizar Jira.
+- Próximo paso: commit del bloque y PR `feat/api-david` → `development`.
+
 ## 2026-10-20 — Backend de David: tareas 44, 48, 53, 60 y 61
 
 - Objetivo: implementar los módulos backend de David sobre el schema de Sonny.
