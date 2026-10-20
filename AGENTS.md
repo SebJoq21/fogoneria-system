@@ -18,9 +18,16 @@ SaaS ERP gastronómico (parrilla peruana). Monorepo `pnpm + turbo`, Node >=24.
 ## Reglas globales
 
 - Commits en español, formato Conventional Commits (`feat/fix/refactor/chore/docs`).
+- Ramas desde `development`; no commitear directo en `main`.
 - No commitear `*.tsbuildinfo`, `.next/`, `dist/`, `.env*` (solo `.env.example`).
 - Verificar antes de cerrar: `lint + check-types`; en api además `vitest run` si tocó `src/`.
 - Tareas chicas y enfocadas; `@explore` para búsquedas amplias, no leer 100+ archivos en el hilo principal.
+
+## Seguimiento de tareas
+
+- Al terminar cualquier tarea de `docs/TAREAS-SEMANAS-5-8.md`, actualizar ese archivo: estado, % por tarea, % global (promedio simple), evidencia y bitácora.
+- Actualizar también el estado y comentario en Jira (`AYCDS-*`) con la evidencia.
+- No marcar una tarea como Listo si no cumple el DoD o si su dependencia dura no existe.
 
 ## Memoria entre sesiones
 

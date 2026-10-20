@@ -12,7 +12,8 @@ SaaS ERP gastronómico multitenant (1 empresa → N sucursales). Monorepo `pnpm 
 
 ## apps/api (NestJS 12, scaffold)
 
-- Solo `GET / → Hello World!` (`app.controller.ts` + `app.service.ts`). Puerto `3001`. Sin DB, auth, validación, CORS, config.
+- Solo `GET / → Hello World!` (`app.controller.ts` + `app.service.ts`). Puerto `3001`. Sin módulos, auth, validación, CORS ni config todavía.
+- Capa de datos lista: `prisma/schema.prisma` (41 modelos, 27 enums), migración `20261019000000_init`, seed demo idempotente y cliente Prisma 7 con `@prisma/adapter-pg`. Ver `docs/modelo-datos.md`.
 
 ## packages/* (starter sin usar)
 

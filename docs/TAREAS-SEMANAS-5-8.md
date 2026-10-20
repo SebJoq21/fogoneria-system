@@ -15,13 +15,13 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **14** |
-| Cerradas (Listo) | **0** |
+| Cerradas (Listo) | **2** (AYCDS-32, AYCDS-42) |
 | En curso | **1** (AYCDS-55) |
-| Por hacer | **13** |
-| Avance global (promedio simple) | **26%** |
-| Avance funcional end-to-end | **≈10–15%** |
+| Por hacer | **11** |
+| Avance global (promedio simple) | **37%** |
+| Avance funcional end-to-end | **≈15–20%** |
 
-**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo), pero funciona **100% con mocks**. La API NestJS es un scaffold ("Hello World"), no existe `schema.prisma`, no hay migraciones, Docker, CI ni autenticación real. El cuello de botella está en la **fundación backend** (tareas 32, 42, 44, 48, 53) y en las **APIs de catálogo y SaaS** (60, 61), de las que dependen las UIs 63 y 65.
+**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo), pero funciona **100% con mocks**. La API NestJS sigue siendo un scaffold ("Hello World"): ya existen `schema.prisma`, migración inicial, seed demo y cliente Prisma, pero faltan módulos, autenticación, Docker y CI. El cuello de botella está en la **fundación backend** (tareas 44, 48, 53) y en las **APIs de catálogo y SaaS** (60, 61), de las que dependen las UIs 63 y 65.
 
 > **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que existan las APIs 60 y 61. Hoy muestran datos mock.
 
@@ -38,20 +38,20 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S5 | 32, 44, 55 | 30% |
+| S5 | 32, 44, 55 | 57% |
 | S5-6 | 48, 57, 58 | 13% |
-| S6 | 42, 53 | 15% |
+| S6 | 42, 53 | 50% |
 | S7 | 62 | 15% |
-| S7-8 | 60, 61, 63, 65 | 47% |
+| S7-8 | 60, 61, 63, 65 | 48% |
 | S8 | 66 | 0% |
-| **Global** | **14 tareas** | **26%** |
+| **Global** | **14 tareas** | **37%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
 | David Piñarreta | 44, 48, 53, 60, 61 | 5% |
-| Sonny De La Cruz | 32, 42, 62 | 22% |
+| Sonny De La Cruz | 32, 42, 62 | 72% |
 | Joshua Chávez | 55, 65 | 75% |
 | Diego Arévalo | 57, 63 | 63% |
 | Sebastián Chicata | 58, 66 | 0% |
@@ -62,13 +62,13 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-32 | [15.0] Modelo datos `schema.prisma` ERP/CRM | 5 | Sonny | Por hacer | 20% | `db/fogoneria_schema.sql` (41 tablas, 27 enums, seed inline) | `schema.prisma`, ER, versión Prisma |
+| AYCDS-32 | [15.0] Modelo datos `schema.prisma` ERP/CRM | 5 | Sonny | Listo | 100% | `schema.prisma` (41 modelos, 27 enums), `prisma.config.ts`, ER en `docs/modelo-datos.md` | — |
 | AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | Por hacer | 0% | Scaffold NestJS (`GET /`) | Módulos, Prisma, config, validación |
 | AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 70% | 37 páginas, `proxy.ts`, RBAC de UI | Protección server-side real, cookie segura |
 | AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | Por hacer | 0% | Login demo sin validación | JWT/Passport, guards, estados de tenant |
 | AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | Por hacer | 40% | UI de login + wizard 3 pasos | Conexión a API, RUC/logo persistidos |
 | AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | Por hacer | 0% | Nada | Dockerfiles, compose, workflow CI |
-| AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Por hacer | 30% | Seed inline en SQL | Migraciones versionadas, seed Prisma |
+| AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Listo | 100% | Migración `20261019000000_init`, `prisma/seed.ts` idempotente, scripts `db:*` | — |
 | AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | Por hacer | 0% | Columnas `empresa_id`/`sucursal_id` | RLS, middleware, tests de aislamiento |
 | AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | Por hacer | 15% | 22 triggers `updated_at` | Índices, políticas RLS, soft-delete |
 | AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | Por hacer | 0% | Mock `lib/erp-catalog.ts` | Endpoints, DTOs, Swagger, tests |
@@ -83,16 +83,17 @@
 
 ### AYCDS-32 — [15.0] Modelo datos `schema.prisma` ERP/CRM
 
-- **Semana:** 5 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Por hacer | **Avance:** 20%
+- **Semana:** 5 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Modelo completo todas entidades RNF-01 RDES-01. ER + schema versionado."
 - **Qué debe hacerse:**
   1. Crear `apps/api/prisma/schema.prisma` con `datasource db` (PostgreSQL) y `generator client`.
-  2. Migrar las **41 tablas** y **27 enums** de `db/fogoneria_schema.sql` a modelos Prisma, manteniendo nombres con `@@map`/`@map` en `snake_case`.
-  3. Definir relaciones, claves foráneas, índices y restricciones (`@@unique`, `@@index`).
-  4. Agregar la variable `DATABASE_URL` a `.env.example`.
+  2. Migrar las **41 tablas** y **27 enums** de `db/fogoneria_schema.sql` a modelos Prisma, manteniendo nombres en `snake_case` (introspección con `prisma db pull`).
+  3. Definir relaciones, claves foráneas, índices y restricciones (`@@unique`, `@@index`, índices parciales).
+  4. Agregar `DATABASE_URL` y `SHADOW_DATABASE_URL` a `.env.example`.
   5. Documentar el diagrama entidad-relación (Mermaid) en `docs/modelo-datos.md`.
-- **Archivos/rutas:** `apps/api/prisma/schema.prisma`, `apps/api/.env.example`, `docs/modelo-datos.md`
+- **Archivos/rutas:** `apps/api/prisma/schema.prisma`, `apps/api/prisma.config.ts`, `apps/api/.env.example`, `docs/modelo-datos.md`
 - **Criterio de aceptación:** `prisma validate` y `prisma format` sin errores; paridad 1:1 de tablas y enums con el SQL; ER documentado.
+- **Evidencia:** 41 modelos y 27 enums validados; `prisma generate` produce el cliente en `src/generated/prisma`; índices parciales `uq_usuarios_email_global` y `uq_empleados_usuario` introspeccionados con `partialIndexes`.
 
 ---
 
@@ -187,15 +188,16 @@
 
 ### AYCDS-42 — [16.0] Postgres migraciones y seed demo
 
-- **Semana:** 6 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Por hacer | **Avance:** 30%
+- **Semana:** 6 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Migraciones iniciales + tenant/sucursales demo RDES-01."
 - **Qué debe hacerse:**
-  1. Generar la migración inicial con `prisma migrate dev --name init`.
+  1. Crear la migración inicial `20261019000000_init` a partir del DDL de `db/fogoneria_schema.sql` (sin los INSERT demo).
   2. Crear `apps/api/prisma/seed.ts` idempotente con: empresa demo (`Mi Restaurante S.A.C.`, RUC `20123456789`), 3 sucursales, roles, usuarios demo y catálogo base.
-  3. Agregar scripts `db:migrate`, `db:seed` y `db:reset` al `package.json` de la API.
+  3. Agregar scripts `db:deploy`, `db:migrate`, `db:seed`, `db:reset` y `db:studio` al `package.json` de la API.
   4. Documentar el procedimiento en el README de la API.
 - **Archivos/rutas:** `apps/api/prisma/migrations/**`, `apps/api/prisma/seed.ts`, `apps/api/package.json`, `apps/api/README.md`
 - **Criterio de aceptación:** `prisma migrate deploy` y `db seed` funcionan en una base limpia; ejecutar el seed dos veces no duplica datos.
+- **Evidencia:** `migrate deploy` aplicado en base limpia (41 tablas, 27 enums, 22 triggers, 4 vistas); seed ejecutado dos veces con conteos estables; la migración conserva CHECKs, triggers y vistas que Prisma no modela.
 
 ---
 
@@ -329,7 +331,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 65 UI SaaS | Joshua Chávez | 61 API SaaS | David Piñarreta | Sin API solo hay mocks |
 | 66 QA | Sebastián Chicata | 48, 53, 60, 61 + 58 | David Piñarreta + Sebastián Chicata | Requiere funcionalidad real y CI |
 
-**Sin dependencias (pueden iniciar hoy):** 32 (Sonny), 44 scaffold (David), 55 (Joshua), 57 UI (Diego), 58 (Sebastián), 62 parcial (Sonny), 63 UI mock (Diego), 65 UI mock (Joshua).
+**Completadas:** 32 y 42 (Sonny). **Pueden iniciar hoy:** 44 scaffold (David), 55 (Joshua), 57 UI (Diego), 58 (Sebastián), 62 parcial (Sonny), 63 UI mock (Diego), 65 UI mock (Joshua).
 
 ### 5.3 Matriz de inicio: ¿puede cada uno avanzar cuando quiera?
 
@@ -337,17 +339,17 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 
 | Tarea | Responsable | ¿Inicia hoy? | Depende de (responsable) | Tipo |
 |---|---|---|---|---|
-| 32 Prisma | Sonny De La Cruz | **Sí** | — | Base de todo |
-| 42 Migraciones | Sonny De La Cruz | No | 32 (Sonny) | Dura |
-| 44 NestJS modular | David Piñarreta | **Sí, parcial** | 32 (Sonny) para integrar | Blanda (scaffold) |
-| 48 JWT | David Piñarreta | Parcial | 44 (David) + 42 (Sonny) | Dura para cerrar |
-| 53 RLS tenant | David Piñarreta | No | 48 (David) + 32/42 (Sonny) | Dura |
+| 32 Prisma | Sonny De La Cruz | **Hecha** | — | Base de todo |
+| 42 Migraciones | Sonny De La Cruz | **Hecha** | 32 (Sonny) | Dura |
+| 44 NestJS modular | David Piñarreta | **Sí** | 32 resuelto | Blanda (scaffold) |
+| 48 JWT | David Piñarreta | Parcial | 44 (David); 42 resuelto | Dura para cerrar |
+| 53 RLS tenant | David Piñarreta | No | 48 (David); 32/42 resueltos | Dura |
 | 55 Rutas protegidas | Joshua Chávez | **Sí** | — | Independiente |
 | 57 Login/onboarding | Diego Arévalo | **Sí, UI** | 48 (David) + 61 (David) para integrar | Blanda |
 | 58 Docker/CI | Sebastián Chicata | **Sí** | — | Independiente |
 | 60 API catálogo | David Piñarreta | No | 44/48/53 (David) + 32/42 (Sonny) | Dura |
 | 61 API SaaS | David Piñarreta | No | 44/48/53 (David) + 32/42 (Sonny) | Dura |
-| 62 Índices/RLS | Sonny De La Cruz | Parcial | 32/42 (Sonny) | Dura para cerrar |
+| 62 Índices/RLS | Sonny De La Cruz | Parcial | 32/42 resueltos | Dura para cerrar |
 | 63 UI catálogo | Diego Arévalo | **Sí, UI** | 60 (David) para datos reales | Blanda |
 | 65 UI SaaS | Joshua Chávez | **Sí, UI** | 61 (David) para datos reales | Blanda |
 | 66 QA | Sebastián Chicata | No | 48/53 (David) + 60/61 (David) + 58 (Sebastián) | Última |
@@ -382,8 +384,8 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 - [ ] **61** Endpoints `/saas`, ciclo de suscripción, suspensión/reactivación, cron de morosidad
 
 ### Sonny De La Cruz — Base de datos
-- [ ] **32** `schema.prisma` con 41 tablas y 27 enums + ER documentado
-- [ ] **42** Migración inicial + seed demo idempotente + `.env.example`
+- [x] **32** `schema.prisma` con 41 tablas y 27 enums + ER documentado
+- [x] **42** Migración inicial + seed demo idempotente + `.env.example`
 - [ ] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable
 
 ### Joshua Chávez — Frontend / RBAC y SaaS
@@ -441,6 +443,6 @@ docker compose up --build
 | Fecha | Tarea | Responsable | Cambio realizado | Evidencia |
 |---|---|---|---|---|
 | 2026-10-19 | — | — | Línea base: 14 tareas, 26% global | Este documento |
-| | | | | |
+| 2026-10-19 | 32 y 42 | Sonny De La Cruz | Prisma 7.10.1, `schema.prisma`, migración inicial y seed demo idempotente; 41 tablas, 27 enums, 22 triggers y 4 vistas | `apps/api/prisma/**`, `docs/modelo-datos.md` |
 | | | | | |
 | | | | | |
