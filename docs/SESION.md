@@ -3,7 +3,7 @@
 ## 2026-10-20 — Tarea 55 de Joshua: sesión HttpOnly firmada (stack sobre PR #3)
 
 - Objetivo: cerrar AYCDS-55 (rutas protegidas por rol) en una rama apilada sobre `feat/web-conexion-api` (PR #3), sin esperar su merge.
-- Rama: `feat/session-cookie` creada desde `origin/feat/web-conexion-api` (`abb5a4e`). Sin push ni PR todavía.
+- Rama: `feat/session-cookie` creada desde `origin/feat/web-conexion-api` (`abb5a4e`) y publicada con PR draft [#4](https://github.com/SebJoq21/fogoneria-system/pull/4) (base `feat/web-conexion-api`).
 - Hecho:
   - `apps/web/lib/session.ts`: firma/verificación HS256 con `jose` + `SESSION_SECRET` (cookie `fogoneria.session`, 8 h, dev fallback de 32+ caracteres).
   - `apps/web/app/api/session/route.ts`: BFF `POST` (login contra la API → cookie HttpOnly/SameSite + devuelve usuario y JWT) y `DELETE` (logout). Limpia cookies planas heredadas.
@@ -12,7 +12,7 @@
   - `lib/session-api.ts` (cliente BFF), `jose` + `vitest` en `apps/web`, scripts `test`/`test:watch`, `SESSION_SECRET` en `.env.example`.
   - Tests nuevos: `lib/auth.test.ts` (matriz de acceso por rol) y `lib/session.test.ts` (firma, manipulación, expiración, rol inválido): 12/12.
 - Verificado: `pnpm --filter web test` 12/12, `lint` OK, `check-types` OK (borrando `.next` obsoleto) y `build` OK (46 rutas, incluida `/api/session`). Avance 95%: falta la prueba en vivo.
-- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde en este entorno); push de la rama y PR draft con `--base feat/web-conexion-api`; al mergear #3, `git rebase origin/development` + `git push --force-with-lease` + `gh pr edit <n> --base development`.
+- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde en este entorno); al mergear #3, `git rebase origin/development` + `git push --force-with-lease` + `gh pr edit 4 --base development`.
 - Próximo paso: 65 (`/saas` contra la API) desde `development` actualizado, no desde este stack.
 
 ## 2026-10-20 — Tareas 57 y 63 de Diego: login real, onboarding y catálogo contra la API
