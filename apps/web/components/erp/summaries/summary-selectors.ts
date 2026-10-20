@@ -38,15 +38,16 @@ export function mesasSummary(tables: Table[]): { kpis: SummaryKpi[]; donut: { na
 
 /* ---------- Órdenes / Cocina / Mozo ---------- */
 export function ordenesSummary(orders: Order[]): { kpis: SummaryKpi[]; bars: { name: string; v: number }[] } {
-  const pendiente = orders.filter((o) => o.status === "pendiente").length;
-  const cocina = orders.filter((o) => o.status === "cocina").length;
-  const listo = orders.filter((o) => o.status === "listo").length;
-  const entregado = orders.filter((o) => o.status === "entregado").length;
-  const total = orders.reduce((s, o) => s + parseMoney(o.total), 0);
-  const ticket = orders.length === 0 ? 0 : total / orders.length;
+  const live = orders.filter((o) => o.status !== "anulado");
+  const pendiente = live.filter((o) => o.status === "pendiente").length;
+  const cocina = live.filter((o) => o.status === "cocina").length;
+  const listo = live.filter((o) => o.status === "listo").length;
+  const entregado = live.filter((o) => o.status === "entregado").length;
+  const total = live.reduce((s, o) => s + o.amount, 0);
+  const ticket = live.length === 0 ? 0 : total / live.length;
   return {
     kpis: [
-      { label: "Comandas activas", value: String(orders.length), hint: `${pendiente} por confirmar` },
+      { label: "Comandas activas", value: String(live.length), hint: `${pendiente} por confirmar` },
       { label: "Por confirmar", value: String(pendiente), hint: "esperan recepción" },
       { label: "En cocina", value: String(cocina), hint: "por preparar" },
       { label: "Ticket promedio", value: fmtMoney(ticket), hint: `${fmtMoney(total)} acumulado` },
@@ -90,10 +91,10 @@ export function cajaSummary(cash: CashMovement[]): {
 export function comprobantesSummary(receipts: Receipt[]): { kpis: SummaryKpi[]; donut: { name: string; v: number }[] } {
   const pagadas = receipts.filter((r) => r.status === "Pagada");
   const anuladas = receipts.filter((r) => r.status === "Anulada");
-  const total = pagadas.reduce((s, r) => s + parseMoney(r.total), 0);
+  const total = pagadas.reduce((s, r) => s + r.total, 0);
   return {
     kpis: [
-      { label: "Emitidos", value: String(receipts.length), hint: "correlativo B001" },
+      { label: "Emitidos", value: String(receipts.length), hint: "series B001/F001/NC01" },
       { label: "Pagadas", value: String(pagadas.length), hint: fmtMoney(total) },
       { label: "Anuladas", value: String(anuladas.length), hint: anuladas.length === 0 ? "sin anulaciones" : "requieren revisión" },
       { label: "Total cobrado", value: fmtMoney(total), hint: "solo pagadas" },

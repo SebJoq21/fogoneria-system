@@ -65,28 +65,47 @@ export const MODULE_CATALOG: ModuleMeta[] = [
 
 /* ---------- Pedidos Web ---------- */
 
-export type OrderStatus = "pendiente" | "cocina" | "listo" | "entregado";
+export type OrderStatus = "pendiente" | "cocina" | "listo" | "entregado" | "anulado";
 
-export type OrderItem = { productId?: number; name: string; qty: number };
+export type OrderItem = {
+  productId?: number;
+  name: string;
+  qty: number;
+  modifiers?: string[];
+};
 
 export type Order = {
   id: string;
+  /** Cuenta de mesa a la que pertenece la comanda. */
+  accountId?: string;
+  tableId?: number | null;
   customer: string;
   items: OrderItem[];
-  total: string;
+  amount: number;
   time: string;
   elapsed: string;
+  /** ISO real: la UI calcula el tiempo transcurrido con esto. */
+  createdAt: string;
   status: OrderStatus;
-  channel: "Web" | "Mesa";
+  channel: "Web" | "Mesa" | "Llevar";
   /** Mesero que tomó la orden (para "mis órdenes") */
   waiter?: string;
+  motivoAnulacion?: string;
 };
 
+/** ISO de hoy a la hora indicada ("13:42") — para seeds de demo. */
+export function isoToday(hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
 export const initialOrders: Order[] = [
-  { id: "#PD-1042", customer: "Valeria Ríos", items: [{ name: "Lomo Saltado", qty: 2 }, { name: "Chicha Morada", qty: 2 }], total: "$52.00", time: "13:42", elapsed: "hace 6 min", status: "pendiente", channel: "Web" },
-  { id: "#PD-1041", customer: "Mesa 7", items: [{ name: "Ceviche Clásico", qty: 1 }, { name: "Pisco Sour", qty: 2 }], total: "$35.00", time: "13:35", elapsed: "hace 13 min", status: "cocina", channel: "Mesa", waiter: "Ana Beltrán" },
-  { id: "#PD-1040", customer: "Diego Torres", items: [{ name: "Ají de Gallina", qty: 1 }], total: "$18.00", time: "13:28", elapsed: "hace 20 min", status: "listo", channel: "Web" },
-  { id: "#PD-1039", customer: "Mesa 3", items: [{ name: "Tequeños de Lomo", qty: 2 }, { name: "Chicha Morada", qty: 1 }], total: "$20.00", time: "13:15", elapsed: "hace 33 min", status: "entregado", channel: "Mesa" },
+  { id: "#PD-1042", customer: "Valeria Ríos", items: [{ name: "Lomo Saltado", qty: 2 }, { name: "Chicha Morada", qty: 2 }], amount: 52.0, time: "13:42", elapsed: "hace 6 min", createdAt: isoToday("13:42"), status: "pendiente", channel: "Web" },
+  { id: "#PD-1041", customer: "Mesa 7", items: [{ name: "Ceviche Clásico", qty: 1 }, { name: "Pisco Sour", qty: 2 }], amount: 35.0, time: "13:35", elapsed: "hace 13 min", createdAt: isoToday("13:35"), status: "cocina", channel: "Mesa", waiter: "Ana Beltrán" },
+  { id: "#PD-1040", customer: "Diego Torres", items: [{ name: "Ají de Gallina", qty: 1 }], amount: 18.0, time: "13:28", elapsed: "hace 20 min", createdAt: isoToday("13:28"), status: "listo", channel: "Web" },
+  { id: "#PD-1039", customer: "Mesa 3", items: [{ name: "Tequeños de Lomo", qty: 2 }, { name: "Chicha Morada", qty: 1 }], amount: 20.0, time: "13:15", elapsed: "hace 33 min", createdAt: isoToday("13:15"), status: "entregado", channel: "Mesa" },
 ];
 
 /* ---------- Fidelización ---------- */
@@ -114,28 +133,34 @@ export type Table = { id: number; label: string; seats: number; shape: TableShap
 
 export const initialTables: Table[] = [
   { id: 1, label: "Mesa 1", seats: 2, shape: "round", status: "libre", zone: "Terraza" },
-  { id: 2, label: "Mesa 2", seats: 2, shape: "round", status: "ocupada", zone: "Terraza" },
-  { id: 3, label: "Mesa 3", seats: 4, shape: "rect", status: "reservada", zone: "Salón" },
+  { id: 2, label: "Mesa 2", seats: 2, shape: "round", status: "libre", zone: "Terraza" },
+  { id: 3, label: "Mesa 3", seats: 4, shape: "rect", status: "libre", zone: "Salón" },
   { id: 4, label: "Mesa 4", seats: 4, shape: "rect", status: "libre", zone: "Salón" },
-  { id: 5, label: "Mesa 5", seats: 6, shape: "rect", status: "ocupada", zone: "Salón" },
+  { id: 5, label: "Mesa 5", seats: 6, shape: "rect", status: "libre", zone: "Salón" },
   { id: 6, label: "Mesa 6", seats: 2, shape: "round", status: "libre", zone: "Barra" },
-  { id: 7, label: "Mesa 7", seats: 4, shape: "rect", status: "ocupada", zone: "Barra" },
-  { id: 8, label: "Mesa 8", seats: 8, shape: "rect", status: "reservada", zone: "Salón" },
+  { id: 7, label: "Mesa 7", seats: 4, shape: "rect", status: "libre", zone: "Barra" },
+  { id: 8, label: "Mesa 8", seats: 8, shape: "rect", status: "libre", zone: "Salón" },
 ];
+
+export type ReservationStatus = "confirmada" | "llego" | "no_show" | "cancelada";
 
 export type Reservation = {
   id: string;
   customer: string;
   guests: number;
   phone: string;
+  /** ISO real para filtrar por día y detectar la reserva de hoy. */
+  date: string;
+  /** Hora legible ("20:00"). */
   time: string;
+  status: ReservationStatus;
   notes: string;
-  tableId: number;
+  tableId: number | null;
 };
 
 export const initialReservations: Reservation[] = [
-  { id: "RS-201", customer: "Camila Duarte", guests: 4, phone: "+51 987 442 019", time: "Hoy 20:00", notes: "Mesa cerca a la ventana, una silla de bebé.", tableId: 3 },
-  { id: "RS-202", customer: "Jorge Paredes", guests: 8, phone: "+51 955 128 774", time: "Hoy 21:30", notes: "Cumpleaños, llevarán torta.", tableId: 8 },
+  { id: "RS-201", customer: "Camila Duarte", guests: 4, phone: "+51 987 442 019", date: isoToday("20:00"), time: "20:00", status: "confirmada", notes: "Mesa cerca a la ventana, una silla de bebé.", tableId: 3 },
+  { id: "RS-202", customer: "Jorge Paredes", guests: 8, phone: "+51 955 128 774", date: isoToday("21:30"), time: "21:30", status: "confirmada", notes: "Cumpleaños, llevarán torta.", tableId: 8 },
 ];
 
 /* ---------- Inventario ---------- */
@@ -266,35 +291,71 @@ export const initialPromos: PromoSchedule[] = [
 
 export type CashMovement = {
   id: number;
+  /** ISO real para cortes de turno y arqueos. */
+  at: string;
   datetime: string;
   concept: string;
   kind: "Ingreso" | "Egreso";
   amount: number;
   method: string;
+  shiftId?: string;
+  accountId?: string;
 };
 
 export const initialCashMovements: CashMovement[] = [
-  { id: 1, datetime: "Hoy 13:55", concept: "Venta mesa 7", kind: "Ingreso", amount: 35.0, method: "Yape" },
-  { id: 2, datetime: "Hoy 13:20", concept: "Venta web #PD-1042", kind: "Ingreso", amount: 52.0, method: "Tarjeta" },
-  { id: 3, datetime: "Hoy 11:05", concept: "Compra hielo", kind: "Egreso", amount: 12.0, method: "Efectivo" },
-  { id: 4, datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 200.0, method: "Efectivo" },
+  { id: 1, at: isoToday("13:55"), datetime: "Hoy 13:55", concept: "Venta mesa 7", kind: "Ingreso", amount: 35.0, method: "Yape" },
+  { id: 2, at: isoToday("13:20"), datetime: "Hoy 13:20", concept: "Venta web #PD-1042", kind: "Ingreso", amount: 52.0, method: "Tarjeta" },
+  { id: 3, at: isoToday("11:05"), datetime: "Hoy 11:05", concept: "Compra hielo", kind: "Egreso", amount: 12.0, method: "Efectivo" },
+  { id: 4, at: isoToday("09:00"), datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 200.0, method: "Efectivo" },
 ];
 
-/* ---------- Comprobantes de venta ---------- */
+/* ---------- Comprobantes de venta (facturación electrónica SUNAT) ---------- */
+
+export type ReceiptType = "01" | "03" | "07"; // Factura | Boleta | Nota de crédito
+export type ReceiptStatus = "Pagada" | "Anulada" | "Emitida";
+
+/** Ciclo de vida del CPE ante el OSE/SUNAT. */
+export type SunatStatus = "en_cola" | "enviado" | "aceptado" | "rechazado" | "anulado";
+
+/** Constancia de Recepción: solo con CDR "aceptado" hay validez tributaria. */
+export type CdrInfo = {
+  numero: string;
+  fecha: string;
+  codigo: string;
+  mensaje: string;
+};
 
 export type Receipt = {
   id: string;
+  type: ReceiptType;
+  at: string;
   date: string;
   customer: string;
-  total: string;
-  status: "Pagada" | "Anulada";
+  /** "1" = DNI · "6" = RUC · "" = consumidor final */
+  docType: "1" | "6" | "";
+  docNumber: string;
+  subtotal: number;
+  igv: number;
+  total: number;
+  status: ReceiptStatus;
   source: string;
+  accountId?: string;
+  motivoAnulacion?: string;
+  /** Nota de crédito: comprobante que modifica. */
+  refId?: string;
+  estadoSunat: SunatStatus;
+  cdr?: CdrInfo;
+  mensajeSunat?: string;
+  intentosEnvio: number;
+  ultimoEnvio?: string;
+  /** Boleta dada de baja: incluida en el resumen diario RC-… */
+  bajaResumenId?: string;
 };
 
 export const initialReceipts: Receipt[] = [
-  { id: "B001-1042", date: "Hoy 13:42", customer: "Valeria Ríos", total: "$52.00", status: "Pagada", source: "Orden #PD-1042" },
-  { id: "B001-1041", date: "Hoy 13:35", customer: "Mesa 7", total: "$35.00", status: "Pagada", source: "Mesa 7" },
-  { id: "B001-1040", date: "Hoy 13:28", customer: "Diego Torres", total: "$18.00", status: "Anulada", source: "Orden #PD-1040" },
+  { id: "B001-1042", type: "03", at: isoToday("13:42"), date: "Hoy 13:42", customer: "Valeria Ríos", docType: "1", docNumber: "45678901", subtotal: 44.07, igv: 7.93, total: 52.0, status: "Pagada", source: "Orden #PD-1042", estadoSunat: "aceptado", intentosEnvio: 1, ultimoEnvio: isoToday("13:42"), cdr: { numero: "0000-0000-0000001", fecha: isoToday("13:42"), codigo: "0", mensaje: "ACEPTADO" } },
+  { id: "B001-1041", type: "03", at: isoToday("13:35"), date: "Hoy 13:35", customer: "Mesa 7", docType: "", docNumber: "", subtotal: 29.66, igv: 5.34, total: 35.0, status: "Pagada", source: "Mesa 7", estadoSunat: "enviado", intentosEnvio: 1, ultimoEnvio: isoToday("13:35") },
+  { id: "B001-1040", type: "03", at: isoToday("13:28"), date: "Hoy 13:28", customer: "Diego Torres", docType: "", docNumber: "", subtotal: 15.25, igv: 2.75, total: 18.0, status: "Anulada", source: "Orden #PD-1040", motivoAnulacion: "Error de captura", estadoSunat: "anulado", intentosEnvio: 1, ultimoEnvio: isoToday("13:28"), bajaResumenId: "RC-pendiente", cdr: { numero: "0000-0000-0000002", fecha: isoToday("13:28"), codigo: "0", mensaje: "ACEPTADO" } },
 ];
 
 /* ---------- Gastos ---------- */

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme";
 import { ROLE_LABEL } from "@/lib/auth";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useModules } from "./ModulesProvider";
 
 const exactTitles: Record<string, string> = {
@@ -58,9 +59,10 @@ function titleFor(pathname: string) {
 export function AppTopBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout } = useModules();
+  const { currentUser, logout, resetDemoData, notify } = useModules();
   const { theme, toggle } = useTheme();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [pendingReset, setPendingReset] = useState(false);
 
   return (
     <header className="min-h-16 bg-surface border-b border-ink-900/10 flex items-center gap-3 px-4 sm:px-6 py-2 shrink-0">
@@ -119,6 +121,17 @@ export function AppTopBar() {
                 <div className="border-t border-ink-900/[0.06] my-1" />
               </>
             )}
+            <div className="border-t border-ink-900/[0.06] my-1" />
+            <button
+              type="button"
+              className="w-full text-left px-4 py-2 text-sm text-ink-600 hover:bg-primary-hover/[0.04] cursor-pointer"
+              onClick={() => {
+                setProfileOpen(false);
+                setPendingReset(true);
+              }}
+            >
+              Reiniciar datos demo
+            </button>
             <button
               type="button"
               className="w-full text-left px-4 py-2 text-sm text-ink-900 hover:bg-primary-hover/[0.04] cursor-pointer"
@@ -133,6 +146,20 @@ export function AppTopBar() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingReset}
+        title="Reiniciar datos demo"
+        message="¿Volver al estado inicial? Se perderán cuentas, ventas y cambios guardados en este navegador."
+        confirmLabel="Reiniciar"
+        danger
+        onConfirm={() => {
+          resetDemoData();
+          notify("Datos reiniciados", "La demo volvió a su estado inicial.");
+          setPendingReset(false);
+        }}
+        onCancel={() => setPendingReset(false)}
+      />
     </header>
   );
 }

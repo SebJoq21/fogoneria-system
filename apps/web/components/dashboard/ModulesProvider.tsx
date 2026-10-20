@@ -1,10 +1,18 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   initialTickets,
   type Notification,
-  type Payment,
+  type Payment as PlanPayment,
   type Ticket,
 } from "@/lib/dashboard";
 import {
@@ -23,6 +31,7 @@ import {
   type Ingredient,
   type Order,
   type Receipt,
+  type ReceiptType,
   type Reservation,
   type Role,
   type StockMovement,
@@ -32,7 +41,9 @@ import {
   ALL_BRANCHES,
   BRANCH_IDS,
   company,
+  initialAccounts,
   initialBranches,
+  initialCashShifts,
   initialScopes,
   type Branch,
   type BranchScope,
@@ -42,6 +53,23 @@ import {
   findDemoUser,
   type AppUser,
 } from "@/lib/auth";
+import {
+  accountTotals,
+  expectedCashFor,
+  fmtDateTime,
+  itemLineTotal,
+  newId,
+  nextReceiptNumber,
+  nowIso,
+  parseCouponDiscount,
+  round2,
+  splitIgv,
+  type AccountItem,
+  type CashShift,
+  type Payment,
+  type PaymentMethod,
+  type TableAccount,
+} from "@/lib/domain";
 import {
   categoryName,
   initialCategories,
@@ -56,9 +84,32 @@ import {
   type Product,
   type ProductCategory,
 } from "@/lib/erp-catalog";
+import {
+  cpeFromReceipt,
+  getFacturacionPort,
+} from "@/lib/facturacion";
+import {
+  loadErpState,
+  saveErpState,
+  resetErpState,
+  subscribeErpSync,
+  broadcastErpState,
+  type ErpState,
+} from "@/lib/persistence";
+
+export type CheckoutInput = {
+  accountId: string;
+  payments: { method: PaymentMethod; amount: number }[];
+  tip: number;
+  couponCode: string | null;
+  customerId: number | null;
+  receiptType: ReceiptType;
+  docType: "1" | "6" | "";
+  docNumber: string;
+};
 
 type ModulesContext = {
-  payments: Payment[];
+  payments: PlanPayment[];
   tickets: Ticket[];
   addTicket: (subject: string) => void;
   setTickets: (tickets: Ticket[]) => void;
@@ -106,14 +157,42 @@ type ModulesContext = {
   setCashMovements: React.Dispatch<React.SetStateAction<CashMovement[]>>;
   receipts: Receipt[];
   setReceipts: (r: Receipt[]) => void;
+  annulReceipt: (id: string, motivo: string) => void;
+  /* Facturación electrónica SUNAT */
+  enviarSunat: (receipt: Receipt) => void;
+  generarResumenDiario: () => { count: number; resumenId: string } | null;
+  sunatContingencia: boolean;
+  toggleSunatContingencia: () => void;
   expenses: Expense[];
   setExpenses: (e: Expense[]) => void;
   combos: Combo[];
   setCombos: (c: Combo[]) => void;
+  /* Cuentas de mesa (operación del turno) */
+  accounts: TableAccount[];
+  openAccount: (input: {
+    tableId: number | null;
+    label: string;
+    customer: string;
+    waiter: string;
+  }) => string | null;
+  addAccountItems: (accountId: string, items: AccountItem[]) => void;
+  updateAccountItem: (accountId: string, itemId: string, qty: number) => void;
+  removeAccountItem: (accountId: string, itemId: string) => void;
+  sendToKitchen: (accountId: string) => Order | null;
+  annulAccount: (accountId: string, motivo: string) => void;
+  checkoutAccount: (input: CheckoutInput) => Receipt | null;
+  /* Turno de caja */
+  cashShifts: CashShift[];
+  openCashShift: CashShift | null;
+  startCashShift: (fund: number) => void;
+  closeCashShift: (countedCash: number, observations: string) => void;
+  /* Notificaciones */
   notifications: Notification[];
   hasUnread: boolean;
   notify: (title: string, message: string) => void;
   clearUnread: () => void;
+  /* Demo: volver al estado inicial */
+  resetDemoData: () => void;
   /* Sesión mock (fase 1; la API real llega en fase 3) */
   currentUser: AppUser | null;
   login: (email: string) => AppUser | null;
@@ -169,48 +248,92 @@ function applyWrite(
   return out;
 }
 
+function buildInitialState(): ErpState {
+  return {
+    version: 1,
+    products: initialProducts,
+    categories: initialCategories,
+    modifierGroups: initialModifierGroups,
+    priceLists: initialPriceLists,
+    roles: initialRoles,
+    reservations: initialReservations,
+    ingredients: initialIngredients,
+    movements: initialMovements,
+    customers: initialCustomers,
+    coupons: initialCoupons,
+    receipts: initialReceipts,
+    expenses: initialExpenses,
+    combos: initialCombos,
+    tickets: initialTickets,
+    notifications: [],
+    hasUnread: false,
+    scopes: initialScopes,
+    accounts: initialAccounts,
+    cashShifts: initialCashShifts,
+    sunatContingencia: false,
+  };
+}
+
 export function ModulesProvider({
   children,
   initialPayments,
 }: {
   children: React.ReactNode;
-  initialPayments: Payment[];
+  initialPayments: PlanPayment[];
 }) {
-  const [payments] = useState<Payment[]>(initialPayments);
-  const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [categories, setCategories] = useState<ProductCategory[]>(initialCategories);
-  const [modifierGroups, setModifierGroups] =
-    useState<ModifierGroup[]>(initialModifierGroups);
-  const [priceLists, setPriceLists] = useState<PriceList[]>(initialPriceLists);
-  const [scopes, setScopes] = useState<Record<string, BranchScope>>(initialScopes);
+  const [payments] = useState<PlanPayment[]>(initialPayments);
+  const [state, setState] = useState<ErpState>(buildInitialState);
   const [activeBranchId, setActiveBranchId] = useState<string>("todas");
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
-  const [reservations, setReservations] = useState<Reservation[]>(initialReservations);
-  const [ingredients, setIngredients] = useState<Ingredient[]>(initialIngredients);
-  const [movements, setMovements] = useState<StockMovement[]>(initialMovements);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [coupons, setCoupons] = useState<Coupon[]>(initialCoupons);
+  const applyingRemote = useRef(false);
+  const firstPersist = useRef(true);
 
-  // Sesión persistida (hidrata tras el montaje para no romper el SSR)
+  /* Hidratación desde localStorage (solo cliente) */
   useEffect(() => {
+    const saved = loadErpState();
+    if (saved) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación desde localStorage (solo cliente)
+      setState(saved);
+    }
     try {
       const raw = localStorage.getItem("fogoneria:user");
       const found = demoUsers.find((u) => u.id === raw);
       if (found) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación desde localStorage (solo cliente)
         setCurrentUser(found);
         if (found.branchId) {
           setActiveBranchId(found.branchId);
         } else {
           const branch = localStorage.getItem("fogoneria:branch");
-          if (branch && (branch === "todas" || initialScopes[branch])) setActiveBranchId(branch);
+          if (branch && (branch === "todas" || initialScopes[branch])) {
+            setActiveBranchId(branch);
+          }
         }
       }
     } catch {
       /* almacenamiento no disponible */
     }
+  }, []);
+
+  /* Persistir + difundir a otras pestañas (tras la hidratación inicial) */
+  useEffect(() => {
+    if (firstPersist.current) {
+      firstPersist.current = false;
+      return;
+    }
+    saveErpState(state);
+    if (applyingRemote.current) {
+      applyingRemote.current = false;
+      return;
+    }
+    broadcastErpState(state);
+  }, [state]);
+
+  /* Estado compartido entre pestañas (mesero ↔ cocina) */
+  useEffect(() => {
+    return subscribeErpSync((msg) => {
+      applyingRemote.current = true;
+      setState(msg.type === "state" ? msg.state : buildInitialState());
+    });
   }, []);
 
   const setActiveBranch = useCallback((id: string) => {
@@ -250,94 +373,601 @@ export function ModulesProvider({
   }, []);
 
   const isGeneral = activeBranchId === "todas";
+  const writeBranchId = isGeneral ? BRANCH_IDS[0] : activeBranchId;
 
   const activeScope: BranchScope = useMemo(() => {
-    if (!isGeneral) return scopes[activeBranchId] ?? initialScopes.miraflores;
+    if (!isGeneral) return scopesOf(state.scopes, activeBranchId);
     return {
-      orders: BRANCH_IDS.flatMap((id) => scopes[id]?.orders ?? []),
-      tables: BRANCH_IDS.flatMap((id) => scopes[id]?.tables ?? []),
-      cash: BRANCH_IDS.flatMap((id) => scopes[id]?.cash ?? []),
+      orders: BRANCH_IDS.flatMap((id) => state.scopes[id]?.orders ?? []),
+      tables: BRANCH_IDS.flatMap((id) => state.scopes[id]?.tables ?? []),
+      cash: BRANCH_IDS.flatMap((id) => state.scopes[id]?.cash ?? []),
     };
-  }, [scopes, activeBranchId, isGeneral]);
+  }, [state.scopes, activeBranchId, isGeneral]);
+
+  const accounts = useMemo(
+    () => (isGeneral ? state.accounts : state.accounts.filter((a) => a.branchId === activeBranchId)),
+    [state.accounts, activeBranchId, isGeneral],
+  );
+
+  const cashShifts = useMemo(
+    () => (isGeneral ? state.cashShifts : state.cashShifts.filter((s) => s.branchId === activeBranchId)),
+    [state.cashShifts, activeBranchId, isGeneral],
+  );
+
+  const openCashShift = useMemo(
+    () => state.cashShifts.find((s) => s.branchId === writeBranchId && s.status === "abierto") ?? null,
+    [state.cashShifts, writeBranchId],
+  );
 
   const branchOf = useCallback(
     (kind: keyof BranchScope, id: number | string): Branch | null => {
       for (const b of initialBranches) {
-        const list = (scopes[b.id]?.[kind] ?? []) as Array<{ id: number | string }>;
+        const list = (state.scopes[b.id]?.[kind] ?? []) as Array<{ id: number | string }>;
         if (list.some((o) => o.id === id)) return b;
       }
       return initialBranches[0] ?? null;
     },
-    [scopes],
+    [state.scopes],
   );
 
-  const setOrders: React.Dispatch<React.SetStateAction<Order[]>> = useCallback(
-    (v) => setScopes((prev) => applyWrite(prev, activeBranchId, "orders", v)),
-    [activeBranchId],
-  );
-  const setTables: React.Dispatch<React.SetStateAction<Table[]>> = useCallback(
-    (v) => setScopes((prev) => applyWrite(prev, activeBranchId, "tables", v)),
-    [activeBranchId],
-  );
-  const setCashMovements: React.Dispatch<React.SetStateAction<CashMovement[]>> = useCallback(
-    (v) => setScopes((prev) => applyWrite(prev, activeBranchId, "cash", v)),
-    [activeBranchId],
-  );
-  const [receipts, setReceipts] = useState<Receipt[]>(initialReceipts);
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [combos, setCombos] = useState<Combo[]>(initialCombos);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [hasUnread, setHasUnread] = useState(false);
+  /* ---------- Setters (API compatible con las vistas) ---------- */
 
-  const notify = useCallback((title: string, message: string) => {
-    setNotifications((prev) => [
-      { id: Date.now(), title, message, timestamp: Date.now() },
-      ...prev,
-    ]);
-    setHasUnread(true);
+  const setPlain = useCallback(<K extends keyof ErpState>(key: K, value: ErpState[K]) => {
+    setState((s) => ({ ...s, [key]: value }));
   }, []);
 
-  const addTicket = useCallback(
-    (subject: string) => {
+  const setOrders = useCallback<React.Dispatch<React.SetStateAction<Order[]>>>(
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "orders", v) })),
+    [activeBranchId],
+  );
+  const setTables = useCallback<React.Dispatch<React.SetStateAction<Table[]>>>(
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "tables", v) })),
+    [activeBranchId],
+  );
+  const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "cash", v) })),
+    [activeBranchId],
+  );
+
+  const setProducts = useCallback((p: Product[]) => setPlain("products", p), [setPlain]);
+  const setCategories = useCallback((c: ProductCategory[]) => setPlain("categories", c), [setPlain]);
+  const setModifierGroups = useCallback((g: ModifierGroup[]) => setPlain("modifierGroups", g), [setPlain]);
+  const setPriceLists = useCallback((l: PriceList[]) => setPlain("priceLists", l), [setPlain]);
+  const setRoles = useCallback((r: Role[]) => setPlain("roles", r), [setPlain]);
+  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
+  const setIngredients = useCallback((i: Ingredient[]) => setPlain("ingredients", i), [setPlain]);
+  const setMovements = useCallback((m: StockMovement[]) => setPlain("movements", m), [setPlain]);
+  const setCustomers = useCallback((c: Customer[]) => setPlain("customers", c), [setPlain]);
+  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
+  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);
+  const setExpenses = useCallback((e: Expense[]) => setPlain("expenses", e), [setPlain]);
+  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
+  const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
+
+  const setActivePriceList = useCallback((id: string) => {
+    setState((s) => ({
+      ...s,
+      priceLists: s.priceLists.map((l) => ({ ...l, active: l.id === id })),
+    }));
+  }, []);
+
+  const priceOfCallback = useCallback(
+    (productId: number) => priceOf(productId, state.priceLists),
+    [state.priceLists],
+  );
+
+  const categoryNameOf = useCallback(
+    (categoryId: string) => categoryName(categoryId, state.categories),
+    [state.categories],
+  );
+
+  const notify = useCallback((title: string, message: string) => {
+    setState((s) => ({
+      ...s,
+      notifications: [{ id: Date.now(), title, message, timestamp: Date.now() }, ...s.notifications],
+      hasUnread: true,
+    }));
+  }, []);
+
+  const clearUnread = useCallback(() => {
+    setState((s) => ({ ...s, hasUnread: false }));
+  }, []);
+
+  const addTicket = useCallback((subject: string) => {
+    setState((s) => {
       const ticket: Ticket = {
         id: `#TK-${Math.floor(Math.random() * 9000) + 1000}`,
         subject,
         status: "Enviado",
         updated: "Justo ahora",
       };
-      setTickets((prev) => [ticket, ...prev]);
-      notify("Ticket enviado", `Tu solicitud "${subject}" ha sido enviada a soporte.`);
-    },
-    [notify],
-  );
-
-  const setActivePriceList = useCallback((id: string) => {
-    setPriceLists((prev) => prev.map((l) => ({ ...l, active: l.id === id })));
+      return {
+        ...s,
+        tickets: [ticket, ...s.tickets],
+        notifications: [
+          {
+            id: Date.now(),
+            title: "Ticket enviado",
+            message: `Tu solicitud "${subject}" ha sido enviada a soporte.`,
+            timestamp: Date.now(),
+          },
+          ...s.notifications,
+        ],
+        hasUnread: true,
+      };
+    });
   }, []);
 
-  const priceOfCallback = useCallback(
-    (productId: number) => priceOf(productId, priceLists),
-    [priceLists],
+  const resetDemoData = useCallback(() => {
+    resetErpState();
+    setState(buildInitialState());
+  }, []);
+
+  /* ---------- Cuentas de mesa ---------- */
+
+  const openAccount = useCallback(
+    (input: { tableId: number | null; label: string; customer: string; waiter: string }): string | null => {
+      const id = newId("CT");
+      const account: TableAccount = {
+        id,
+        branchId: writeBranchId,
+        tableId: input.tableId,
+        label: input.label,
+        customer: input.customer,
+        waiter: input.waiter,
+        openedAt: nowIso(),
+        closedAt: null,
+        status: "abierta",
+        items: [],
+        payments: [],
+        tip: 0,
+        discount: 0,
+        discountConcept: "",
+        couponCode: null,
+        customerId: null,
+        motivoAnulacion: null,
+      };
+      setState((s) => {
+        const scopes = input.tableId
+          ? patchTableStatus(s.scopes, writeBranchId, input.tableId, "ocupada")
+          : s.scopes;
+        return { ...s, accounts: [account, ...s.accounts], scopes };
+      });
+      return id;
+    },
+    [writeBranchId],
   );
 
-  const categoryNameOf = useCallback(
-    (categoryId: string) => categoryName(categoryId, categories),
-    [categories],
+  const patchAccount = useCallback((accountId: string, fn: (a: TableAccount) => TableAccount) => {
+    setState((s) => ({
+      ...s,
+      accounts: s.accounts.map((a) => (a.id === accountId ? fn(a) : a)),
+    }));
+  }, []);
+
+  const addAccountItems = useCallback(
+    (accountId: string, items: AccountItem[]) => {
+      patchAccount(accountId, (a) => ({ ...a, items: [...a.items, ...items] }));
+    },
+    [patchAccount],
+  );
+
+  const updateAccountItem = useCallback(
+    (accountId: string, itemId: string, qty: number) => {
+      patchAccount(accountId, (a) => ({
+        ...a,
+        items:
+          qty <= 0
+            ? a.items.filter((i) => i.id !== itemId)
+            : a.items.map((i) => (i.id === itemId ? { ...i, qty } : i)),
+      }));
+    },
+    [patchAccount],
+  );
+
+  const removeAccountItem = useCallback(
+    (accountId: string, itemId: string) => {
+      patchAccount(accountId, (a) => ({ ...a, items: a.items.filter((i) => i.id !== itemId) }));
+    },
+    [patchAccount],
+  );
+
+  const sendToKitchen = useCallback(
+    (accountId: string): Order | null => {
+      const account = state.accounts.find((a) => a.id === accountId);
+      const pending = account?.items.filter((i) => !i.sent) ?? [];
+      if (!account || pending.length === 0) return null;
+      const order: Order = {
+        id: `#PD-${Date.now().toString().slice(-6)}`,
+        accountId,
+        tableId: account.tableId,
+        customer: account.label,
+        items: pending.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          qty: i.qty,
+          modifiers: i.modifiers.map((m) => m.name),
+        })),
+        amount: round2(pending.reduce((s, i) => s + itemLineTotal(i), 0)),
+        time: new Date().toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" }),
+        elapsed: "ahora mismo",
+        createdAt: nowIso(),
+        status: "pendiente",
+        channel: account.tableId ? "Mesa" : "Llevar",
+        waiter: account.waiter,
+      };
+      setState((s) => ({
+        ...s,
+        accounts: s.accounts.map((a) =>
+          a.id === accountId
+            ? { ...a, items: a.items.map((i) => (i.sent ? i : { ...i, sent: true })) }
+            : a,
+        ),
+        scopes: {
+          ...s.scopes,
+          [account.branchId]: {
+            ...s.scopes[account.branchId],
+            orders: [order, ...(s.scopes[account.branchId]?.orders ?? [])],
+          },
+        },
+      }));
+      return order;
+    },
+    [state.accounts],
+  );
+
+  const annulAccount = useCallback(
+    (accountId: string, motivo: string) => {
+      setState((s) => {
+        const account = s.accounts.find((a) => a.id === accountId);
+        if (!account) return s;
+        const scopes = account.tableId
+          ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
+          : s.scopes;
+        return {
+          ...s,
+          accounts: s.accounts.map((a) =>
+            a.id === accountId
+              ? { ...a, status: "anulada", closedAt: nowIso(), motivoAnulacion: motivo }
+              : a,
+          ),
+          scopes,
+        };
+      });
+    },
+    [],
+  );
+
+  /* ---------- Facturación electrónica SUNAT ---------- */
+
+  const toggleSunatContingencia = useCallback(() => {
+    setState((s) => ({ ...s, sunatContingencia: !s.sunatContingencia }));
+  }, []);
+
+  /** Envía un CPE al OSE: nunca bloquea la venta (cola + reintentos). */
+  const enviarSunat = useCallback(
+    (receipt: Receipt) => {
+      const port = getFacturacionPort();
+      port.setContingencia(state.sunatContingencia);
+      setState((s) => ({
+        ...s,
+        receipts: s.receipts.map((r) =>
+          r.id === receipt.id
+            ? {
+                ...r,
+                estadoSunat: "enviado" as const,
+                intentosEnvio: r.intentosEnvio + 1,
+                ultimoEnvio: nowIso(),
+              }
+            : r,
+        ),
+      }));
+      void port.enviar(cpeFromReceipt(receipt)).then((res) => {
+        setState((s) => ({
+          ...s,
+          receipts: s.receipts.map((r) =>
+            r.id === receipt.id
+              ? {
+                  ...r,
+                  estadoSunat: res.estado,
+                  cdr: res.cdr ?? r.cdr,
+                  mensajeSunat: res.mensaje,
+                }
+              : r,
+          ),
+        }));
+      });
+    },
+    [state.sunatContingencia],
+  );
+
+  /** Resumen diario: da de baja las boletas anuladas pendientes. */
+  const generarResumenDiario = useCallback((): {
+    count: number;
+    resumenId: string;
+  } | null => {
+    const pendientes = state.receipts.filter(
+      (r) => r.type === "03" && r.status === "Anulada" && r.bajaResumenId === "RC-pendiente",
+    );
+    if (pendientes.length === 0) return null;
+    const at = nowIso();
+    const dayKey = at.slice(0, 10).replace(/-/g, "");
+    const seq =
+      state.receipts.filter((r) => (r.bajaResumenId ?? "").startsWith(`RC-${dayKey}-`)).length + 1;
+    const resumenId = `RC-${dayKey}-${String(seq).padStart(2, "0")}`;
+    const port = getFacturacionPort();
+    port.setContingencia(state.sunatContingencia);
+    void port.enviarBaja(pendientes.map((r) => r.id)).then((res) => {
+      if (res.estado !== "aceptado") return;
+      setState((s) => ({
+        ...s,
+        receipts: s.receipts.map((r) =>
+          pendientes.some((p) => p.id === r.id) ? { ...r, bajaResumenId: resumenId } : r,
+        ),
+      }));
+    });
+    return { count: pendientes.length, resumenId };
+  }, [state.receipts, state.sunatContingencia]);
+
+  const checkoutAccount = useCallback(
+    (input: CheckoutInput): Receipt | null => {
+      const account = state.accounts.find((a) => a.id === input.accountId);
+      if (!account || account.status !== "abierta") return null;
+      const base = accountTotals(account);
+      const coupon = input.couponCode
+        ? state.coupons.find((c) => c.code === input.couponCode) ?? null
+        : null;
+      const discount = coupon ? parseCouponDiscount(coupon, base.subtotal) : 0;
+      const total = round2(base.subtotal - discount);
+      const { subtotal, igv } = splitIgv(total);
+      const at = nowIso();
+      const receiptId = nextReceiptNumber(state.receipts, input.receiptType);
+
+      const receipt: Receipt = {
+        id: receiptId,
+        type: input.receiptType,
+        at,
+        date: fmtDateTime(at),
+        customer: account.customer || account.label,
+        docType: input.docType,
+        docNumber: input.docNumber,
+        subtotal,
+        igv,
+        total,
+        status: "Pagada",
+        source: `Cuenta ${account.id} · ${account.label}`,
+        accountId: account.id,
+        estadoSunat: "en_cola",
+        intentosEnvio: 0,
+      };
+
+      const payments: Payment[] = input.payments.map((p) => ({
+        method: p.method,
+        amount: round2(p.amount),
+        tip: 0,
+        at,
+      }));
+
+      const movements: CashMovement[] = input.payments.map((p, i) => ({
+        id: Date.now() + i,
+        at,
+        datetime: fmtDateTime(at),
+        concept: `Cobro ${account.label} · ${account.id}`,
+        kind: "Ingreso",
+        amount: round2(p.amount),
+        method: p.method,
+        shiftId: openCashShift?.id,
+        accountId: account.id,
+      }));
+
+      setState((s) => {
+        const scopes = account.tableId
+          ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
+          : s.scopes;
+        return {
+          ...s,
+          receipts: [receipt, ...s.receipts],
+          accounts: s.accounts.map((a) =>
+            a.id === account.id
+              ? {
+                  ...a,
+                  status: "cobrada",
+                  closedAt: at,
+                  payments,
+                  tip: round2(input.tip),
+                  discount,
+                  discountConcept: coupon ? `Cupón ${coupon.code}` : "",
+                  couponCode: coupon?.code ?? null,
+                  customerId: input.customerId,
+                }
+              : a,
+          ),
+          coupons: coupon
+            ? s.coupons.map((c) => (c.code === coupon.code ? { ...c, used: c.used + 1 } : c))
+            : s.coupons,
+          customers: input.customerId
+            ? s.customers.map((c) =>
+                c.id === input.customerId
+                  ? {
+                      ...c,
+                      points: c.points + Math.floor(total),
+                      visits: c.visits + 1,
+                      lastVisit: "Hoy",
+                    }
+                  : c,
+              )
+            : s.customers,
+          scopes: {
+            ...scopes,
+            [account.branchId]: {
+              ...scopes[account.branchId],
+              cash: [...movements, ...(scopes[account.branchId]?.cash ?? [])],
+            },
+          },
+        };
+      });
+      enviarSunat(receipt);
+      return receipt;
+    },
+    [state.accounts, state.coupons, state.receipts, openCashShift, enviarSunat],
+  );
+
+  /** Anulación tributaria: NC si es factura, baja en resumen si es boleta. */
+  const annulReceipt = useCallback(
+    (id: string, motivo: string) => {
+      const receipt = state.receipts.find((r) => r.id === id);
+      if (!receipt || receipt.status === "Anulada") return;
+      const at = nowIso();
+      const account = receipt.accountId
+        ? state.accounts.find((a) => a.id === receipt.accountId)
+        : undefined;
+      const methods: { method: string; amount: number }[] = account?.payments.length
+        ? account.payments.map((p) => ({ method: p.method, amount: p.amount }))
+        : [{ method: "Efectivo", amount: receipt.total }];
+      const reverse: CashMovement[] = methods.map((m, i) => ({
+        id: Date.now() + i,
+        at,
+        datetime: fmtDateTime(at),
+        concept: `Anulación ${receipt.id}`,
+        kind: "Egreso",
+        amount: m.amount,
+        method: m.method,
+        accountId: receipt.accountId,
+      }));
+      const branchId = account?.branchId ?? BRANCH_IDS[0];
+      const nota: Receipt | null =
+        receipt.type === "01"
+          ? {
+              id: nextReceiptNumber(state.receipts, "07"),
+              type: "07",
+              at,
+              date: fmtDateTime(at),
+              customer: receipt.customer,
+              docType: receipt.docType,
+              docNumber: receipt.docNumber,
+              subtotal: receipt.subtotal,
+              igv: receipt.igv,
+              total: receipt.total,
+              status: "Emitida",
+              source: `Nota de crédito · ${receipt.id}`,
+              accountId: receipt.accountId,
+              refId: receipt.id,
+              motivoAnulacion: motivo,
+              estadoSunat: "en_cola",
+              intentosEnvio: 0,
+            }
+          : null;
+      const patch = (r: Receipt): Receipt =>
+        r.id === id
+          ? {
+              ...r,
+              status: "Anulada",
+              motivoAnulacion: motivo,
+              estadoSunat: "anulado",
+              ...(r.type === "03" ? { bajaResumenId: r.bajaResumenId ?? "RC-pendiente" } : {}),
+            }
+          : r;
+      setState((s) => ({
+        ...s,
+        receipts: nota ? [nota, ...s.receipts.map(patch)] : s.receipts.map(patch),
+        scopes: {
+          ...s.scopes,
+          [branchId]: {
+            ...s.scopes[branchId],
+            cash: [...reverse, ...(s.scopes[branchId]?.cash ?? [])],
+          },
+        },
+      }));
+      if (nota) enviarSunat(nota);
+    },
+    [state.receipts, state.accounts, enviarSunat],
+  );
+
+  /* ---------- Turno de caja ---------- */
+
+  const startCashShift = useCallback(
+    (fund: number) => {
+      if (openCashShift) return;
+      const at = nowIso();
+      const shift: CashShift = {
+        id: newId("CH"),
+        branchId: writeBranchId,
+        status: "abierto",
+        openedBy: currentUser?.name ?? "Caja",
+        openedAt: at,
+        openingFund: round2(fund),
+        closedBy: null,
+        closedAt: null,
+        countedCash: null,
+        expectedCash: null,
+        difference: null,
+        observations: "",
+      };
+      const movement: CashMovement = {
+        id: Date.now(),
+        at,
+        datetime: fmtDateTime(at),
+        concept: "Fondo de apertura",
+        kind: "Ingreso",
+        amount: round2(fund),
+        method: "Efectivo",
+        shiftId: shift.id,
+      };
+      setState((s) => ({
+        ...s,
+        cashShifts: [shift, ...s.cashShifts],
+        scopes: {
+          ...s.scopes,
+          [writeBranchId]: {
+            ...s.scopes[writeBranchId],
+            cash: [movement, ...(s.scopes[writeBranchId]?.cash ?? [])],
+          },
+        },
+      }));
+    },
+    [openCashShift, writeBranchId, currentUser],
+  );
+
+  const closeCashShift = useCallback(
+    (countedCash: number, observations: string) => {
+      const shift = openCashShift;
+      if (!shift) return;
+      const movements = state.scopes[shift.branchId]?.cash ?? [];
+      const expected = expectedCashFor(shift, movements);
+      setState((s) => ({
+        ...s,
+        cashShifts: s.cashShifts.map((sh) =>
+          sh.id === shift.id
+            ? {
+                ...sh,
+                status: "cerrado",
+                closedBy: currentUser?.name ?? "Caja",
+                closedAt: nowIso(),
+                countedCash: round2(countedCash),
+                expectedCash: expected,
+                difference: round2(countedCash - expected),
+                observations,
+              }
+            : sh,
+        ),
+      }));
+    },
+    [openCashShift, state.scopes, currentUser],
   );
 
   const value = useMemo<ModulesContext>(
     () => ({
       payments,
-      tickets,
+      tickets: state.tickets,
       addTicket,
-      setTickets: setTickets,
-      products,
+      setTickets,
+      products: state.products,
       setProducts,
-      categories,
+      categories: state.categories,
       setCategories,
-      modifierGroups,
+      modifierGroups: state.modifierGroups,
       setModifierGroups,
-      priceLists,
+      priceLists: state.priceLists,
       setPriceLists,
       setActivePriceList,
       priceOf: priceOfCallback,
@@ -353,43 +983,61 @@ export function ModulesProvider({
       setOrders,
       tables: activeScope.tables,
       setTables,
-      roles,
+      roles: state.roles,
       setRoles,
-      reservations,
+      reservations: state.reservations,
       setReservations,
-      ingredients,
+      ingredients: state.ingredients,
       setIngredients,
-      movements,
+      movements: state.movements,
       setMovements,
-      customers,
+      customers: state.customers,
       setCustomers,
-      coupons,
+      coupons: state.coupons,
       setCoupons,
       cashMovements: activeScope.cash,
       setCashMovements,
-      receipts,
+      receipts: state.receipts,
       setReceipts,
-      expenses,
+      annulReceipt,
+      enviarSunat,
+      generarResumenDiario,
+      sunatContingencia: state.sunatContingencia,
+      toggleSunatContingencia,
+      expenses: state.expenses,
       setExpenses,
-      combos,
+      combos: state.combos,
       setCombos,
-      notifications,
-      hasUnread,
+      accounts,
+      openAccount,
+      addAccountItems,
+      updateAccountItem,
+      removeAccountItem,
+      sendToKitchen,
+      annulAccount,
+      checkoutAccount,
+      cashShifts,
+      openCashShift,
+      startCashShift,
+      closeCashShift,
+      notifications: state.notifications,
+      hasUnread: state.hasUnread,
       notify,
-      clearUnread: () => setHasUnread(false),
+      clearUnread,
+      resetDemoData,
       currentUser,
       login,
       logout,
     }),
     [
       payments,
-      tickets,
+      state,
       addTicket,
       setTickets,
-      products,
-      categories,
-      modifierGroups,
-      priceLists,
+      setProducts,
+      setCategories,
+      setModifierGroups,
+      setPriceLists,
       setActivePriceList,
       priceOfCallback,
       categoryNameOf,
@@ -397,22 +1045,38 @@ export function ModulesProvider({
       isGeneral,
       setActiveBranch,
       branchOf,
+      activeScope,
       setOrders,
       setTables,
-      activeScope,
-      roles,
-      reservations,
-      ingredients,
-      movements,
-      customers,
-      coupons,
+      setRoles,
+      setReservations,
+      setIngredients,
+      setMovements,
+      setCustomers,
+      setCoupons,
       setCashMovements,
-      receipts,
-      expenses,
-      combos,
-      notifications,
-      hasUnread,
+      setReceipts,
+      annulReceipt,
+      enviarSunat,
+      generarResumenDiario,
+      toggleSunatContingencia,
+      setExpenses,
+      setCombos,
+      accounts,
+      openAccount,
+      addAccountItems,
+      updateAccountItem,
+      removeAccountItem,
+      sendToKitchen,
+      annulAccount,
+      checkoutAccount,
+      cashShifts,
+      openCashShift,
+      startCashShift,
+      closeCashShift,
       notify,
+      clearUnread,
+      resetDemoData,
       currentUser,
       login,
       logout,
@@ -420,6 +1084,29 @@ export function ModulesProvider({
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+function scopesOf(scopes: Record<string, BranchScope>, id: string): BranchScope {
+  return (
+    scopes[id] ?? { orders: [], tables: [], cash: [] }
+  );
+}
+
+function patchTableStatus(
+  scopes: Record<string, BranchScope>,
+  branchId: string,
+  tableId: number,
+  status: Table["status"],
+): Record<string, BranchScope> {
+  return {
+    ...scopes,
+    [branchId]: {
+      ...scopes[branchId],
+      tables: (scopes[branchId]?.tables ?? []).map((t) =>
+        t.id === tableId ? { ...t, status } : t,
+      ),
+    },
+  };
 }
 
 export function useModules() {
