@@ -73,7 +73,7 @@ $$ LANGUAGE plpgsql;
 
 -- 4.1 SaaS / Tenant ----------------------------------------------------------
 CREATE TABLE IF NOT EXISTS empresas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   nombre_legal TEXT NOT NULL,
   nombre_comercial TEXT,
   ruc VARCHAR(11) NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS empresas (
 );
 
 CREATE TABLE IF NOT EXISTS sucursales (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   nombre_corto TEXT,
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS sucursales (
 CREATE INDEX IF NOT EXISTS idx_sucursales_empresa ON sucursales (empresa_id);
 
 CREATE TABLE IF NOT EXISTS leads_cotizaciones (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   nombre TEXT NOT NULL,
   apellido TEXT NOT NULL,
   telefono TEXT NOT NULL,
@@ -137,7 +137,7 @@ CREATE INDEX IF NOT EXISTS idx_leads_empresa ON leads_cotizaciones (empresa_crea
 CREATE INDEX IF NOT EXISTS idx_leads_estado ON leads_cotizaciones (estado);
 
 CREATE TABLE IF NOT EXISTS usuarios (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID,
   sucursal_id UUID,
   nombre TEXT NOT NULL,
@@ -161,7 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_usuarios_sucursal ON usuarios (sucursal_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_email_global ON usuarios (email) WHERE empresa_id IS NULL;
 
 CREATE TABLE IF NOT EXISTS suscripciones_eventos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   plan plan_suscripcion NOT NULL,
   estado_anterior estado_empresa,
@@ -180,7 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_suscripciones_empresa ON suscripciones_eventos (e
 
 -- 4.2 Catálogo (maestro por empresa, compartido entre sucursales) --------------
 CREATE TABLE IF NOT EXISTS categorias (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   posicion INTEGER NOT NULL DEFAULT 0,
@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS categorias (
 CREATE INDEX IF NOT EXISTS idx_categorias_empresa ON categorias (empresa_id);
 
 CREATE TABLE IF NOT EXISTS grupos_modificadores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   obligatorio BOOLEAN NOT NULL DEFAULT false,
@@ -209,7 +209,7 @@ CREATE TABLE IF NOT EXISTS grupos_modificadores (
 CREATE INDEX IF NOT EXISTS idx_grupos_empresa ON grupos_modificadores (empresa_id);
 
 CREATE TABLE IF NOT EXISTS opciones_modificadores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   grupo_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   precio_extra NUMERIC(12,2) NOT NULL DEFAULT 0,
@@ -222,7 +222,7 @@ CREATE TABLE IF NOT EXISTS opciones_modificadores (
 CREATE INDEX IF NOT EXISTS idx_opciones_grupo ON opciones_modificadores (grupo_id);
 
 CREATE TABLE IF NOT EXISTS platos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   categoria_id UUID NOT NULL,
   sku TEXT NOT NULL,
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS platos_grupos_modificadores (
 CREATE INDEX IF NOT EXISTS idx_pgm_grupo ON platos_grupos_modificadores (grupo_id);
 
 CREATE TABLE IF NOT EXISTS listas_precios (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   activa BOOLEAN NOT NULL DEFAULT false,
@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS precios_platos (
 CREATE INDEX IF NOT EXISTS idx_precios_plato ON precios_platos (plato_id);
 
 CREATE TABLE IF NOT EXISTS combos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   descripcion TEXT,
@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS combos_platos (
 CREATE INDEX IF NOT EXISTS idx_cp_plato ON combos_platos (plato_id);
 
 CREATE TABLE IF NOT EXISTS reglas_horarias_promos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   beneficio TEXT NOT NULL,
@@ -325,7 +325,7 @@ CREATE TABLE IF NOT EXISTS reglas_horarias_promos (
 CREATE INDEX IF NOT EXISTS idx_reglas_empresa ON reglas_horarias_promos (empresa_id);
 
 CREATE TABLE IF NOT EXISTS cupones (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   codigo TEXT NOT NULL,
   tipo_descuento tipo_descuento_cupon NOT NULL,
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS cupones (
 CREATE INDEX IF NOT EXISTS idx_cupones_empresa ON cupones (empresa_id);
 
 CREATE TABLE IF NOT EXISTS proveedores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   ruc VARCHAR(11),
@@ -362,7 +362,7 @@ CREATE TABLE IF NOT EXISTS proveedores (
 CREATE INDEX IF NOT EXISTS idx_proveedores_empresa ON proveedores (empresa_id);
 
 CREATE TABLE IF NOT EXISTS insumos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   proveedor_id UUID,
   nombre TEXT NOT NULL,
@@ -383,7 +383,7 @@ CREATE INDEX IF NOT EXISTS idx_insumos_proveedor ON insumos (proveedor_id);
 
 -- 4.3 CRM (global por empresa) ------------------------------------------------
 CREATE TABLE IF NOT EXISTS clientes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   telefono TEXT NOT NULL,
@@ -403,7 +403,7 @@ CREATE INDEX IF NOT EXISTS idx_clientes_empresa ON clientes (empresa_id);
 CREATE INDEX IF NOT EXISTS idx_clientes_telefono ON clientes (telefono);
 
 CREATE TABLE IF NOT EXISTS config_lealtad (
-  empresa_id UUID PRIMARY KEY,
+  empresa_id UUID,
   puntos_por_moneda NUMERIC(10,2) NOT NULL DEFAULT 1.00,
   caducidad_meses INTEGER NOT NULL DEFAULT 12,
   umbral_frecuente INTEGER NOT NULL DEFAULT 5,
@@ -417,7 +417,7 @@ CREATE TABLE IF NOT EXISTS config_lealtad (
 
 -- 4.4 RRHH base ----------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS roles_empresa (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   nombre TEXT NOT NULL,
   descripcion TEXT,
@@ -431,7 +431,7 @@ CREATE TABLE IF NOT EXISTS roles_empresa (
 CREATE INDEX IF NOT EXISTS idx_roles_empresa ON roles_empresa (empresa_id);
 
 CREATE TABLE IF NOT EXISTS empleados (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   usuario_id UUID,
@@ -457,7 +457,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_empleados_usuario ON empleados (usuario_id)
 -- 5. Tablas operativas por sucursal
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS mesas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   numero TEXT NOT NULL,
@@ -478,7 +478,7 @@ CREATE INDEX IF NOT EXISTS idx_mesas_sucursal ON mesas (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_mesas_estado ON mesas (sucursal_id, estado);
 
 CREATE TABLE IF NOT EXISTS reservas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   mesa_id UUID NOT NULL,
@@ -506,7 +506,7 @@ CREATE INDEX IF NOT EXISTS idx_reservas_sucursal ON reservas (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_reservas_mesa ON reservas (mesa_id);
 
 CREATE TABLE IF NOT EXISTS ordenes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   numero_orden TEXT NOT NULL,
@@ -546,7 +546,7 @@ CREATE INDEX IF NOT EXISTS idx_ordenes_cliente ON ordenes (cliente_id);
 CREATE INDEX IF NOT EXISTS idx_ordenes_mesero ON ordenes (mesero_id);
 
 CREATE TABLE IF NOT EXISTS detalles_orden (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   orden_id UUID NOT NULL,
   tipo tipo_detalle_orden NOT NULL,
   plato_id UUID,
@@ -612,7 +612,7 @@ CREATE TABLE IF NOT EXISTS escandallos_recetas (
 CREATE INDEX IF NOT EXISTS idx_esc_insumo ON escandallos_recetas (insumo_id);
 
 CREATE TABLE IF NOT EXISTS movimientos_inventario (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   insumo_id UUID NOT NULL,
@@ -637,7 +637,7 @@ CREATE INDEX IF NOT EXISTS idx_movinv_insumo ON movimientos_inventario (insumo_i
 CREATE INDEX IF NOT EXISTS idx_movinv_orden ON movimientos_inventario (orden_id);
 
 CREATE TABLE IF NOT EXISTS turnos_caja (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   cajero_id UUID,
@@ -663,7 +663,7 @@ CREATE INDEX IF NOT EXISTS idx_turnos_sucursal ON turnos_caja (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_turnos_estado ON turnos_caja (sucursal_id, estado);
 
 CREATE TABLE IF NOT EXISTS gastos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   concepto TEXT NOT NULL,
@@ -691,7 +691,7 @@ CREATE INDEX IF NOT EXISTS idx_gastos_turno ON gastos (turno_id);
 CREATE INDEX IF NOT EXISTS idx_gastos_proveedor ON gastos (proveedor_id);
 
 CREATE TABLE IF NOT EXISTS movimientos_caja (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   turno_id UUID NOT NULL,
   tipo tipo_movimiento_caja NOT NULL,
@@ -716,7 +716,7 @@ CREATE INDEX IF NOT EXISTS idx_movcaja_orden ON movimientos_caja (orden_id);
 CREATE INDEX IF NOT EXISTS idx_movcaja_gasto ON movimientos_caja (gasto_id);
 
 CREATE TABLE IF NOT EXISTS comprobantes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   tipo tipo_comprobante NOT NULL DEFAULT 'BOLETA',
@@ -744,7 +744,7 @@ CREATE INDEX IF NOT EXISTS idx_comp_sucursal ON comprobantes (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_comp_orden ON comprobantes (orden_id);
 
 CREATE TABLE IF NOT EXISTS canjes_cupones (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   cupon_id UUID NOT NULL,
   orden_id UUID NOT NULL,
   empresa_id UUID NOT NULL,
@@ -767,7 +767,7 @@ CREATE INDEX IF NOT EXISTS idx_canjes_empresa ON canjes_cupones (empresa_id);
 CREATE INDEX IF NOT EXISTS idx_canjes_sucursal ON canjes_cupones (sucursal_id);
 
 CREATE TABLE IF NOT EXISTS movimientos_puntos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   cliente_id UUID NOT NULL,
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
@@ -788,7 +788,7 @@ CREATE INDEX IF NOT EXISTS idx_movpuntos_empresa ON movimientos_puntos (empresa_
 CREATE INDEX IF NOT EXISTS idx_movpuntos_sucursal ON movimientos_puntos (sucursal_id);
 
 CREATE TABLE IF NOT EXISTS turnos_plan (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   empleado_id UUID NOT NULL,
@@ -806,7 +806,7 @@ CREATE INDEX IF NOT EXISTS idx_tp_sucursal ON turnos_plan (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_tp_empleado ON turnos_plan (empleado_id);
 
 CREATE TABLE IF NOT EXISTS asistencias (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   empleado_id UUID NOT NULL,
@@ -828,7 +828,7 @@ CREATE INDEX IF NOT EXISTS idx_asis_sucursal ON asistencias (sucursal_id);
 CREATE INDEX IF NOT EXISTS idx_asis_empleado ON asistencias (empleado_id);
 
 CREATE TABLE IF NOT EXISTS pozos_propinas (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID NOT NULL,
   sucursal_id UUID NOT NULL,
   fecha DATE NOT NULL,
@@ -858,7 +858,7 @@ CREATE TABLE IF NOT EXISTS repartos_propinas (
 CREATE INDEX IF NOT EXISTS idx_rep_empleado ON repartos_propinas (empleado_id);
 
 CREATE TABLE IF NOT EXISTS auditoria (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID DEFAULT gen_random_uuid(),
   empresa_id UUID,
   sucursal_id UUID,
   usuario_id UUID,
