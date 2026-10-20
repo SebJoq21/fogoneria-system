@@ -1,12 +1,11 @@
-/* Cliente del BFF de sesión (`/api/session`). La cookie HttpOnly la fija el
-   servidor; aquí solo se devuelve el usuario y el JWT para las llamadas API. */
+/* Cliente del BFF de sesión (`/api/session`). El servidor fija las cookies
+   HttpOnly; aquí solo se recibe el usuario para el estado de la UI. */
 
 import { ApiError } from "./api";
 import type { AppUser } from "./auth";
 
 type SessionResponse = {
   user: AppUser;
-  accessToken: string;
 };
 
 async function readError(response: Response): Promise<string> {
@@ -27,6 +26,7 @@ export async function createSession(email: string, password: string): Promise<Se
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
       credentials: "same-origin",
+      cache: "no-store",
     });
   } catch {
     throw new ApiError("No se pudo conectar con el servidor.", 0);
@@ -36,11 +36,8 @@ export async function createSession(email: string, password: string): Promise<Se
   return (await response.json()) as SessionResponse;
 }
 
-/** Borra la cookie HttpOnly. Nunca lanza: el logout local no debe bloquearse. */
-export async function destroySession(): Promise<void> {
-  try {
-    await fetch("/api/session", { method: "DELETE", credentials: "same-origin" });
-  } catch {
-    /* sin red: la cookie expirará sola */
-  }
+/** El logout real es una navegación a `/api/session/logout` (borra cookies
+    HttpOnly y redirige). Se expone aquí para que la UI lo use en un solo lugar. */
+export function logoutUrl(): string {
+  return "/api/session/logout";
 }

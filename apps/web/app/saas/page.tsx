@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Flame } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { KpiCard } from "@/components/ui/KpiCard";
@@ -26,7 +25,6 @@ const initialCompanies: Company[] = [
 
 /** Consola SaaS del superadmin: empresas, planes y estado. Fuera del shell restaurante. */
 export default function SaasPage() {
-  const router = useRouter();
   const { currentUser, logout, notify } = useModules();
   const [companies, setCompanies] = useState<Company[]>(initialCompanies);
 
@@ -56,10 +54,7 @@ export default function SaasPage() {
           </span>
           <button
             type="button"
-            onClick={async () => {
-              await logout();
-              router.push("/");
-            }}
+            onClick={() => logout()}
             className="px-4 h-10 rounded-full text-nav font-medium text-ink-600 border border-ink-900/15 hover:border-ink-900 transition-colors cursor-pointer"
           >
             Cerrar sesión

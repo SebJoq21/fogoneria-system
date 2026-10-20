@@ -1,131 +1,101 @@
-/* Identidad y RBAC. El rol/sucursal vienen del login real y viajan al
-   servidor en la cookie HttpOnly `fogoneria.session` (ver `lib/session.ts`).
-   Jerarquía: superadmin (SaaS) > admin (dueño franquicia) >
-   sucursal (admin de sucursal) + cajero + cocina + mesero (branchId fijo). */
+/* Sesión de navegación (servidor): JWT firmado con `SESSION_SECRET` que vive
+   en una cookie HttpOnly. `proxy.ts` lo verifica para aplicar el RBAC; el
+   cliente nunca puede leerlo ni alterarlo. El access token de la API vive en
+   otra cookie HttpOnly y solo lo usa el BFF (`app/api/backend`). */
 
-export type AppRole = "superadmin" | "admin" | "sucursal" | "cajero" | "cocina" | "mesero";
+import { SignJWT, jwtVerify } from "jose";
+import type { AppRole } from "./auth";
 
-export type AppUser = {
-  id: string;
-  name: string;
-  email: string;
-  role: AppRole;
-  /** null = todas las sucursales (superadmin/admin) */
-  branchId: string | null;
-  initials: string;
-};
+export const SESSION_COOKIE = "fogoneria.session";
+/** Ventana deslizante: el proxy renueva la cookie en cada navegación. */
+export const SESSION_MAX_AGE_SECONDS = 15 * 60;
+/** Tope absoluto aunque la sesión se refresque. */
+export const SESSION_ABSOLUTE_MAX_SECONDS = 8 * 60 * 60;
 
-export const ROLE_LABEL: Record<AppRole, string> = {
-  superadmin: "Superadmin SaaS",
-  admin: "Dueño franquicia",
-  sucursal: "Admin sucursal",
-  cajero: "Cajero",
-  cocina: "Cocina",
-  mesero: "Mesero",
-};
-
-export const ROLE_HOME: Record<AppRole, string> = {
-  superadmin: "/saas",
-  admin: "/app",
-  sucursal: "/app",
-  cajero: "/app/caja",
-  cocina: "/app/cocina",
-  mesero: "/app/mozo",
-};
-
-export const demoUsers: AppUser[] = [
-  { id: "u-super", name: "Equipo Fogonería", email: "super@fogoneria.com", role: "superadmin", branchId: null, initials: "SA" },
-  { id: "u-admin", name: "Martín Quispe", email: "admin@mirestaurante.com", role: "admin", branchId: null, initials: "MQ" },
-  { id: "u-suc", name: "Rosa Quispe", email: "sucursal@mirestaurante.com", role: "sucursal", branchId: "miraflores", initials: "RQ" },
-  { id: "u-caj", name: "Carlos Paredes", email: "caja@mirestaurante.com", role: "cajero", branchId: "miraflores", initials: "CP" },
-  { id: "u-coc", name: "Luis Huamán", email: "cocina@mirestaurante.com", role: "cocina", branchId: "miraflores", initials: "LH" },
-  { id: "u-moz", name: "Ana Beltrán", email: "mesero@mirestaurante.com", role: "mesero", branchId: "miraflores", initials: "AB" },
+const ROLES: readonly AppRole[] = [
+  "superadmin",
+  "admin",
+  "sucursal",
+  "cajero",
+  "cocina",
+  "mesero",
 ];
+const DEV_SECRET = "dev-only-session-secret-change-me-32chars";
 
-export function findDemoUser(email: string): AppUser | null {
-  const clean = email.trim().toLowerCase();
-  return demoUsers.find((u) => u.email === clean) ?? null;
-}
-
-/** Contraseña única de las cuentas demo del seed (ver `apps/api/prisma/seed.ts`). */
-export const DEMO_PASSWORD = "Fogoneria123!";
-
-/** Rol de la API (enum `rol_usuario`) → rol del shell web. */
-const API_ROLE: Record<string, AppRole> = {
-  SUPERADMIN: "superadmin",
-  ADMIN_GLOBAL: "admin",
-  GERENTE_SUCURSAL: "sucursal",
-  CAJERO: "cajero",
-  COCINERO: "cocina",
-  MESERO: "mesero",
+export type SessionPayload = {
+  sub: string;
+  role: AppRole;
+  branchId: string | null;
+  /** epoch en segundos; no se renueva al refrescar (tope absoluto). */
+  startedAt: number;
 };
 
-export function appRoleFromApi(rol: string): AppRole {
-  return API_ROLE[rol] ?? "mesero";
+function isAppRole(value: unknown): value is AppRole {
+  return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }
 
-/** Sucursales del seed: la API usa UUID, el shell web usa slug. */
-const SEED_BRANCH_SLUGS: Record<string, string> = {
-  "22222222-2222-2222-2222-222222222222": "miraflores",
-  "33333333-3333-3333-3333-333333333333": "surco",
-  "44444444-4444-4444-4444-444444444444": "san-isidro",
-};
-
-/** uuid de sucursal → slug del shell; `null` cuando es desconocida (= todas). */
-export function branchSlugFromApi(sucursalId: string | null): string | null {
-  if (!sucursalId) return null;
-  return SEED_BRANCH_SLUGS[sucursalId] ?? null;
+function secretKey(): Uint8Array {
+  const configured = process.env.SESSION_SECRET?.trim();
+  const isExplicitDev = process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
+  const secret = configured || (isExplicitDev ? DEV_SECRET : "");
+  if (secret.length < 32) {
+    throw new Error(
+      "SESSION_SECRET debe tener al menos 32 caracteres (obligatorio fuera de development/test)",
+    );
+  }
+  return new TextEncoder().encode(secret);
 }
 
-export type ApiLoginUser = {
-  id: string;
-  nombre: string;
-  email: string;
-  rol: string;
-  empresaId: string | null;
-  sucursalId: string | null;
-};
-
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  const first = parts[0]?.[0] ?? "";
-  const last = parts.length > 1 ? parts[parts.length - 1][0] : "";
-  return `${first}${last}`.toUpperCase() || "??";
+/** Firma una sesión; `ttlSeconds` solo se usa en pruebas. */
+export async function signSession(
+  payload: SessionPayload,
+  ttlSeconds: number = SESSION_MAX_AGE_SECONDS,
+): Promise<string> {
+  return new SignJWT({
+    role: payload.role,
+    branchId: payload.branchId,
+    startedAt: payload.startedAt,
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(payload.sub)
+    .setIssuedAt()
+    .setExpirationTime(`${ttlSeconds}s`)
+    .sign(secretKey());
 }
 
-/** Usuario de la API → usuario del shell (rol + sucursal en slug). */
-export function appUserFromApi(user: ApiLoginUser): AppUser {
-  const role = appRoleFromApi(user.rol);
-  const branchId = role === "admin" || role === "superadmin" ? null : branchSlugFromApi(user.sucursalId);
+/** Opciones de la cookie de sesión (compartidas por el BFF y el proxy). */
+export function sessionCookieOptions() {
   return {
-    id: user.id,
-    name: user.nombre,
-    email: user.email,
-    role,
-    branchId,
-    initials: initialsOf(user.nombre),
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_SECONDS,
   };
 }
 
-/** ¿El rol puede operar más de una sucursal (ver switcher)? */
-export function canSwitchBranch(role: AppRole): boolean {
-  return role === "admin";
-}
-
-/** ¿El rol ve una ruta del shell? (el proxy hace cumplir lo mismo en servidor) */
-export function canViewPath(pathname: string, role: AppRole): boolean {
-  if (role === "superadmin") return pathname.startsWith("/saas");
-  if (pathname.startsWith("/saas")) return false;
-  if (pathname.startsWith("/app/mesas/maestro")) return role === "sucursal";
-  if (pathname.startsWith("/app/cocina")) return role === "cocina";
-  if (pathname.startsWith("/app/mozo")) return role === "mesero";
-  if (role === "cajero") {
-    if (pathname === "/app") return true;
-    return ["/app/caja", "/app/comprobantes"].some(
-      (path) => pathname === path || pathname.startsWith(`${path}/`),
-    );
+/** Devuelve la sesión solo si la firma, el rol, la expiración y el tope absoluto son válidos. */
+export async function verifySession(token: string | undefined | null): Promise<SessionPayload | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
+    if (typeof payload.sub !== "string" || !payload.sub || !isAppRole(payload.role)) {
+      return null;
+    }
+    if (typeof payload.startedAt !== "number" || !Number.isFinite(payload.startedAt)) {
+      return null;
+    }
+    const ageSeconds = Math.floor(Date.now() / 1000) - payload.startedAt;
+    if (ageSeconds < 0 || ageSeconds > SESSION_ABSOLUTE_MAX_SECONDS) {
+      return null;
+    }
+    return {
+      sub: payload.sub,
+      role: payload.role,
+      branchId: typeof payload.branchId === "string" ? payload.branchId : null,
+      startedAt: payload.startedAt,
+    };
+  } catch {
+    return null;
   }
-  if (role === "cocina" || role === "mesero") return false;
-  return role === "admin" || role === "sucursal";
 }
-
