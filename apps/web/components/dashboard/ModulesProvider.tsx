@@ -77,7 +77,7 @@ import {
   type ProductCategory,
 } from "@/lib/erp-catalog";
 import { ApiError, getToken, setToken } from "@/lib/api";
-import { loginRequest } from "@/lib/auth-api";
+import { createSession, destroySession } from "@/lib/session-api";
 import * as catalogApi from "@/lib/catalog-api";
 import {
   cpeFromReceipt,
@@ -219,7 +219,7 @@ type ModulesContext = {
   /* Sesión real (JWT de la API) */
   currentUser: AppUser | null;
   login: (email: string, password: string) => Promise<AppUser>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 const Ctx = createContext<ModulesContext | null>(null);
@@ -535,13 +535,11 @@ export function ModulesProvider({
   /* ---------- Sesión (JWT) ---------- */
 
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
-    const { user, accessToken } = await loginRequest(email, password);
+    const { user, accessToken } = await createSession(email, password);
     setToken(accessToken);
     setCurrentUser(user);
     try {
       localStorage.setItem("fogoneria:user", JSON.stringify(user));
-      document.cookie = `fogoneria.role=${user.role}; path=/; max-age=604800`;
-      document.cookie = `fogoneria.branch=${user.branchId ?? "todas"}; path=/; max-age=604800`;
     } catch {
       /* almacenamiento no disponible */
     }
@@ -549,18 +547,20 @@ export function ModulesProvider({
     return user;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     setToken(null);
     setCurrentUser(null);
     setCatalog(EMPTY_CATALOG);
     try {
       localStorage.removeItem("fogoneria:user");
       localStorage.removeItem("fogoneria:branch");
+      // Limpia cookies planas heredadas de la fase anterior.
       document.cookie = "fogoneria.role=; path=/; max-age=0";
       document.cookie = "fogoneria.branch=; path=/; max-age=0";
     } catch {
       /* almacenamiento no disponible */
     }
+    await destroySession();
   }, []);
 
   const isGeneral = activeBranchId === "todas";

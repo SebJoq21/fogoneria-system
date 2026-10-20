@@ -1,5 +1,5 @@
-/* Identidad y RBAC. El rol/sucursal vienen del login real (JWT) y se
-   guardan en cookies planas para el RBAC optimista del proxy.
+/* Identidad y RBAC. El rol/sucursal vienen del login real y viajan al
+   servidor en la cookie HttpOnly `fogoneria.session` (ver `lib/session.ts`).
    Jerarquía: superadmin (SaaS) > admin (dueño franquicia) >
    sucursal (admin de sucursal) + cocina + mesero (branchId fijo). */
 

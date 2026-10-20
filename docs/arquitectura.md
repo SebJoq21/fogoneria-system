@@ -6,9 +6,11 @@ SaaS ERP gastronómico multitenant (1 empresa → N sucursales). Monorepo `pnpm 
 
 - Rutas: `/` login por rol → `/app/*` ERP (`DashboardShell`: `AppSidebar` + `AppTopBar`), `/saas` consola superadmin standalone, `/onboarding`, `/demo/[id]`, `/terminos`.
 - Dominios ERP en `/app`: inicio, mesas (+`maestro`), órdenes, carta, cocina (KDS), mozo, caja, comprobantes, inventario, combos, promociones, clientes, reservas, gastos, analíticas, personal, platos/productos (`platos|categorias|modificadores|precios`), fidelización, pagos, soporte, configuración.
-- Estado: `ModulesProvider.tsx` (contexto global + `localStorage` + cookies `fogoneria.role|branch`). El catálogo y las listas de precios ya vienen de la API (`lib/catalog-api.ts`); el resto del ERP sigue mock.
-- Cliente API: `lib/api.ts` (`NEXT_PUBLIC_API_URL`, JWT en `fogoneria:token`, `ApiError`), `lib/auth-api.ts` (login), `lib/onboarding-api.ts` (RUC + alta de tenant) y `lib/catalog-api.ts` (catálogo/precios).
-- Datos en `lib/`: `auth.ts` (roles + `ROLE_HOME` + `canViewPath` + mapeo rol/sucursal de la API), `tenancy.ts` (sucursales miraflores/surco/san-isidro + `todas`), `permissions.ts` (cocina/mozo/caja), `erp.ts` (órdenes/mesas/caja/inventario/personal), `erp-catalog.ts` (tipos + `priceOf()`/`categoryName()`, sin mocks), `dashboard.ts`, `demo.ts`.
+- Estado: `ModulesProvider.tsx` (contexto global + `localStorage` para el usuario y los datos del ERP; la autorización ya no depende de `localStorage`). El catálogo y las listas de precios ya vienen de la API (`lib/catalog-api.ts`); el resto del ERP sigue mock.
+- Sesión: `app/api/session/route.ts` valida credenciales contra la API y emite la cookie HttpOnly/SameSite `fogoneria.session`, firmada con HS256 (`lib/session.ts`, `jose`, `SESSION_SECRET`, 8 h); `proxy.ts` verifica firma/expiración y aplica `ROLE_HOME`/`canViewPath`. Logout borra la cookie en servidor (`lib/session-api.ts`).
+- Cliente API: `lib/api.ts` (`NEXT_PUBLIC_API_URL`, JWT en `fogoneria:token` para `/api/v1`, `ApiError`), `lib/auth-api.ts` (login), `lib/onboarding-api.ts` (RUC + alta de tenant), `lib/catalog-api.ts` (catálogo/precios) y `lib/session-api.ts` (BFF de sesión).
+- Datos en `lib/`: `auth.ts` (roles + `ROLE_HOME` + `canViewPath` + mapeo rol/sucursal de la API), `session.ts` (firma/verificación de la cookie), `tenancy.ts` (sucursales miraflores/surco/san-isidro + `todas`), `permissions.ts` (cocina/mozo/caja), `erp.ts` (órdenes/mesas/caja/inventario/personal), `erp-catalog.ts` (tipos + `priceOf()`/`categoryName()`, sin mocks), `dashboard.ts`, `demo.ts`.
+- Tests: Vitest (`pnpm --filter web test`) para la matriz de acceso por rol y la firma/expiración de la sesión.
 - DS propio `components/ui/` + tokens `@theme` en `app/globals.css` + gate `scripts/check-styles.mjs`. `app/demo/*` exento del gate.
 
 ## apps/api (NestJS 12 + Prisma 7)

@@ -16,14 +16,14 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 - `app/` — rutas: `/` login, `/app/*` ERP bajo `DashboardShell`, `/saas` consola superadmin, `/onboarding`, `/demo/[id]`, `/terminos`.
 - `components/ui/` — único DS válido (`Button`, `Card`, `fields`, `data-table`, `Modal`, `Drawer`, `Tabs`, `KpiCard`, `cn`). No crear estilos crudos fuera.
-- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`.
-- `proxy.ts` — RBAC con cookies planas (fase mocks). `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
+- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`; sesión: `session.ts` (servidor, firma HS256) y `session-api.ts` (cliente del BFF).
+- `proxy.ts` — RBAC server-side con la cookie HttpOnly `fogoneria.session` (firmada, 8 h); la emite `app/api/session/route.ts`. `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
 
 ## Reglas web (evitan los errores repetidos)
 
 - Precio vive en `PriceList`, nunca en `Product`. Usar `priceOf(productId, lists)` / `categoryName(categoryId, categories)` de `lib/erp-catalog.ts` (ids de catálogo = UUID de la API).
 - Catálogo global, operación scoped por sucursal (`ModulesProvider.applyWrite`). Vista `todas` es agregada de lectura.
-- RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`. Roles: `superadmin|admin|sucursal|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`).
+- RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`, que verifica la cookie firmada `fogoneria.session` (no `localStorage`). Roles: `superadmin|admin|sucursal|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`). No volver a autorizar con cookies planas ni con el usuario de `localStorage`.
 - UI: `Button href` con `<a>` está permitido aquí; no usar `<img>` crudo salvo `app/demo/*` (exento del gate).
 - Solo pesos `400/500`, salvo etiquetas de hub (`Másteres e informes` 18px y títulos de columna 16px) que van en `semibold` (600) por decisión de diseño. Escala `12/13/14/16/18/24`, tokens `@theme` en `app/globals.css`.
 - RSC delgados que delegan a client. Login/onboarding y catálogo/precios ya llaman a la API (`lib/api.ts` + `NEXT_PUBLIC_API_URL`); el resto del ERP sigue con estado en `ModulesProvider` + `localStorage`.
@@ -34,4 +34,4 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 ## Comandos
 
-- `pnpm --filter web dev | build | lint | check-types` (`lint` = `eslint && node scripts/check-styles.mjs`).
+- `pnpm --filter web dev | build | lint | check-types | test` (`lint` = `eslint && node scripts/check-styles.mjs`; `test` = Vitest).

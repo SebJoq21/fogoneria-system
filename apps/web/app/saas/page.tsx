@@ -56,8 +56,8 @@ export default function SaasPage() {
           </span>
           <button
             type="button"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.push("/");
             }}
             className="px-4 h-10 rounded-full text-nav font-medium text-ink-600 border border-ink-900/15 hover:border-ink-900 transition-colors cursor-pointer"
