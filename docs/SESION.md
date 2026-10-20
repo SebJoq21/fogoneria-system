@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-19 — Tareas 32 y 42: Prisma 7, migración inicial y seed demo
+
+- Objetivo: desbloquear la fundación backend con `schema.prisma`, migraciones PostgreSQL y datos demo.
+- Hecho:
+  - Prisma 7.10.1 + `@prisma/adapter-pg` + `prisma.config.ts`; `schema.prisma` con 41 modelos, 27 enums e índices parciales (`apps/api/prisma/schema.prisma`).
+  - Migración `20261019000000_init` desde el DDL, con CHECKs, 22 triggers y 4 vistas; verificada en base limpia.
+  - Seed demo idempotente (`apps/api/prisma/seed.ts`): empresa, 3 sucursales, usuarios, catálogo, inventario, caja y RRHH.
+  - Documentación: `docs/modelo-datos.md`, README de API, `TAREAS-SEMANAS-5-8.md` (global 37%, Sonny 72%).
+- Pendiente: PR de `feat/prisma-schema` a `development`.
+- Próximo paso: David retoma 44/48 sobre el schema y el seed ya listos.
+- Verificado: `api check-types`, `api lint`, `api build`, `api test`, `api test:e2e`, `pnpm lint` raíz, `migrate deploy`, seed 2 veces sin duplicar.
+- Extra: se agregó `@babel/preset-typescript` a la raíz para que `@repo/ui` lint resuelva el preset en pnpm estricto (falla preexistente).
+
 ## 2026-09-13 — Bloque grande sin commitear: sidebar, nombres, confirms, hubs, tipos, consola, breadcrumb
 
 - Objetivo: dejar el ERP navegable, seguro y consistente (dueño) en una sola jornada; todo verificado pero SIN commit.
