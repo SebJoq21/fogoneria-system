@@ -1,6 +1,7 @@
 /* Cliente HTTP de la API Fogonería (fase 3: backend real).
-   El JWT vive en localStorage; el rol/sucursal siguen en cookies planas
-   para que el proxy de Next haga el RBAC optimista. */
+   El JWT de la API vive en localStorage para las llamadas a `/api/v1`; el
+   RBAC de navegación usa la cookie HttpOnly `fogoneria.session` que emite
+   `app/api/session/route.ts` (ver `lib/session.ts`). */
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";

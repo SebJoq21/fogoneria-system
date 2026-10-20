@@ -8,9 +8,12 @@
     "start": "next start",
     "lint": "eslint && node scripts/check-styles.mjs",
     "check:styles": "node scripts/check-styles.mjs",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "jose": "^6.2.12",
     "lucide-react": "^1.43.0",
     "next": "16.3.4",
     "react": "19.2.8",
@@ -26,7 +29,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.18.0"
 }

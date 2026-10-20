@@ -18,7 +18,7 @@
 | Cerradas (Listo) | **6** (AYCDS-32, AYCDS-42, AYCDS-44, AYCDS-48, AYCDS-60, AYCDS-61) |
 | En curso | **6** (AYCDS-53, AYCDS-55, AYCDS-57, AYCDS-58, AYCDS-63, AYCDS-65) |
 | Por hacer | **2** (AYCDS-62, AYCDS-66) |
-| Avance global (promedio simple) | **77%** |
+| Avance global (promedio simple) | **79%** |
 | Avance funcional end-to-end | **≈60–65%** |
 
 **Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend está implementada y **verificada contra PostgreSQL 16 real** (Docker Compose en `localhost:5433`): Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e. Falta completar Dockerfiles/CI (tarea 58), conectar las UIs 63 y 65 a las APIs y el RLS nativo (tarea 62).
@@ -40,13 +40,13 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S5 | 32, 44, 55 | 90% |
+| S5 | 32, 44, 55 | 98% |
 | S5-6 | 48, 57, 58 | 73% |
 | S6 | 42, 53 | 98% |
 | S7 | 62 | 15% |
 | S7-8 | 60, 61, 63, 65 | 94% |
 | S8 | 66 | 0% |
-| **Global** | **14 tareas** | **77%** |
+| **Global** | **14 tareas** | **79%** |
 
 ### Avance por responsable
 
@@ -54,7 +54,7 @@
 |---|---|---|
 | David Piñarreta | 44, 48, 53, 60, 61 | 99% |
 | Sonny De La Cruz | 32, 42, 62 | 72% |
-| Joshua Chávez | 55, 65 | 75% |
+| Joshua Chávez | 55, 65 | 88% |
 | Diego Arévalo | 57, 63 | 95% |
 | Sebastián Chicata | 58, 66 | 13% |
 
@@ -66,7 +66,7 @@
 |---|---|---|---|---|---|---|---|
 | AYCDS-32 | [15.0] Modelo datos `schema.prisma` ERP/CRM | 5 | Sonny | Listo | 100% | `schema.prisma` (41 modelos, 27 enums), `prisma.config.ts`, ER en `docs/modelo-datos.md` | — |
 | AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | Listo | 100% | Módulos auth/tenant/orders/catalog/pricing/saas/billing, `PrismaService`, `ConfigModule` validado, `ValidationPipe`, prefijo `/api/v1`, health y Swagger | — |
-| AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 70% | 37 páginas, `proxy.ts`, RBAC de UI | Protección server-side real, cookie segura |
+| AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 95% | 37 páginas, `proxy.ts`, RBAC de UI, cookie de sesión HttpOnly firmada (`lib/session.ts` + `app/api/session`), tests de `canViewPath` y de sesión | Verificación en vivo del login/cookie con API + PostgreSQL
 | AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | Listo | 100% | JWT/Passport, `JwtAuthGuard`/`RolesGuard` globales, login valida usuario y estado del tenant, seed con bcrypt, tests unit/e2e, colección Postman | — |
 | AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | En curso | 95% | Login real contra `POST /auth/login` (JWT en `lib/api.ts` + cookie de rol para el RBAC de `proxy.ts`), wizard de 3 pasos con RUC validado (módulo 11) y logo opcional que crea empresa/sucursal/admin vía `POST /onboarding`, estados de carga y errores visibles | Verificación en vivo contra PostgreSQL |
 | AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | En curso | 25% | `docker-compose.yml` con PostgreSQL 16 en 5433 + shadow DB, scripts `db:up/down/logs/status/psql` | Dockerfiles api/web, workflow CI y backlog |
@@ -117,7 +117,7 @@
 
 ### AYCDS-55 — [20.0] Setup Next.js rutas protegidas por rol
 
-- **Semana:** 5 | **Responsable:** Joshua Chávez | **Estado Jira:** En curso | **Avance:** 70%
+- **Semana:** 5 | **Responsable:** Joshua Chávez | **Estado Jira:** En curso | **Avance:** 95%
 - **Descripción Jira:** "App Router Tailwind shadcn rutas /app /cocina /mozo /saas RDES-01 RF-02."
 - **Qué debe hacerse:**
   1. Revisar y mantener las rutas del App Router: `/app`, `/app/cocina`, `/app/mozo`, `/saas` (el repo usa design system propio en lugar de shadcn; documentar la decisión).
@@ -127,6 +127,8 @@
   5. Eliminar la confianza en `localStorage` para autorización y agregar pruebas de acceso por rol.
 - **Archivos/rutas:** `apps/web/proxy.ts`, `apps/web/lib/auth.ts`, `apps/web/lib/permissions.ts`, `apps/web/components/auth/**`
 - **Criterio de aceptación:** un usuario que accede por URL a una ruta de otro rol es redirigido; la sesión no puede alterarse desde DevTools; rutas privadas sin sesión redirigen al login.
+- **Evidencia:** `proxy.ts` verifica en cada request una cookie `fogoneria.session` HttpOnly/SameSite firmada con HS256 (`lib/session.ts`, `jose`, `SESSION_SECRET`) emitida por `app/api/session/route.ts`; ya no se confía en `localStorage` ni en cookies planas para autorizar. `ModulesProvider` usa `createSession`/`destroySession` y el logout borra la cookie en el servidor. Pruebas `lib/auth.test.ts` (matriz de acceso por rol) y `lib/session.test.ts` (firma, manipulación, expiración y rol inválido): 12/12. `lint`, `check-types` y `build` (46 rutas) verdes. El JWT de la API sigue en `localStorage` solo para llamar a `/api/v1`; la autorización de navegación ya no depende de él.
+- **Pendiente para Listo:** verificación en vivo del login a través de `/api/session` (cookie + redirect por rol) con la API y PostgreSQL levantados; en este entorno el puerto `5433` no responde. Se cierra junto con la verificación pendiente de 57/63.
 
 ---
 
@@ -341,7 +343,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 65 UI SaaS | Joshua Chávez | 61 API SaaS | David Piñarreta | Sin API solo hay mocks |
 | 66 QA | Sebastián Chicata | 48, 53, 60, 61 + 58 | David Piñarreta + Sebastián Chicata | Requiere funcionalidad real y CI |
 
-**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 58 (Sebastián), 55 (Joshua), 57 y 63 (Diego, ya integradas a la API) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 62 parcial (Sonny) y 66 al cerrar 58.
+**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 55 (Joshua), 58 (Sebastián), 57 y 63 (Diego, ya integradas a la API) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 62 parcial (Sonny) y 66 al cerrar 58.
 
 ### 5.3 Matriz de inicio: ¿puede cada uno avanzar cuando quiera?
 
@@ -399,7 +401,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 - [ ] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable
 
 ### Joshua Chávez — Frontend / RBAC y SaaS
-- [ ] **55** Protección server-side de rutas, cookie segura/JWT, redirects por rol
+- [ ] **55** Protección server-side de rutas, cookie segura/JWT, redirects por rol — *código completo y testeado; falta la verificación en vivo contra API + PostgreSQL*
 - [ ] **65** Conectar `/saas` a la API: MRR, grilla de empresas, suspender/reactivar
 
 ### Diego Arévalo — Frontend / Auth y catálogo
@@ -459,6 +461,7 @@ docker compose up --build
 | 2026-10-20 | 44, 48, 53, 60, 61 | David Piñarreta | Verificación real: login de 6 usuarios, CRUD catálogo/precios, alta/suspensión/reactivación de tenant, métricas MRR y aislamiento con 2 empresas; fix de `PrismaService` (composición en vez de herencia) | API en `:3001` contra Postgres en `:5433`; 25 unit + 7 e2e verdes; tenant B ve 1 sucursal y 0 órdenes de A |
 | 2026-10-20 | 57 | Diego Arévalo | Login real con JWT (`lib/api.ts`, `lib/auth-api.ts`), wizard de onboarding de 3 pasos con validación de RUC y logo, y módulo público `POST /api/v1/onboarding` (empresa TRIAL + sucursal matriz + admin + lead + auditoría) | `apps/web/lib/{api,auth-api,onboarding-api,auth}.ts`, `components/auth/LoginContent.tsx`, `components/onboarding/**`, `apps/api/src/modules/onboarding/**`; `onboarding.service.spec.ts` 3/3 verdes; `lint` + `check-types` web verdes |
 | 2026-10-20 | 63 | Diego Arévalo | `/app/productos` conectado a la API de catálogo/precios: CRUD real de productos, categorías, modificadores y listas, con UUID en todo el ERP y catálogo fuera de `localStorage` (v2) | `apps/web/lib/catalog-api.ts`, `components/dashboard/ModulesProvider.tsx`, `components/erp/catalog/**`, `lib/{erp-catalog,persistence,domain,erp,dashboard,tenancy}.ts`; `lint` + `check-types` web verdes |
+| 2026-10-20 | 55 (95%) | Joshua Chávez | Sesión de navegación con cookie HttpOnly `fogoneria.session` firmada (HS256, `SESSION_SECRET`, 8 h) emitida por `app/api/session`; `proxy.ts` la verifica y aplica `canViewPath`. Se retiran las cookies planas `fogoneria.role`/`fogoneria.branch` y la autorización ya no confía en `localStorage`; logout borra la cookie en servidor. 12 tests nuevos en web. Falta verificación en vivo (PostgreSQL no disponible) | `apps/web/lib/session.ts`, `app/api/session/route.ts`, `lib/session-api.ts`, `proxy.ts`, `components/dashboard/ModulesProvider.tsx`; `test` 12/12, `lint`, `check-types` y `build` (46 rutas) verdes |
 | 2026-10-20 | 57 | Diego Arévalo | Revisión P0/P1: RUC SUNAT con dígito verificador correcto (400 si inválido), alta pública sin `plan` (TRIAL forzado), RUC/email duplicado → 409, logo y longitudes validadas, rate limit 5/10 min por IP, body de 4 MB solo en `/onboarding` y login ambiguo → 409 | `apps/api/src/common/utils/ruc.ts`, `apps/api/src/modules/{onboarding,auth}/**`, `apps/api/src/common/guards/rate-limit.guard.ts`, `apps/api/src/main.ts`, `apps/web/lib/{onboarding-api,domain}.ts`; `ruc.spec` 7, `auth.service.spec` 8, `onboarding.e2e-spec` 3 |
 | 2026-10-20 | 63 | Diego Arévalo | Revisión P0/P1: modificadores por `id` (sync transaccional, 400 ids ajenos/repetidos, 409 si la opción está en órdenes), tenant y sucursales hidratados de la API, paginación de platos + abort de peticiones, rol real `cajero` en el RBAC y rollback de altas de plato/lista | `apps/api/src/modules/catalog/{catalog.service.ts,dto/modifier-group.dto.ts}`, `apps/web/lib/{tenant-api,catalog-api,auth,permissions}.ts`, `apps/web/components/dashboard/{ModulesProvider,AppSidebar,DashboardShell}.tsx`, `apps/web/proxy.ts`; `catalog.service.spec` 10; `api test` 52 + e2e 10, `web build` 45 rutas |
 | | | | | |

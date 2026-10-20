@@ -16,6 +16,8 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 - `app/` — rutas: `/` login, `/app/*` ERP bajo `DashboardShell`, `/saas` consola superadmin, `/onboarding`, `/demo/[id]`, `/terminos`.
 - `components/ui/` — único DS válido (`Button`, `Card`, `fields`, `data-table`, `Modal`, `Drawer`, `Tabs`, `KpiCard`, `cn`). No crear estilos crudos fuera.
+- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`; sesión: `session.ts` (servidor, firma HS256) y `session-api.ts` (cliente del BFF).
+- `proxy.ts` — RBAC server-side con la cookie HttpOnly `fogoneria.session` (firmada, 8 h); la emite `app/api/session/route.ts`. `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
 - `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`, `tenant-api.ts`.
 - `proxy.ts` — RBAC con cookies planas (fase mocks). `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
 
@@ -23,6 +25,7 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 - Precio vive en `PriceList`, nunca en `Product`. Usar `priceOf(productId, lists)` / `categoryName(categoryId, categories)` de `lib/erp-catalog.ts` (ids de catálogo = UUID de la API).
 - Catálogo global, operación scoped por sucursal (`ModulesProvider.applyWrite`). Vista `todas` es agregada de lectura.
+- RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`, que verifica la cookie firmada `fogoneria.session` (no `localStorage`). Roles: `superadmin|admin|sucursal|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`). No volver a autorizar con cookies planas ni con el usuario de `localStorage`.
 - RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`. Roles: `superadmin|admin|sucursal|cajero|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`). `cajero` = rol real de la API (`API_ROLE.CAJERO`), solo `/app`, `/app/caja` y `/app/comprobantes`.
 - Tenant y sucursales se hidratan de la API (`lib/tenant-api.ts` → `/tenant`, `/tenant/branches`) en `ModulesProvider`; `DEMO_COMPANY` y `GENERAL_BRANCH` son el fallback sin sesión.
 - UI: `Button href` con `<a>` está permitido aquí; no usar `<img>` crudo salvo `app/demo/*` (exento del gate).
@@ -35,4 +38,4 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 ## Comandos
 
-- `pnpm --filter web dev | build | lint | check-types` (`lint` = `eslint && node scripts/check-styles.mjs`).
+- `pnpm --filter web dev | build | lint | check-types | test` (`lint` = `eslint && node scripts/check-styles.mjs`; `test` = Vitest).
