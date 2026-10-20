@@ -1,5 +1,19 @@
 # SESION — estado entre sesiones
 
+## 2026-10-20 — Backend de David: tareas 44, 48, 53, 60 y 61
+
+- Objetivo: implementar los módulos backend de David sobre el schema de Sonny.
+- Hecho:
+  - Merge local de `origin/feat/prisma-schema` (`d6bb6a6`): Prisma 7.10.1, schema de 41 modelos, migración y seed. Ese trabajo no estaba en `main`.
+  - 44: wiring en `app.module.ts`, `bootstrap.ts` (prefijo `/api/v1`, CORS, `ValidationPipe`), `swagger.ts` (`/api/docs`), `config/env.validation.ts` y health.
+  - 48: `modules/auth` con JWT/Passport, `JwtStrategy`, guards globales, decoradores `@Public/@Roles/@CurrentUser`, login con bcrypt y bloqueo por estado del tenant; colección Postman y contraseña demo `Fogoneria123!`.
+  - 53: `TenantContextService` + `TenantContextInterceptor` + extensión Prisma (`prisma.scoped`) con bypass SUPERADMIN; tests en `tenant-scope.spec.ts`.
+  - 60: `modules/catalog` y `modules/pricing` con DTOs, RBAC, Swagger y tests.
+  - 61: `modules/saas`, `modules/billing` (cron diario 03:00) y `modules/audit`; MRR, alta transaccional, suspensión/reactivación y eventos.
+- Verificado: `api check-types`, `api lint`, `api build`, `api test` (25) y `api test:e2e` (7). Sin PostgreSQL (Docker apagado y sin `psql`): los tests usan Prisma mockeado.
+- Pendiente: verificar contra Postgres real (tarea 58), conectar UIs 63/65 y RLS nativo (62).
+- Próximo paso: levantar Docker/Postgres, correr `db:deploy` + `db:seed` + colección Postman y luego push.
+
 ## 2026-10-19 — Integración con `origin/main` (Fases 0–3 preservadas)
 
 - Objetivo: traer los cambios del remoto sin perder las fases 0–3 locales.

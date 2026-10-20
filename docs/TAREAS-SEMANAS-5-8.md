@@ -16,12 +16,12 @@
 |---|---|
 | Tareas del rango | **14** |
 | Cerradas (Listo) | **2** (AYCDS-32, AYCDS-42) |
-| En curso | **1** (AYCDS-55) |
-| Por hacer | **11** |
-| Avance global (promedio simple) | **37%** |
-| Avance funcional end-to-end | **≈15–20%** |
+| En curso | **6** (AYCDS-55, AYCDS-44, AYCDS-48, AYCDS-53, AYCDS-60, AYCDS-61) |
+| Por hacer | **6** |
+| Avance global (promedio simple) | **67%** |
+| Avance funcional end-to-end | **≈45–50%** |
 
-**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo), pero funciona **100% con mocks**. La API NestJS sigue siendo un scaffold ("Hello World"): ya existen `schema.prisma`, migración inicial, seed demo y cliente Prisma, pero faltan módulos, autenticación, Docker y CI. El cuello de botella está en la **fundación backend** (tareas 44, 48, 53) y en las **APIs de catálogo y SaaS** (60, 61), de las que dependen las UIs 63 y 65.
+**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend ya está implementada: Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e con Prisma mockeado. Falta la verificación contra PostgreSQL real (Docker/CI, tarea 58) y conectar las UIs 63 y 65 a las APIs.
 
 > **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que existan las APIs 60 y 61. Hoy muestran datos mock.
 
@@ -38,19 +38,19 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S5 | 32, 44, 55 | 57% |
-| S5-6 | 48, 57, 58 | 13% |
-| S6 | 42, 53 | 50% |
+| S5 | 32, 44, 55 | 88% |
+| S5-6 | 48, 57, 58 | 43% |
+| S6 | 42, 53 | 93% |
 | S7 | 62 | 15% |
-| S7-8 | 60, 61, 63, 65 | 48% |
+| S7-8 | 60, 61, 63, 65 | 86% |
 | S8 | 66 | 0% |
-| **Global** | **14 tareas** | **37%** |
+| **Global** | **14 tareas** | **67%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
-| David Piñarreta | 44, 48, 53, 60, 61 | 5% |
+| David Piñarreta | 44, 48, 53, 60, 61 | 90% |
 | Sonny De La Cruz | 32, 42, 62 | 72% |
 | Joshua Chávez | 55, 65 | 75% |
 | Diego Arévalo | 57, 63 | 63% |
@@ -63,16 +63,16 @@
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
 | AYCDS-32 | [15.0] Modelo datos `schema.prisma` ERP/CRM | 5 | Sonny | Listo | 100% | `schema.prisma` (41 modelos, 27 enums), `prisma.config.ts`, ER en `docs/modelo-datos.md` | — |
-| AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | Por hacer | 0% | Scaffold NestJS (`GET /`) | Módulos, Prisma, config, validación |
+| AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | En curso | 95% | Módulos auth/tenant/orders/catalog/pricing/saas/billing, `PrismaService`, `ConfigModule` validado, `ValidationPipe`, prefijo `/api/v1`, health y Swagger | Verificación contra PostgreSQL real |
 | AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 70% | 37 páginas, `proxy.ts`, RBAC de UI | Protección server-side real, cookie segura |
-| AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | Por hacer | 0% | Login demo sin validación | JWT/Passport, guards, estados de tenant |
+| AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | En curso | 90% | JWT/Passport, `JwtAuthGuard`/`RolesGuard` globales, login valida usuario y estado del tenant, seed con bcrypt, tests unit/e2e, colección Postman | Prueba con PostgreSQL real y ejecución de la colección |
 | AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | Por hacer | 40% | UI de login + wizard 3 pasos | Conexión a API, RUC/logo persistidos |
 | AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | Por hacer | 0% | Nada | Dockerfiles, compose, workflow CI |
 | AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Listo | 100% | Migración `20261019000000_init`, `prisma/seed.ts` idempotente, scripts `db:*` | — |
-| AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | Por hacer | 0% | Columnas `empresa_id`/`sucursal_id` | RLS, middleware, tests de aislamiento |
+| AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | En curso | 85% | `TenantContextService` (AsyncLocalStorage) + extensión Prisma que inyecta `empresa_id`/`sucursal_id`, bypass SUPERADMIN, tests unitarios | Test de aislamiento contra DB real (2 empresas) y RLS nativo (tarea 62) |
 | AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | Por hacer | 15% | 22 triggers `updated_at` | Índices, políticas RLS, soft-delete |
-| AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | Por hacer | 0% | Mock `lib/erp-catalog.ts` | Endpoints, DTOs, Swagger, tests |
-| AYCDS-61 | [24.0] Consola SaaS alta Tenant + cron morosidad | 7-8 | David | Por hacer | 25% | UI `/saas` mock | Endpoints `/saas`, cron, auditoría |
+| AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | En curso | 90% | CRUD de categorías, platos y modificadores; listas de precios, upsert masivo y `resolvePrice`; DTOs validados, Swagger y tests | Verificación con PostgreSQL real |
+| AYCDS-61 | [24.0] Consola SaaS alta Tenant + cron morosidad | 7-8 | David | En curso | 90% | Endpoints SaaS, alta de tenant transaccional, suspender/reactivar/plan, métricas MRR, cron diario 03:00 y auditoría; tests | Prueba con PostgreSQL real y ejecución del cron en entorno |
 | AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | Por hacer | 85% | `/app/productos` con 5 tabs (mock) | Conexión a API real |
 | AYCDS-65 | [27.0] UI consola SaaS MRR empresas | 7-8 | Joshua | Por hacer | 80% | `/saas` con 3 empresas mock | Conexión a API, MRR real |
 | AYCDS-66 | [28.0] QA aislamiento y RBAC + acta 1 | 8 | Sebastián | Por hacer | 0% | Tests "Hello World" | Suite multi-tenant/RBAC, acta |
@@ -99,7 +99,7 @@
 
 ### AYCDS-44 — [17.0] Setup modular NestJS Auth/Tenant/Orders
 
-- **Semana:** 5 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 5 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 95%
 - **Descripción Jira:** "Estructura AuthModule TenantModule OrdersModule RDES-03 + README."
 - **Qué debe hacerse:**
   1. Crear `apps/api/src/modules/auth`, `apps/api/src/modules/tenant` y `apps/api/src/modules/orders` con `module`, `controller` y `service`.
@@ -109,6 +109,7 @@
   5. Agregar endpoint `GET /api/v1/health` y actualizar el README de la API con la estructura.
 - **Archivos/rutas:** `apps/api/src/modules/**`, `apps/api/src/app.module.ts`, `apps/api/src/main.ts`, `apps/api/README.md`
 - **Criterio de aceptación:** `pnpm --filter api build` compila; `GET /api/v1/health` responde; los tres módulos están registrados.
+- **Evidencia:** `src/modules/{auth,tenant,orders,catalog,pricing,saas,billing}` registrados en `app.module.ts`; `PrismaModule` y `TenantContextModule` globales; `ConfigModule` con validación (`config/env.validation.ts`); `ValidationPipe` global y prefijo `/api/v1` (`bootstrap.ts`); health y Swagger (`/api/docs`). Verificado con `check-types`, `lint`, `build`, 25 tests unitarios y 7 e2e. Falta ejecutarlo contra PostgreSQL real.
 
 ---
 
@@ -129,7 +130,7 @@
 
 ### AYCDS-48 — [18.0] Auth JWT Passport + estado Tenant
 
-- **Semana:** 5-6 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 5-6 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 90%
 - **Descripción Jira:** "Login valida Trial/Activa/Suspendida RF-01 RF-02 + Postman."
 - **Qué debe hacerse:**
   1. Implementar `POST /api/v1/auth/login` con validación de credenciales y hash `bcrypt`/`argon2`.
@@ -139,12 +140,13 @@
   5. Añadir colección Postman y pruebas unitarias/e2e del login.
 - **Archivos/rutas:** `apps/api/src/modules/auth/**`, `apps/api/src/common/guards/**`, `apps/api/src/common/decorators/**`, `docs/postman/`
 - **Criterio de aceptación:** login devuelve JWT válido; tenant suspendido recibe 403; tests verdes; colección Postman incluida.
+- **Evidencia:** `auth.service.ts` valida `estado` del usuario y bloquea tenants `SUSPENDED`/`EXPIRED`/`LEAD`/`NO_CALIFICADO` y trials vencidos; `JwtStrategy` + guards globales (`common/guards`); decoradores `@Public`, `@Roles`, `@CurrentUser`; seed con hash real bcrypt (`Fogoneria123!`); `docs/postman/fogoneria-api.postman_collection.json`; tests de login y RBAC en `auth.service.spec.ts` y `test/auth.e2e-spec.ts`. Falta correr la colección contra PostgreSQL real.
 
 ---
 
 ### AYCDS-53 — [19.0] Middleware RLS `tenant_id`/`branch_id`
 
-- **Semana:** 6 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 6 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 85%
 - **Descripción Jira:** "Aislamiento geografico inyeccion auto RD-02 RNF-01 CT-FG-01 + tests."
 - **Qué debe hacerse:**
   1. Resolver `empresa_id` y `sucursal_id` desde el JWT en cada request (contexto de tenant).
@@ -153,6 +155,7 @@
   4. Escribir pruebas de aislamiento (empresa A no ve datos de empresa B).
 - **Archivos/rutas:** `apps/api/src/modules/tenant/**`, `apps/api/src/common/context/**`, `apps/api/prisma/prisma.service.ts`
 - **Criterio de aceptación:** todas las consultas operativas quedan filtradas por tenant/sucursal; las pruebas de aislamiento pasan; no se puede forzar otro tenant desde el body o query.
+- **Evidencia:** `TenantContextService` (AsyncLocalStorage) + `TenantContextInterceptor`; extensión `withTenantScope` (`prisma/tenant.extension.ts`) que inyecta `empresa_id`/`sucursal_id` en `findMany`, `findFirst`, `count`, `aggregate`, `groupBy`, `updateMany`, `deleteMany`, `create` y `createMany`; SUPERADMIN con bypass; `tenant-scope.spec.ts` cubre merge por AND e inyección en creates. Falta el test de aislamiento contra DB real y el RLS nativo de la tarea 62.
 
 ---
 
@@ -192,7 +195,7 @@
 - **Descripción Jira:** "Migraciones iniciales + tenant/sucursales demo RDES-01."
 - **Qué debe hacerse:**
   1. Crear la migración inicial `20261019000000_init` a partir del DDL de `db/fogoneria_schema.sql` (sin los INSERT demo).
-  2. Crear `apps/api/prisma/seed.ts` idempotente con: empresa demo (`Mi Restaurante S.A.C.`, RUC `20123456789`), 3 sucursales, roles, usuarios demo y catálogo base.
+  2. Crear `apps/api/prisma/seed.ts` idempotente con: empresa demo (`Mi Restaurante S.A.C.`, RUC `20123456786`), 3 sucursales, roles, usuarios demo y catálogo base.
   3. Agregar scripts `db:deploy`, `db:migrate`, `db:seed`, `db:reset` y `db:studio` al `package.json` de la API.
   4. Documentar el procedimiento en el README de la API.
 - **Archivos/rutas:** `apps/api/prisma/migrations/**`, `apps/api/prisma/seed.ts`, `apps/api/package.json`, `apps/api/README.md`
@@ -218,7 +221,7 @@
 
 ### AYCDS-60 — [23.0] API catálogo maestro y PriceList
 
-- **Semana:** 7-8 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 7-8 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 90%
 - **Descripción Jira:** "CRUD platos/categorias/modificadores + listas por canal RF-03 CT-FG-06 Swagger."
 - **Qué debe hacerse:**
   1. Implementar CRUD de platos, categorías y grupos/opciones de modificadores.
@@ -228,12 +231,13 @@
   5. Escribir pruebas unitarias/e2e de los endpoints.
 - **Archivos/rutas:** `apps/api/src/modules/catalog/**`, `apps/api/src/modules/pricing/**`, `apps/api/src/main.ts`
 - **Criterio de aceptación:** CRUD completo documentado en Swagger; filtrado por tenant; pruebas verdes.
+- **Evidencia:** `catalog.controller.ts` (categorías, platos, grupos/opciones, asignación a platos) y `pricing.controller.ts` (listas, precios, activación, `resolvePrice`); DTOs con `class-validator`; roles `ADMIN_GLOBAL`/`GERENTE_SUCURSAL` en escrituras; Swagger en `/api/docs`; `catalog.service.spec.ts` y `pricing.service.spec.ts` verdes. Falta verificación con PostgreSQL real.
 
 ---
 
 ### AYCDS-61 — [24.0] Consola SaaS alta Tenant + cron morosidad
 
-- **Semana:** 7-8 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 25%
+- **Semana:** 7-8 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 90%
 - **Descripción Jira:** "Endpoints /saas ciclo suscripcion + cron suspension RF-01 CT-FG-01."
 - **Qué debe hacerse:**
   1. Implementar endpoints `/api/v1/saas`: alta de tenant, listado de empresas y detalle de suscripción.
@@ -243,6 +247,7 @@
   5. Alimentar la UI `/saas` (tarea 65) con estos endpoints.
 - **Archivos/rutas:** `apps/api/src/modules/saas/**`, `apps/api/src/modules/billing/**`, `apps/api/src/app.module.ts`
 - **Criterio de aceptación:** alta y cron probados; el estado de la suscripción se refleja en el login; acciones auditadas.
+- **Evidencia:** `saas.controller.ts` (alta, listado, detalle, suspender, reactivar, cambio de plan, historial y métricas MRR); alta transaccional en `saas.service.ts`; `billing.scheduler.ts` con `@Cron(EVERY_DAY_AT_3AM)` y ciclo `TRIAL → EXPIRED → SUSPENDED`; cada transición escribe `suscripciones_eventos` y `auditoria`; `saas.service.spec.ts` y `billing.service.spec.ts` verdes. Falta probar contra PostgreSQL real.
 
 ---
 
@@ -444,5 +449,5 @@ docker compose up --build
 |---|---|---|---|---|
 | 2026-10-19 | — | — | Línea base: 14 tareas, 26% global | Este documento |
 | 2026-10-19 | 32 y 42 | Sonny De La Cruz | Prisma 7.10.1, `schema.prisma`, migración inicial y seed demo idempotente; 41 tablas, 27 enums, 22 triggers y 4 vistas | `apps/api/prisma/**`, `docs/modelo-datos.md` |
-| | | | | |
+| 2026-10-20 | 44, 48, 53, 60, 61 | David Piñarreta | Backend modular NestJS: auth JWT, guards RBAC, contexto de tenant + extensión Prisma, catálogo/precios, consola SaaS y cron de morosidad; Swagger, colección Postman y tests | `apps/api/src/**`, `docs/postman/**`; `check-types`, `lint`, `build`, 25 unit + 7 e2e verdes |
 | | | | | |
