@@ -11,7 +11,7 @@
   - Verificado contra Postgres: health, login de los 6 usuarios demo, JWT, `/tenant`, `/catalog`, `/pricing`, `/orders`, CRUD real de catálogo/precios, alta de tenant, `/saas/metrics`, suspensión (login 403) y reactivación; aislamiento con 2 empresas (la B ve 1 sucursal y 0 órdenes de A).
 - Verificado: `api check-types`, `api lint`, 25 unit y 7 e2e verdes.
 - Pendiente: Dockerfiles api/web + CI (tarea 58), conectar UIs 63/65, RLS nativo (62) y sincronizar Jira.
-- Próximo paso: commit del bloque y PR `feat/api-david` → `development`.
+- Próximo paso: revisar y mergear el PR [#2](https://github.com/SebJoq21/fogoneria-system/pull/2) (`feat/api-david` → `development`).
 
 ## 2026-10-20 — Backend de David: tareas 44, 48, 53, 60 y 61
 
