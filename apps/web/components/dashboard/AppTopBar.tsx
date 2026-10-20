@@ -133,10 +133,9 @@ export function AppTopBar() {
             <button
               type="button"
               className="w-full text-left px-4 py-2 text-sm text-ink-900 hover:bg-primary-hover/[0.04] cursor-pointer"
-              onClick={async () => {
+              onClick={() => {
                 setProfileOpen(false);
-                await logout();
-                router.push("/");
+                logout();
               }}
             >
               Cerrar sesión

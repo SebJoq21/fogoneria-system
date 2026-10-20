@@ -1,12 +1,12 @@
-/* Cliente HTTP de la API Fogonería (fase 3: backend real).
-   El JWT de la API vive en localStorage para las llamadas a `/api/v1`; el
-   RBAC de navegación usa la cookie HttpOnly `fogoneria.session` que emite
-   `app/api/session/route.ts` (ver `lib/session.ts`). */
+/* Cliente HTTP del navegador. Las llamadas van al BFF (`/api/backend`), que
+   adjunta el access token desde una cookie HttpOnly; el token nunca queda
+   expuesto a JavaScript. `API_BASE_URL` solo lo usan módulos de servidor
+   (BFF y login). */
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
 
-const TOKEN_KEY = "fogoneria:token";
+const BFF_BASE = "/api/backend";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -18,28 +18,9 @@ export class ApiError extends Error {
   }
 }
 
-export function getToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
-export function setToken(token: string | null): void {
-  try {
-    if (token) localStorage.setItem(TOKEN_KEY, token);
-    else localStorage.removeItem(TOKEN_KEY);
-  } catch {
-    /* almacenamiento no disponible */
-  }
-}
-
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   body?: unknown;
-  /** Envía el JWT guardado. Por defecto sí; el login y el alta son públicos. */
-  auth?: boolean;
   signal?: AbortSignal;
 };
 
@@ -53,23 +34,21 @@ function messageFrom(data: unknown, status: number): string {
   return "Ocurrió un error inesperado. Inténtalo de nuevo.";
 }
 
-/** Llama a la API y devuelve el JSON tipado. Lanza `ApiError` si falla. */
+/** Llama al BFF y devuelve el JSON tipado. Lanza `ApiError` si falla. */
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, auth = true, signal } = options;
+  const { method = "GET", body, signal } = options;
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (auth) {
-    const token = getToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
-  }
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetch(`${BFF_BASE}${path}`, {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
+      credentials: "same-origin",
+      cache: "no-store",
     });
   } catch (error) {
     // Una petición cancelada no es un fallo de conexión.

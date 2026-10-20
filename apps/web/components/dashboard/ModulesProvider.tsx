@@ -79,8 +79,8 @@ import {
   type Product,
   type ProductCategory,
 } from "@/lib/erp-catalog";
-import { ApiError, getToken, setToken } from "@/lib/api";
-import { createSession, destroySession } from "@/lib/session-api";
+import { ApiError } from "@/lib/api";
+import { createSession, logoutUrl } from "@/lib/session-api";
 import * as catalogApi from "@/lib/catalog-api";
 import {
   cpeFromReceipt,
@@ -223,7 +223,7 @@ type ModulesContext = {
   /* Sesión real (JWT de la API) */
   currentUser: AppUser | null;
   login: (email: string, password: string) => Promise<AppUser>;
-  logout: () => Promise<void>;
+  logout: () => void;
 };
 
 const Ctx = createContext<ModulesContext | null>(null);
@@ -362,16 +362,31 @@ export function ModulesProvider({
   const firstPersist = useRef(true);
 
   const branchIds = useMemo(
-    () => (tenantBranches ? tenantBranches.map((branch) => branch.id) : BRANCH_IDS),
-    [tenantBranches],
+    () =>
+      tenantBranches
+        ? tenantBranches.map((branch) => branch.id)
+        : currentUser
+          ? []
+          : BRANCH_IDS,
+    [tenantBranches, currentUser],
   );
   const branches = useMemo<Branch[]>(
-    () => (tenantBranches ? [GENERAL_BRANCH, ...tenantBranches] : ALL_BRANCHES),
-    [tenantBranches],
+    () =>
+      tenantBranches
+        ? [GENERAL_BRANCH, ...tenantBranches]
+        : currentUser
+          ? [GENERAL_BRANCH]
+          : ALL_BRANCHES,
+    [tenantBranches, currentUser],
   );
   const company = useMemo(
-    () => (tenant ? { legalName: tenant.legalName, ruc: tenant.ruc } : DEMO_COMPANY),
-    [tenant],
+    () =>
+      tenant
+        ? { legalName: tenant.legalName, ruc: tenant.ruc }
+        : currentUser
+          ? { legalName: "—", ruc: "—" }
+          : DEMO_COMPANY,
+    [tenant, currentUser],
   );
 
   /* Hidratación desde localStorage (solo cliente) */
@@ -446,11 +461,6 @@ export function ModulesProvider({
 
   const refreshCatalog = useCallback(async (signal?: AbortSignal) => {
     const requestId = ++catalogRequest.current;
-    if (!getToken()) {
-      setCatalog(EMPTY_CATALOG);
-      setCatalogError(null);
-      return;
-    }
     setCatalogLoading(true);
     setCatalogError(null);
     try {
@@ -510,7 +520,10 @@ export function ModulesProvider({
           return branchData.length > 0 ? branchData[0].id : GENERAL_BRANCH.id;
         });
       } catch {
-        /* API no disponible: se mantiene el modo demo */
+        // Sin datos reales no se cae a la empresa/sucursales demo: el shell
+        // queda sin sucursal operativa hasta que la API responda.
+        setTenant(null);
+        setTenantBranches([]);
       }
     })();
 
@@ -653,8 +666,7 @@ export function ModulesProvider({
   /* ---------- Sesión (JWT) ---------- */
 
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
-    const { user, accessToken } = await createSession(email, password);
-    setToken(accessToken);
+    const { user } = await createSession(email, password);
     // Un login nuevo no hereda la sucursal del usuario anterior.
     setActiveBranchId("todas");
     setTenant(null);
@@ -669,25 +681,20 @@ export function ModulesProvider({
     return user;
   }, []);
 
-  const logout = useCallback(async () => {
-    setToken(null);
-    setCurrentUser(null);
-    setCatalog(EMPTY_CATALOG);
-    // Resetear tenant/sucursal para que el próximo login no herede datos ajenos.
-    setTenant(null);
-    setTenantBranches(null);
-    setActiveBranchId(GENERAL_BRANCH.id);
+  const logout = useCallback(() => {
+    // Limpia el estado local y luego navega al logout del servidor, que borra
+    // las cookies HttpOnly y redirige. Si la navegación falla, no se simula un
+    // logout exitoso.
     try {
       localStorage.removeItem("fogoneria:user");
       localStorage.removeItem("fogoneria:branch");
-      // Limpia cookies planas heredadas de la fase anterior.
       localStorage.removeItem("fogoneria:tenant");
       document.cookie = "fogoneria.role=; path=/; max-age=0";
       document.cookie = "fogoneria.branch=; path=/; max-age=0";
     } catch {
       /* almacenamiento no disponible */
     }
-    await destroySession();
+    window.location.assign(logoutUrl());
   }, []);
 
   const isGeneral = activeBranchId === GENERAL_BRANCH.id;

@@ -1,41 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { ROLE_HOME, canViewPath } from "./lib/auth";
-import { SESSION_COOKIE, verifySession } from "./lib/session";
-
-/**
- * RBAC server-side: verifica la cookie HttpOnly firmada (`fogoneria.session`)
- * y aplica `canViewPath`. La cookie la emite `app/api/session/route.ts`; el
- * cliente no puede leerla ni modificarla desde DevTools.
- */
-export default async function proxy(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-  const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
-
-  // `/` es el login: si ya hay sesión, manda al home por rol.
-  if (path === "/") {
-    if (session) {
-      return NextResponse.redirect(new URL(ROLE_HOME[session.role], req.url));
-    }
-    return NextResponse.next();
-  }
-
-  if (!session) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  if (!canViewPath(path, session.role)) {
-    return NextResponse.redirect(new URL(ROLE_HOME[session.role], req.url));
-  }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: ["/", "/app/:path*", "/saas/:path*"],
-};
-
-/* Identidad y RBAC. El rol/sucursal vienen del login real (JWT) y se
-   guardan en cookies planas para el RBAC optimista del proxy.
+/* Identidad y RBAC. El rol/sucursal vienen del login real y viajan al
+   servidor en la cookie HttpOnly `fogoneria.session` (ver `lib/session.ts`).
    Jerarquía: superadmin (SaaS) > admin (dueño franquicia) >
    sucursal (admin de sucursal) + cocina + mesero (branchId fijo). */
 
@@ -95,8 +59,9 @@ const API_ROLE: Record<string, AppRole> = {
   MESERO: "mesero",
 };
 
-export function appRoleFromApi(rol: string): AppRole {
-  return API_ROLE[rol] ?? "mesero";
+/** Rol de la API (enum `rol_usuario`) → rol del shell web. `null` = rechazar. */
+export function appRoleFromApi(rol: string): AppRole | null {
+  return API_ROLE[rol] ?? null;
 }
 
 export type ApiLoginUser = {
@@ -115,12 +80,15 @@ function initialsOf(name: string): string {
   return `${first}${last}`.toUpperCase() || "??";
 }
 
-/** Usuario de la API → usuario del shell (rol + sucursal real en UUID). */
-export function appUserFromApi(user: ApiLoginUser): AppUser {
+/** Usuario de la API → usuario del shell. `null` si el rol o la sucursal no son válidos. */
+export function appUserFromApi(user: ApiLoginUser): AppUser | null {
   const role = appRoleFromApi(user.rol);
-  // admin/superadmin operan la empresa completa; el resto queda fijo a su sucursal.
-  const branchId =
-    role === "admin" || role === "superadmin" ? null : user.sucursalId;
+  if (!role) return null;
+  // admin/superadmin operan la empresa completa; el resto exige sucursal real
+  // (nunca se cae a "todas" si el payload no la trae).
+  const needsBranch = role !== "admin" && role !== "superadmin";
+  if (needsBranch && !user.sucursalId) return null;
+  const branchId = needsBranch ? user.sucursalId : null;
   return {
     id: user.id,
     name: user.nombre,

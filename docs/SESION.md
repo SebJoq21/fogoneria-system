@@ -1,19 +1,5 @@
 # SESION — estado entre sesiones
 
-## 2026-10-20 — Tarea 55 de Joshua: sesión HttpOnly firmada (stack sobre PR #3)
-
-- Objetivo: cerrar AYCDS-55 (rutas protegidas por rol) en una rama apilada sobre `feat/web-conexion-api` (PR #3), sin esperar su merge.
-- Rama: `feat/session-cookie` creada desde `origin/feat/web-conexion-api` (`abb5a4e`) y publicada con PR draft [#4](https://github.com/SebJoq21/fogoneria-system/pull/4) (base `feat/web-conexion-api`).
-- Hecho:
-  - `apps/web/lib/session.ts`: firma/verificación HS256 con `jose` + `SESSION_SECRET` (cookie `fogoneria.session`, 8 h, dev fallback de 32+ caracteres).
-  - `apps/web/app/api/session/route.ts`: BFF `POST` (login contra la API → cookie HttpOnly/SameSite + devuelve usuario y JWT) y `DELETE` (logout). Limpia cookies planas heredadas.
-  - `proxy.ts`: verifica la cookie en cada request y aplica `ROLE_HOME`/`canViewPath`; ya no lee `fogoneria.role|branch`.
-  - `ModulesProvider`: `login` usa `createSession`, `logout` ahora es async y usa `destroySession`; se quitaron las escrituras de cookies planas. Callers `AppTopBar` y `/saas` actualizados.
-  - `lib/session-api.ts` (cliente BFF), `jose` + `vitest` en `apps/web`, scripts `test`/`test:watch`, `SESSION_SECRET` en `.env.example`.
-  - Tests nuevos: `lib/auth.test.ts` (matriz de acceso por rol) y `lib/session.test.ts` (firma, manipulación, expiración, rol inválido): 12/12.
-- Verificado: `pnpm --filter web test` 12/12, `lint` OK, `check-types` OK (borrando `.next` obsoleto) y `build` OK (46 rutas, incluida `/api/session`). Avance 95%: falta la prueba en vivo.
-- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde en este entorno); al mergear #3, `git rebase origin/development` + `git push --force-with-lease` + `gh pr edit 4 --base development`.
-- Próximo paso: 65 (`/saas` contra la API) desde `development` actualizado, no desde este stack.
 ## 2026-10-20 — Revisión estática de 57/63: P0 y P1 aplicados (RUC, onboarding, modificadores, tenant real, cajero)
 
 - Objetivo: cerrar los hallazgos de la revisión de la rama `feat/web-conexion-api` sin depender de Postgres.
@@ -29,6 +15,22 @@
 - Verificado: `api lint` 0/0, `api check-types` OK, `api test` 52/52, `api test:e2e` 10/10; `web lint` OK, `web check-types` OK, `web build` OK (45 rutas).
 - Pendiente: verificación en vivo con Postgres (sin Docker/`psql` aquí) para marcar 57/63 como Listo, Jira y PR.
 - Próximo paso: push de la rama y abrir el PR a `development` con la descripción preparada.
+
+## 2026-10-20 — Tarea 55 de Joshua: sesión HttpOnly + BFF (PR #4 sobre `development`)
+
+- Objetivo: cerrar AYCDS-55 (rutas protegidas por rol) tras el merge del PR #3 (`da18b70`).
+- Rama: `feat/session-cookie` rebasada sobre `origin/development`; PR [#4](https://github.com/SebJoq21/fogoneria-system/pull/4) reapuntado a `development` y listo para revisión.
+- Hecho:
+  - `lib/session.ts`: cookie `fogoneria.session` HttpOnly/SameSite firmada HS256 (`jose` + `SESSION_SECRET`). Ventana deslizante de **15 min** con refresh en `proxy.ts` y tope absoluto de **8 h** (`startedAt`). Fuera de `development`/`test`, sin `SESSION_SECRET` falla cerrado.
+  - `app/api/session/route.ts`: login contra la API, rate limit **5/10 min por IP**, `Cache-Control: no-store`, sin devolver el access token. Emite `fogoneria.session` y `fogoneria.token` (ambas HttpOnly).
+  - `app/api/session/logout/route.ts`: `GET`/`POST` borran ambas cookies y redirigen con 303; el cliente navega ahí, así un fallo de red no simula un logout exitoso.
+  - `app/api/backend/[...path]/route.ts`: BFF que adjunta el Bearer desde la cookie HttpOnly; el JWT de la API ya **no** vive en `localStorage`. Valida `Origin` en mutaciones.
+  - `lib/auth.ts`: `appRoleFromApi` devuelve `null` para roles desconocidos y `appUserFromApi` rechaza roles operativos sin sucursal (no cae a "todas"). `cajero` incluido en la allowlist de sesión.
+  - `ModulesProvider`: sin empresa/sucursales demo cuando hay sesión; si `/tenant` falla, no usa datos demo. `logout` limpia `localStorage` y navega al logout del servidor.
+  - Vitest en web con integración: proxy, route handler de login (cookies/flags/rate limit), logout, BFF y matriz RBAC.
+- Verificado: `pnpm --filter web test` **34/34**, `lint`, `check-types` y `build` (47 rutas: `/api/session`, `/api/session/logout`, `/api/backend/[...path]`) verdes; `pnpm lint` raíz OK.
+- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde aquí); al mergear #4, actualizar Jira y marcar 55 Listo.
+- Próximo paso: 65 (`/saas` contra la API) desde `development` actualizado.
 
 ## 2026-10-20 — Tareas 57 y 63 de Diego: login real, onboarding y catálogo contra la API
 

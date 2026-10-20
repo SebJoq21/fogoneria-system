@@ -47,7 +47,6 @@ export function isValidRuc(value: string): boolean {
 export async function submitOnboarding(payload: OnboardingPayload): Promise<OnboardingResult> {
   return apiFetch<OnboardingResult>("/onboarding", {
     method: "POST",
-    auth: false,
     body: payload,
   });
 }

@@ -1,0 +1,68 @@
+/* BFF de la API: reenvía las llamadas del navegador a NestJS adjuntando el
+   access token desde la cookie HttpOnly. Así el JWT no queda en localStorage
+   ni es accesible para un XSS. */
+
+import { NextResponse, type NextRequest } from "next/server";
+import { API_BASE_URL } from "@/lib/api";
+import { TOKEN_COOKIE } from "@/lib/backend";
+
+type RouteContext = { params: Promise<{ path: string[] }> };
+
+const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+async function forward(request: NextRequest, context: RouteContext): Promise<NextResponse> {
+  if (MUTATING.has(request.method)) {
+    const origin = request.headers.get("origin");
+    if (origin && origin !== request.nextUrl.origin) {
+      return NextResponse.json({ message: "Origen no permitido." }, { status: 403 });
+    }
+  }
+
+  const { path } = await context.params;
+  const target = new URL(`${API_BASE_URL}/${path.map(encodeURIComponent).join("/")}`);
+  target.search = request.nextUrl.search;
+
+  const headers = new Headers();
+  const contentType = request.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+  const accept = request.headers.get("accept");
+  if (accept) headers.set("accept", accept);
+  const token = request.cookies.get(TOKEN_COOKIE)?.value;
+  if (token) headers.set("authorization", `Bearer ${token}`);
+
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  const body = hasBody ? await request.arrayBuffer() : undefined;
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      body,
+      cache: "no-store",
+      redirect: "manual",
+    });
+  } catch {
+    return NextResponse.json(
+      { message: "No se pudo conectar con la API." },
+      { status: 502, headers: { "cache-control": "no-store" } },
+    );
+  }
+
+  const outHeaders = new Headers();
+  const upstreamType = upstream.headers.get("content-type");
+  if (upstreamType) outHeaders.set("content-type", upstreamType);
+  outHeaders.set("cache-control", "no-store");
+
+  return new NextResponse(upstream.body, {
+    status: upstream.status,
+    headers: outHeaders,
+  });
+}
+
+export const GET = forward;
+export const POST = forward;
+export const PUT = forward;
+export const PATCH = forward;
+export const DELETE = forward;
+export const HEAD = forward;
