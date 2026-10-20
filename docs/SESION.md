@@ -16,10 +16,10 @@
 - Pendiente: verificación en vivo con Postgres (sin Docker/`psql` aquí) para marcar 57/63 como Listo, Jira y PR.
 - Próximo paso: push de la rama y abrir el PR a `development` con la descripción preparada.
 
-## 2026-10-20 — Tarea 55 de Joshua: sesión HttpOnly + BFF (PR #4 sobre `development`)
+## 2026-10-20 — Tarea 55 de Joshua: sesión HttpOnly + BFF (PR #5 de seguimiento)
 
 - Objetivo: cerrar AYCDS-55 (rutas protegidas por rol) tras el merge del PR #3 (`da18b70`).
-- Rama: `feat/session-cookie` rebasada sobre `origin/development`; PR [#4](https://github.com/SebJoq21/fogoneria-system/pull/4) reapuntado a `development` y listo para revisión.
+- Rama: `fix/session-cookie-review` desde `origin/development`; PR de seguimiento [#5](https://github.com/SebJoq21/fogoneria-system/pull/5) con las correcciones de la revisión (el #4 se mergeó con la versión inicial).
 - Hecho:
   - `lib/session.ts`: cookie `fogoneria.session` HttpOnly/SameSite firmada HS256 (`jose` + `SESSION_SECRET`). Ventana deslizante de **15 min** con refresh en `proxy.ts` y tope absoluto de **8 h** (`startedAt`). Fuera de `development`/`test`, sin `SESSION_SECRET` falla cerrado.
   - `app/api/session/route.ts`: login contra la API, rate limit **5/10 min por IP**, `Cache-Control: no-store`, sin devolver el access token. Emite `fogoneria.session` y `fogoneria.token` (ambas HttpOnly).
@@ -29,7 +29,7 @@
   - `ModulesProvider`: sin empresa/sucursales demo cuando hay sesión; si `/tenant` falla, no usa datos demo. `logout` limpia `localStorage` y navega al logout del servidor.
   - Vitest en web con integración: proxy, route handler de login (cookies/flags/rate limit), logout, BFF y matriz RBAC.
 - Verificado: `pnpm --filter web test` **34/34**, `lint`, `check-types` y `build` (47 rutas: `/api/session`, `/api/session/logout`, `/api/backend/[...path]`) verdes; `pnpm lint` raíz OK.
-- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde aquí); al mergear #4, actualizar Jira y marcar 55 Listo.
+- Pendiente: verificación en vivo del login/cookie con API + PostgreSQL (`localhost:5433` no responde aquí); al mergear #5, actualizar Jira y marcar 55 Listo.
 - Próximo paso: 65 (`/saas` contra la API) desde `development` actualizado.
 
 ## 2026-10-20 — Tareas 57 y 63 de Diego: login real, onboarding y catálogo contra la API
