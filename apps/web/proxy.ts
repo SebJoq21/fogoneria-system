@@ -1,35 +1,67 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { ROLE_HOME, canViewPath } from "./lib/auth";
-import { SESSION_COOKIE, verifySession } from "./lib/session";
+import { SignJWT } from "jose";
+import { beforeAll, describe, expect, it } from "vitest";
+import { SESSION_COOKIE, signSession, verifySession } from "./session";
 
-/**
- * RBAC server-side: verifica la cookie HttpOnly firmada (`fogoneria.session`)
- * y aplica `canViewPath`. La cookie la emite `app/api/session/route.ts`; el
- * cliente no puede leerla ni modificarla desde DevTools.
- */
-export default async function proxy(req: NextRequest) {
-  const path = req.nextUrl.pathname;
-  const session = await verifySession(req.cookies.get(SESSION_COOKIE)?.value);
+const SECRET = "unit-test-session-secret-32-characters-min";
 
-  // `/` es el login: si ya hay sesión, manda al home por rol.
-  if (path === "/") {
-    if (session) {
-      return NextResponse.redirect(new URL(ROLE_HOME[session.role], req.url));
-    }
-    return NextResponse.next();
-  }
+beforeAll(() => {
+  process.env.SESSION_SECRET = SECRET;
+});
 
-  if (!session) {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
+describe("session", () => {
+  it("firma y verifica una sesión válida", async () => {
+    const token = await signSession({ sub: "u-1", role: "admin", branchId: null });
+    expect(token).not.toBe("");
+    expect(SESSION_COOKIE).toBe("fogoneria.session");
+    await expect(verifySession(token)).resolves.toEqual({
+      sub: "u-1",
+      role: "admin",
+      branchId: null,
+    });
+  });
 
-  if (!canViewPath(path, session.role)) {
-    return NextResponse.redirect(new URL(ROLE_HOME[session.role], req.url));
-  }
+  it("conserva el rol y la sucursal", async () => {
+    const token = await signSession({ sub: "u-2", role: "mesero", branchId: "miraflores" });
+    await expect(verifySession(token)).resolves.toEqual({
+      sub: "u-2",
+      role: "mesero",
+      branchId: "miraflores",
+    });
+  });
 
-  return NextResponse.next();
-}
+  it("acepta el rol cajero", async () => {
+    const token = await signSession({ sub: "u-caja", role: "cajero", branchId: "miraflores" });
+    await expect(verifySession(token)).resolves.toEqual({
+      sub: "u-caja",
+      role: "cajero",
+      branchId: "miraflores",
+    });
+  });
 
-export const config = {
-  matcher: ["/", "/app/:path*", "/saas/:path*"],
-};
+  it("rechaza un token manipulado", async () => {
+    const token = await signSession({ sub: "u-3", role: "admin", branchId: null });
+    const tampered = `${token.slice(0, -2)}xx`;
+    await expect(verifySession(tampered)).resolves.toBeNull();
+  });
+
+  it("rechaza un token expirado", async () => {
+    const token = await signSession({ sub: "u-4", role: "admin", branchId: null }, -1);
+    await expect(verifySession(token)).resolves.toBeNull();
+  });
+
+  it("rechaza cookies vacías o ausentes", async () => {
+    await expect(verifySession(undefined)).resolves.toBeNull();
+    await expect(verifySession("")).resolves.toBeNull();
+  });
+
+  it("rechaza un rol fuera del catálogo aunque la firma sea válida", async () => {
+    const token = await new SignJWT({ role: "root", branchId: null })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject("u-5")
+      .setIssuedAt()
+      .setExpirationTime("1h")
+      .sign(new TextEncoder().encode(SECRET));
+    await expect(verifySession(token)).resolves.toBeNull();
+  });
+});
+
