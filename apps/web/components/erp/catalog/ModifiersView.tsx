@@ -15,52 +15,91 @@ import { MiniBars } from "@/components/erp/summaries/charts";
 
 /** Maestro de modificadores: grupos (tamaño, extras…) con opciones y precio adicional. */
 export function ModifiersView() {
-  const { modifierGroups, setModifierGroups, products, notify } = useModules();
+  const {
+    modifierGroups,
+    products,
+    notify,
+    createModifierGroup,
+    updateModifierGroup,
+    deleteModifierGroup,
+    catalogLoading,
+    catalogError,
+  } = useModules();
   const [groupModal, setGroupModal] = useState(false);
   const [groupName, setGroupName] = useState("");
+  const [saving, setSaving] = useState(false);
   const [optionDrafts, setOptionDrafts] = useState<Record<string, { name: string; extra: string }>>({});
   const [pendingRemove, setPendingRemove] = useState<{ groupId: string; optionId: string; name: string } | null>(null);
+  const [pendingGroup, setPendingGroup] = useState<{ id: string; name: string } | null>(null);
 
-  const addGroup = () => {
+  // Envia el id de cada opción existente: quitarlo borraría la opción y la API
+  // lo rechaza si ya se usó en órdenes.
+  const optionsPayload = (id: string, omitOptionId?: string) => {
+    const group = modifierGroups.find((g) => g.id === id);
+    if (!group) return null;
+    return group.options
+      .filter((o) => o.id !== omitOptionId)
+      .map((o) => ({ id: o.id, name: o.name, extra: o.extra }));
+  };
+
+  const addGroup = async () => {
     if (!groupName.trim()) return;
-    const id = groupName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    setModifierGroups([...modifierGroups, { id, name: groupName, required: false, multi: true, options: [] }]);
-    notify("Grupo creado", `"${groupName}" añadido a modificadores.`);
-    setGroupName("");
-    setGroupModal(false);
+    setSaving(true);
+    try {
+      await createModifierGroup({ name: groupName.trim(), required: false, multi: true });
+      notify("Grupo creado", `"${groupName}" añadido a modificadores.`);
+      setGroupName("");
+      setGroupModal(false);
+    } catch (error) {
+      notify("No se pudo crear el grupo", error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const patchGroup = (id: string, patch: Partial<(typeof modifierGroups)[number]>) => {
-    setModifierGroups(modifierGroups.map((g) => (g.id === id ? { ...g, ...patch } : g)));
+  const patchGroup = async (id: string, patch: { required?: boolean; multi?: boolean }) => {
+    try {
+      await updateModifierGroup(id, patch);
+    } catch (error) {
+      notify("No se pudo actualizar el grupo", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
-  const addOption = (groupId: string) => {
+  const addOption = async (groupId: string) => {
     const draft = optionDrafts[groupId] ?? { name: "", extra: "" };
     if (!draft.name.trim()) return;
-    setModifierGroups(
-      modifierGroups.map((g) =>
-        g.id === groupId
-          ? {
-              ...g,
-              options: [
-                ...g.options,
-                { id: `${groupId}-${Date.now()}`, name: draft.name, extra: Number(draft.extra) || 0 },
-              ],
-            }
-          : g,
-      ),
-    );
-    setOptionDrafts({ ...optionDrafts, [groupId]: { name: "", extra: "" } });
+    const options = optionsPayload(groupId);
+    if (!options) return;
+    try {
+      await updateModifierGroup(groupId, {
+        options: [...options, { name: draft.name.trim(), extra: Number(draft.extra) || 0 }],
+      });
+      setOptionDrafts({ ...optionDrafts, [groupId]: { name: "", extra: "" } });
+    } catch (error) {
+      notify("No se pudo añadir la opción", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
-  const removeOption = (groupId: string, optionId: string) => {
-    setModifierGroups(
-      modifierGroups.map((g) =>
-        g.id === groupId ? { ...g, options: g.options.filter((o) => o.id !== optionId) } : g,
-      ),
-    );
+  const removeOption = async (groupId: string, optionId: string) => {
+    const options = optionsPayload(groupId, optionId);
     setPendingRemove(null);
-    notify("Opción quitada", "Se retiró del grupo de modificadores.");
+    if (!options) return;
+    try {
+      await updateModifierGroup(groupId, { options });
+      notify("Opción quitada", "Se retiró del grupo de modificadores.");
+    } catch (error) {
+      notify("No se pudo quitar la opción", error instanceof Error ? error.message : "Error inesperado");
+    }
+  };
+
+  const removeGroup = async (id: string) => {
+    setPendingGroup(null);
+    try {
+      await deleteModifierGroup(id);
+      notify("Grupo desactivado", "Se retiró del maestro de modificadores.");
+    } catch (error) {
+      notify("No se pudo desactivar el grupo", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
   const summary = useMemo(() => {
@@ -78,6 +117,14 @@ export function ModifiersView() {
 
   return (
     <div>
+      {catalogError && (
+        <p className="text-sm text-red-600 mb-4" role="alert">
+          {catalogError}
+        </p>
+      )}
+      {catalogLoading && modifierGroups.length === 0 && (
+        <p className="text-sm text-ink-400 mb-4">Cargando modificadores…</p>
+      )}
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Opciones por grupo"
@@ -112,7 +159,16 @@ export function ModifiersView() {
                     {usedBy} plato{usedBy === 1 ? "" : "s"} lo usan
                   </p>
                 </div>
-                <Badge tone="neutral">{g.multi ? "Múltiple" : "Único"}</Badge>
+                <span className="flex items-center gap-2">
+                  <Badge tone="neutral">{g.multi ? "Múltiple" : "Único"}</Badge>
+                  <button
+                    type="button"
+                    onClick={() => setPendingGroup({ id: g.id, name: g.name })}
+                    className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
+                  >
+                    Quitar
+                  </button>
+                </span>
               </div>
 
               <div className="flex gap-4 my-3">
@@ -197,6 +253,20 @@ export function ModifiersView() {
         onCancel={() => setPendingRemove(null)}
       />
 
+      <ConfirmDialog
+        open={pendingGroup !== null}
+        title="Desactivar grupo"
+        message={
+          pendingGroup
+            ? `¿Desactivar "${pendingGroup.name}"? Los platos que lo usan dejarán de ofrecerlo.`
+            : ""
+        }
+        confirmLabel="Desactivar"
+        danger
+        onConfirm={() => pendingGroup && removeGroup(pendingGroup.id)}
+        onCancel={() => setPendingGroup(null)}
+      />
+
       {groupModal && (
         <Modal
           onClose={() => setGroupModal(false)}
@@ -206,7 +276,7 @@ export function ModifiersView() {
               <Button variant="ghost" onClick={() => setGroupModal(false)}>
                 Cancelar
               </Button>
-              <Button disabled={!groupName.trim()} onClick={addGroup}>
+              <Button disabled={!groupName.trim() || saving} onClick={addGroup}>
                 Crear grupo
               </Button>
             </>

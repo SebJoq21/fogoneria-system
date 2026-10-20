@@ -12,6 +12,7 @@ import type { CreateDishDto, UpdateDishDto } from './dto/dish.dto.js';
 import type { ListCatalogQueryDto } from './dto/list-catalog.dto.js';
 import type {
   CreateModifierGroupDto,
+  ModifierOptionDto,
   UpdateModifierGroupDto,
 } from './dto/modifier-group.dto.js';
 
@@ -105,6 +106,7 @@ export class CatalogService {
         include: {
           categorias: { select: { id: true, nombre: true } },
           precios_platos: true,
+          platos_grupos_modificadores: { select: { grupo_id: true } },
         },
       }),
       this.prisma.scoped.platos.count({ where }),
@@ -266,29 +268,110 @@ export class CatalogService {
 
   async updateModifierGroup(id: string, dto: UpdateModifierGroupDto) {
     await this.requireGroup(id);
-    return this.prisma.scoped.grupos_modificadores.update({
-      where: { id },
-      data: {
-        ...(dto.nombre !== undefined ? { nombre: dto.nombre.trim() } : {}),
-        ...(dto.obligatorio !== undefined ? { obligatorio: dto.obligatorio } : {}),
-        ...(dto.permiteMultiple !== undefined
-          ? { permite_multiple: dto.permiteMultiple }
-          : {}),
-        ...(dto.activo !== undefined ? { activo: dto.activo } : {}),
-        ...(dto.opciones
-          ? {
-              opciones_modificadores: {
-                deleteMany: {},
-                create: dto.opciones.map((opcion) => ({
+
+    // Las opciones se conservan por id: borrarlas y recrearlas rompería las
+    // órdenes que las referencian (FK `fk_dom_opcion` es RESTRICT).
+    const plan = dto.opciones ? await this.planOptionSync(id, dto.opciones) : null;
+
+    const operaciones = [
+      this.prisma.scoped.grupos_modificadores.update({
+        where: { id },
+        data: {
+          ...(dto.nombre !== undefined ? { nombre: dto.nombre.trim() } : {}),
+          ...(dto.obligatorio !== undefined ? { obligatorio: dto.obligatorio } : {}),
+          ...(dto.permiteMultiple !== undefined
+            ? { permite_multiple: dto.permiteMultiple }
+            : {}),
+          ...(dto.activo !== undefined ? { activo: dto.activo } : {}),
+        },
+      }),
+      ...(plan
+        ? [
+            ...plan.actualizar.map((opcion) =>
+              this.prisma.scoped.opciones_modificadores.update({
+                where: { id: opcion.id },
+                data: { nombre: opcion.nombre.trim(), precio_extra: opcion.precioExtra ?? 0 },
+              }),
+            ),
+            ...plan.crear.map((opcion) =>
+              this.prisma.scoped.opciones_modificadores.create({
+                data: {
+                  grupo_id: id,
                   nombre: opcion.nombre.trim(),
                   precio_extra: opcion.precioExtra ?? 0,
-                })),
-              },
-            }
-          : {}),
-      },
+                },
+              }),
+            ),
+            ...(plan.eliminar.length
+              ? [
+                  this.prisma.scoped.opciones_modificadores.deleteMany({
+                    where: { id: { in: plan.eliminar } },
+                  }),
+                ]
+              : []),
+          ]
+        : []),
+    ];
+
+    try {
+      await this.prisma.scoped.$transaction(operaciones);
+    } catch (error) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Ya existe un grupo u opción con ese nombre');
+      }
+      throw error;
+    }
+
+    return this.prisma.scoped.grupos_modificadores.findFirst({
+      where: { id },
       include: { opciones_modificadores: true },
     });
+  }
+
+  /**
+   * Decide qué opciones actualizar, crear o borrar comparando el payload con
+   * las opciones guardadas. Si alguna opción en uso en órdenes desaparece del
+   * payload, se rechaza (la FK lo impediría igual, pero con un 500).
+   */
+  private async planOptionSync(grupoId: string, opciones: ModifierOptionDto[]) {
+    const actuales = await this.prisma.scoped.opciones_modificadores.findMany({
+      where: { grupo_id: grupoId },
+    });
+
+    const ids = opciones
+      .map((opcion) => opcion.id)
+      .filter((id): id is string => Boolean(id));
+    if (new Set(ids).size !== ids.length) {
+      throw new BadRequestException('Hay opciones repetidas en la petición');
+    }
+    if (ids.some((id) => !actuales.some((actual) => actual.id === id))) {
+      throw new BadRequestException('Alguna opción no pertenece a este grupo');
+    }
+
+    const eliminar = actuales.filter((actual) => !ids.includes(actual.id));
+    if (eliminar.length) {
+      // `detalles_orden_modificadores` no tiene empresa_id, pero las opciones
+      // ya están acotadas al tenant.
+      const usadas = await this.prisma.raw.detalles_orden_modificadores.findMany({
+        where: { opcion_id: { in: eliminar.map((opcion) => opcion.id) } },
+        select: { opcion_id: true },
+        distinct: ['opcion_id'],
+      });
+      if (usadas.length) {
+        const nombres = eliminar
+          .filter((opcion) => usadas.some((uso) => uso.opcion_id === opcion.id))
+          .map((opcion) => opcion.nombre);
+        throw new ConflictException(
+          `No se pueden quitar opciones ya usadas en órdenes (${nombres.join(', ')}). Envíalas de nuevo con su id.`,
+        );
+      }
+    }
+
+    return {
+      actualizar: opciones.filter((opcion) => opcion.id),
+      crear: opciones.filter((opcion) => !opcion.id),
+      eliminar: eliminar.map((opcion) => opcion.id),
+    };
   }
 
   async deleteModifierGroup(id: string) {

@@ -6,12 +6,21 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 
 export class ModifierOptionDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Id de la opción existente; omitir para crear una nueva',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ example: 'Sin ají' })
   @IsString()
   @MaxLength(120)
@@ -75,7 +84,11 @@ export class UpdateModifierGroupDto {
   @IsBoolean()
   activo?: boolean;
 
-  @ApiPropertyOptional({ type: [ModifierOptionDto] })
+  @ApiPropertyOptional({
+    type: [ModifierOptionDto],
+    description:
+      'Reemplaza las opciones del grupo. Enviar `id` conserva la opción (obligatorio si ya se usó en órdenes); omitirlo crea una nueva y quitarlo intenta borrarla.',
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

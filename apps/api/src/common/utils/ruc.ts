@@ -11,7 +11,7 @@ export function isValidRuc(value: string): boolean {
   for (let i = 0; i < 10; i += 1) {
     sum += Number(ruc[i]) * weights[i];
   }
-  const remainder = sum % 11;
-  const checkDigit = remainder < 2 ? remainder : 11 - remainder;
+  // Algoritmo SUNAT: (11 - resto) % 10 (resto 0 → 1, resto 1 → 0).
+  const checkDigit = (11 - (sum % 11)) % 10;
   return checkDigit === Number(ruc[10]);
 }

@@ -175,7 +175,7 @@ export function promosSummary(coupons: Coupon[], scheduledActive: number): { kpi
 }
 
 /* ---------- Carta / Productos ---------- */
-export function cartaSummary(products: Product[], categories: ProductCategory[], priceOf: (id: number) => number): {
+export function cartaSummary(products: Product[], categories: ProductCategory[], priceOf: (id: string) => number): {
   kpis: SummaryKpi[];
   bars: { name: string; v: number }[];
 } {

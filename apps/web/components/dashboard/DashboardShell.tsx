@@ -14,6 +14,7 @@ const mobileLinks: { href: string; label: string; roles: AppRole[] }[] = [
   { href: "/app/ordenes", label: "Órdenes", roles: ["admin", "sucursal"] },
   { href: "/app/mesas", label: "Mesas", roles: ["admin", "sucursal"] },
   { href: "/app/productos", label: "Platos", roles: ["admin", "sucursal"] },
+  { href: "/app/caja", label: "Caja", roles: ["cajero"] },
   { href: "/app/cocina", label: "Cocina", roles: ["cocina"] },
   { href: "/app/mozo", label: "Mis órdenes", roles: ["mesero"] },
 ];

@@ -16,14 +16,14 @@
 |---|---|
 | Tareas del rango | **14** |
 | Cerradas (Listo) | **6** (AYCDS-32, AYCDS-42, AYCDS-44, AYCDS-48, AYCDS-60, AYCDS-61) |
-| En curso | **5** (AYCDS-55, AYCDS-53, AYCDS-58, AYCDS-63, AYCDS-65) |
-| Por hacer | **3** (AYCDS-57, AYCDS-62, AYCDS-66) |
-| Avance global (promedio simple) | **72%** |
-| Avance funcional end-to-end | **≈55–60%** |
+| En curso | **6** (AYCDS-53, AYCDS-55, AYCDS-57, AYCDS-58, AYCDS-63, AYCDS-65) |
+| Por hacer | **2** (AYCDS-62, AYCDS-66) |
+| Avance global (promedio simple) | **77%** |
+| Avance funcional end-to-end | **≈60–65%** |
 
 **Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend está implementada y **verificada contra PostgreSQL 16 real** (Docker Compose en `localhost:5433`): Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e. Falta completar Dockerfiles/CI (tarea 58), conectar las UIs 63 y 65 a las APIs y el RLS nativo (tarea 62).
 
-> **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que sus UIs consuman las APIs 60 y 61. Hoy muestran datos mock.
+> **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que sus UIs consuman las APIs 60 y 61. La 63 ya consume la API 60 (login JWT + CRUD real) y queda pendiente la verificación en vivo contra PostgreSQL; la 65 sigue con datos mock.
 >
 > **Jira:** el estado de las tareas 44/48/60/61 debe sincronizarse manualmente en Jira con la evidencia de esta bitácora; el repositorio ya cumple el DoD local.
 
@@ -41,12 +41,12 @@
 | Semana | Tareas | Avance |
 |---|---|---|
 | S5 | 32, 44, 55 | 90% |
-| S5-6 | 48, 57, 58 | 55% |
+| S5-6 | 48, 57, 58 | 73% |
 | S6 | 42, 53 | 98% |
 | S7 | 62 | 15% |
-| S7-8 | 60, 61, 63, 65 | 91% |
+| S7-8 | 60, 61, 63, 65 | 94% |
 | S8 | 66 | 0% |
-| **Global** | **14 tareas** | **72%** |
+| **Global** | **14 tareas** | **77%** |
 
 ### Avance por responsable
 
@@ -55,7 +55,7 @@
 | David Piñarreta | 44, 48, 53, 60, 61 | 99% |
 | Sonny De La Cruz | 32, 42, 62 | 72% |
 | Joshua Chávez | 55, 65 | 75% |
-| Diego Arévalo | 57, 63 | 63% |
+| Diego Arévalo | 57, 63 | 95% |
 | Sebastián Chicata | 58, 66 | 13% |
 
 ---
@@ -68,14 +68,14 @@
 | AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | Listo | 100% | Módulos auth/tenant/orders/catalog/pricing/saas/billing, `PrismaService`, `ConfigModule` validado, `ValidationPipe`, prefijo `/api/v1`, health y Swagger | — |
 | AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 70% | 37 páginas, `proxy.ts`, RBAC de UI | Protección server-side real, cookie segura |
 | AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | Listo | 100% | JWT/Passport, `JwtAuthGuard`/`RolesGuard` globales, login valida usuario y estado del tenant, seed con bcrypt, tests unit/e2e, colección Postman | — |
-| AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | Por hacer | 40% | UI de login + wizard 3 pasos | Conexión a API, RUC/logo persistidos |
+| AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | En curso | 95% | Login real contra `POST /auth/login` (JWT en `lib/api.ts` + cookie de rol para el RBAC de `proxy.ts`), wizard de 3 pasos con RUC validado (módulo 11) y logo opcional que crea empresa/sucursal/admin vía `POST /onboarding`, estados de carga y errores visibles | Verificación en vivo contra PostgreSQL |
 | AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | En curso | 25% | `docker-compose.yml` con PostgreSQL 16 en 5433 + shadow DB, scripts `db:up/down/logs/status/psql` | Dockerfiles api/web, workflow CI y backlog |
 | AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Listo | 100% | Migración `20261019000000_init`, `prisma/seed.ts` idempotente, scripts `db:*` | — |
 | AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | En curso | 95% | `TenantContextService` (AsyncLocalStorage) + extensión Prisma que inyecta `empresa_id`/`sucursal_id`, bypass SUPERADMIN, tests unitarios y prueba real con 2 empresas | Prueba de escritura cruzada y RLS nativo (tarea 62) |
 | AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | Por hacer | 15% | 22 triggers `updated_at` | Índices, políticas RLS, soft-delete |
 | AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | Listo | 100% | CRUD de categorías, platos y modificadores; listas de precios, upsert masivo y `resolvePrice`; DTOs validados, Swagger y tests | — |
 | AYCDS-61 | [24.0] Consola SaaS alta Tenant + cron morosidad | 7-8 | David | Listo | 100% | Endpoints SaaS, alta de tenant transaccional, suspender/reactivar/plan, métricas MRR, cron diario 03:00 y auditoría; tests | — |
-| AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | Por hacer | 85% | `/app/productos` con 5 tabs (mock) | Conexión a API real |
+| AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | En curso | 95% | `/app/productos` (5 tabs) consumiendo la API de catálogo (tarea 60): CRUD de productos/categorías/modificadores, listas de precios y carta virtual, con estados de carga/error y sin mocks de catálogo | Verificación en vivo contra PostgreSQL |
 | AYCDS-65 | [27.0] UI consola SaaS MRR empresas | 7-8 | Joshua | Por hacer | 80% | `/saas` con 3 empresas mock | Conexión a API, MRR real |
 | AYCDS-66 | [28.0] QA aislamiento y RBAC + acta 1 | 8 | Sebastián | Por hacer | 0% | Tests "Hello World" | Suite multi-tenant/RBAC, acta |
 
@@ -163,7 +163,7 @@
 
 ### AYCDS-57 — [21.0] Login y Onboarding logo/RUC
 
-- **Semana:** 5-6 | **Responsable:** Diego Arévalo | **Estado Jira:** Por hacer | **Avance:** 40%
+- **Semana:** 5-6 | **Responsable:** Diego Arévalo | **Estado Jira:** En curso | **Avance:** 95%
 - **Descripción Jira:** "Pantallas login + wizard onboarding PR-01 PR-02 + Auth backend."
 - **Qué debe hacerse:**
   1. Conectar la pantalla `/` al endpoint real de login; hoy el campo contraseña es decorativo.
@@ -171,8 +171,9 @@
   3. Completar el wizard `/onboarding` (3 pasos) con razón social, RUC y logo.
   4. Implementar subida de logo (archivo o URL) y creación del tenant vía API.
   5. Persistir los datos y redirigir según el rol al finalizar.
-- **Archivos/rutas:** `apps/web/app/page.tsx`, `apps/web/components/auth/**`, `apps/web/app/onboarding/page.tsx`, `apps/web/components/onboarding/**`
+- **Archivos/rutas:** `apps/web/app/page.tsx`, `apps/web/components/auth/**`, `apps/web/app/onboarding/page.tsx`, `apps/web/components/onboarding/**`, `apps/api/src/modules/onboarding/**`
 - **Criterio de aceptación:** login real contra la API; onboarding crea empresa/RUC/logo en la base de datos; errores visibles para el usuario.
+- **Evidencia:** `lib/api.ts` (cliente `fetch` con `NEXT_PUBLIC_API_URL`, JWT en `localStorage["fogoneria:token"]` y `ApiError`), `lib/auth-api.ts` (`loginRequest`) y `lib/auth.ts` (`appUserFromApi`, `branchSlugFromApi`, cookie `fogoneria.role`/`fogoneria.branch` para no romper el RBAC de `proxy.ts`); `LoginContent.tsx` con `await login(...)`, estado `loading`, botones demo (`Fogoneria123!`) y mensajes de error/tenant suspendido; `OnboardingContent.tsx` reescrito con los 3 pasos reales, validación de RUC (módulo 11, `lib/onboarding-api.ts`), `DropZone` con archivo/URL de logo (el archivo se lee como data URL ≤2 MB), `submitOnboarding()` y auto-login + redirect por rol. **Backend nuevo:** `apps/api/src/modules/onboarding/**` expone `POST /api/v1/onboarding` (`@Public()`): valida RUC, rechaza duplicados (409) y en una transacción crea empresa TRIAL con `logo_url`, sucursal matriz, admin con bcrypt, lista de precios "Carta", lead `GANADO` y evento de auditoría; el body parser sube a 4 MB en `main.ts` para admitir el logo. Verificado con 3 tests unitarios; `web lint`/`check-types`/`build` y `api lint`/`test` (28) /`test:e2e` (7) verdes. Falta la verificación en vivo (sin Docker/PostgreSQL en el entorno).
 
 ---
 
@@ -256,7 +257,7 @@
 
 ### AYCDS-63 — [26.0] UI catálogo Maestro/precios/carta virtual
 
-- **Semana:** 7-8 | **Responsable:** Diego Arévalo | **Estado Jira:** Por hacer | **Avance:** 85%
+- **Semana:** 7-8 | **Responsable:** Diego Arévalo | **Estado Jira:** En curso | **Avance:** 95%
 - **Descripción Jira:** "Panel Maestro, modificadores, listas, carta PR-FG-08."
 - **Qué debe hacerse:**
   1. Conectar `/app/productos` (Maestro, Categorías, Modificadores, Listas de precios y Carta virtual) a la API de catálogo (tarea 60).
@@ -264,8 +265,9 @@
   3. Implementar estados de carga, error y listas vacías.
   4. Validar formularios y permisos por rol en la UI.
   5. Probar el flujo completo de alta/edición de plato y publicación de la carta virtual.
-- **Archivos/rutas:** `apps/web/app/app/productos/**`, `apps/web/components/erp/catalog/**`, `apps/web/lib/erp-catalog.ts`
+- **Archivos/rutas:** `apps/web/app/app/productos/**`, `apps/web/components/erp/catalog/**`, `apps/web/lib/erp-catalog.ts`, `apps/web/lib/catalog-api.ts`
 - **Criterio de aceptación:** CRUD real desde la UI; la carta virtual muestra datos de la base de datos; no quedan mocks en el módulo.
+- **Evidencia:** `lib/catalog-api.ts` agrupa `GET /catalog/categories`, `GET /catalog/dishes?limit=100`, `GET /catalog/modifier-groups` y `GET /pricing/price-lists` + precios por lista, y las mutaciones (`createCategory`, `createDish`, `setDishActive`, `createModifierGroup`, `createPriceList`, `activatePriceList`, `setPrices`); `ModulesProvider.tsx` mantiene el catálogo en estado (`catalogLoading`/`catalogError`/`refreshCatalog`) y expone las mutaciones, con lo que `ProductsView`, `CategoriesView`, `ModifiersView` y `PriceListsView` dejaron de usar mocks; `lib/erp-catalog.ts` quedó solo con tipos/helpers (`priceOf`, `categoryName`) y los `id` del catálogo pasaron de numéricos a UUID (también en `erp`, `domain`, `dashboard`, `tenancy`, `AddItemModal` y los resúmenes), y se subió `ErpState` a v2 para no persistir el catálogo. `catalog.service.ts` incluye `platos_grupos_modificadores` en el listado. 3 tests unitarios de la API relacionados verdes, `lint` + `check-types` verdes en web. Falta la verificación en vivo (sin Docker/PostgreSQL en el entorno).
 
 ---
 
@@ -339,7 +341,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 65 UI SaaS | Joshua Chávez | 61 API SaaS | David Piñarreta | Sin API solo hay mocks |
 | 66 QA | Sebastián Chicata | 48, 53, 60, 61 + 58 | David Piñarreta + Sebastián Chicata | Requiere funcionalidad real y CI |
 
-**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 58 (Sebastián), 55 (Joshua), 63 (Diego) y 65 (Joshua) con UI mock. **Pueden iniciar hoy:** 57 UI (Diego), 62 parcial (Sonny) y 66 al cerrar 58.
+**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 58 (Sebastián), 55 (Joshua), 57 y 63 (Diego, ya integradas a la API) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 62 parcial (Sonny) y 66 al cerrar 58.
 
 ### 5.3 Matriz de inicio: ¿puede cada uno avanzar cuando quiera?
 
@@ -353,12 +355,12 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 48 JWT | David Piñarreta | **Hecha** | 44 (David); 42 resuelto | Dura para cerrar |
 | 53 RLS tenant | David Piñarreta | Parcial | 48 (David); 32/42 resueltos | Dura |
 | 55 Rutas protegidas | Joshua Chávez | **Sí** | — | Independiente |
-| 57 Login/onboarding | Diego Arévalo | **Sí, UI** | 48 (David) + 61 (David) para integrar | Blanda |
+| 57 Login/onboarding | Diego Arévalo | **Hecha; falta verificación** | 48 (David) resuelto | Blanda |
 | 58 Docker/CI | Sebastián Chicata | **Sí** | — | Independiente |
 | 60 API catálogo | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
 | 61 API SaaS | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
 | 62 Índices/RLS | Sonny De La Cruz | Parcial | 32/42 resueltos | Dura para cerrar |
-| 63 UI catálogo | Diego Arévalo | **Sí, UI** | 60 (David) para datos reales | Blanda |
+| 63 UI catálogo | Diego Arévalo | **Hecha; falta verificación** | 60 (David) resuelto | Blanda |
 | 65 UI SaaS | Joshua Chávez | **Sí, UI** | 61 (David) para datos reales | Blanda |
 | 66 QA | Sebastián Chicata | No | 48/53 (David) + 60/61 (David) + 58 (Sebastián) | Última |
 
@@ -370,7 +372,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 - **Sonny De La Cruz:** empieza **hoy con 32**; luego 42 y 62. No espera a nadie.
 - **David Piñarreta:** empieza **hoy con el scaffold de 44** y el diseño de 48; no puede cerrar 48/53/60/61 hasta que Sonny entregue 32 y 42.
 - **Joshua Chávez:** empieza **hoy con 55** y la UI de 65; el cierre de 65 espera la API 61 de David.
-- **Diego Arévalo:** empieza **hoy con la UI de 57 y 63**; el cierre real espera 48/61 y 60 de David.
+- **Diego Arévalo:** 57 y 63 ya están integradas a la API (48 y 60 de David); solo falta la verificación en vivo contra la base de datos.
 - **Sebastián Chicata:** empieza **hoy con 58**; 66 se ejecuta al final.
 
 ### 5.4 Riesgo y mitigación
@@ -401,8 +403,8 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 - [ ] **65** Conectar `/saas` a la API: MRR, grilla de empresas, suspender/reactivar
 
 ### Diego Arévalo — Frontend / Auth y catálogo
-- [ ] **57** Login real + onboarding con razón social, RUC y logo
-- [ ] **63** Conectar `/app/productos` a la API y eliminar mocks de catálogo
+- [ ] **57** Login real + onboarding con razón social, RUC y logo — *código completo y testeado; falta la verificación en vivo contra PostgreSQL para marcarla Listo*
+- [ ] **63** Conectar `/app/productos` a la API y eliminar mocks de catálogo — *código completo y testeado; falta la verificación en vivo contra PostgreSQL para marcarla Listo*
 
 ### Sebastián Chicata — DevOps / QA
 - [ ] **58** Docker Compose (Postgres local listo) + Dockerfiles + CI + backlog documentado
@@ -455,4 +457,8 @@ docker compose up --build
 | 2026-10-20 | 44, 48, 53, 60, 61 | David Piñarreta | Backend modular NestJS: auth JWT, guards RBAC, contexto de tenant + extensión Prisma, catálogo/precios, consola SaaS y cron de morosidad; Swagger, colección Postman y tests | `apps/api/src/**`, `docs/postman/**`; `check-types`, `lint`, `build`, 25 unit + 7 e2e verdes |
 | 2026-10-20 | 58 (parcial) | David / Sebastián | Docker Compose de PostgreSQL 16 en `localhost:5433` con shadow DB, healthcheck y scripts `db:*`; verificación contra base real | `docker-compose.yml`, `docker/initdb/01-shadow.sql`, `apps/api/package.json`; `db:deploy` + `db:seed` OK |
 | 2026-10-20 | 44, 48, 53, 60, 61 | David Piñarreta | Verificación real: login de 6 usuarios, CRUD catálogo/precios, alta/suspensión/reactivación de tenant, métricas MRR y aislamiento con 2 empresas; fix de `PrismaService` (composición en vez de herencia) | API en `:3001` contra Postgres en `:5433`; 25 unit + 7 e2e verdes; tenant B ve 1 sucursal y 0 órdenes de A |
+| 2026-10-20 | 57 | Diego Arévalo | Login real con JWT (`lib/api.ts`, `lib/auth-api.ts`), wizard de onboarding de 3 pasos con validación de RUC y logo, y módulo público `POST /api/v1/onboarding` (empresa TRIAL + sucursal matriz + admin + lead + auditoría) | `apps/web/lib/{api,auth-api,onboarding-api,auth}.ts`, `components/auth/LoginContent.tsx`, `components/onboarding/**`, `apps/api/src/modules/onboarding/**`; `onboarding.service.spec.ts` 3/3 verdes; `lint` + `check-types` web verdes |
+| 2026-10-20 | 63 | Diego Arévalo | `/app/productos` conectado a la API de catálogo/precios: CRUD real de productos, categorías, modificadores y listas, con UUID en todo el ERP y catálogo fuera de `localStorage` (v2) | `apps/web/lib/catalog-api.ts`, `components/dashboard/ModulesProvider.tsx`, `components/erp/catalog/**`, `lib/{erp-catalog,persistence,domain,erp,dashboard,tenancy}.ts`; `lint` + `check-types` web verdes |
+| 2026-10-20 | 57 | Diego Arévalo | Revisión P0/P1: RUC SUNAT con dígito verificador correcto (400 si inválido), alta pública sin `plan` (TRIAL forzado), RUC/email duplicado → 409, logo y longitudes validadas, rate limit 5/10 min por IP, body de 4 MB solo en `/onboarding` y login ambiguo → 409 | `apps/api/src/common/utils/ruc.ts`, `apps/api/src/modules/{onboarding,auth}/**`, `apps/api/src/common/guards/rate-limit.guard.ts`, `apps/api/src/main.ts`, `apps/web/lib/{onboarding-api,domain}.ts`; `ruc.spec` 7, `auth.service.spec` 8, `onboarding.e2e-spec` 3 |
+| 2026-10-20 | 63 | Diego Arévalo | Revisión P0/P1: modificadores por `id` (sync transaccional, 400 ids ajenos/repetidos, 409 si la opción está en órdenes), tenant y sucursales hidratados de la API, paginación de platos + abort de peticiones, rol real `cajero` en el RBAC y rollback de altas de plato/lista | `apps/api/src/modules/catalog/{catalog.service.ts,dto/modifier-group.dto.ts}`, `apps/web/lib/{tenant-api,catalog-api,auth,permissions}.ts`, `apps/web/components/dashboard/{ModulesProvider,AppSidebar,DashboardShell}.tsx`, `apps/web/proxy.ts`; `catalog.service.spec` 10; `api test` 52 + e2e 10, `web build` 45 rutas |
 | | | | | |

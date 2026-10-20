@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   UnauthorizedException,
@@ -22,15 +23,31 @@ export class AuthService {
   ) {}
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {
-    const usuario = await this.prisma.raw.usuarios.findFirst({
-      where: { email: dto.email.trim(), deleted_at: null },
+    const email = dto.email.trim();
+    // El email es único por empresa, no global: se buscan todos los candidatos
+    // y se elige el que coincide con la contraseña. Si dos coinciden, el login
+    // sería ambiguo (podría entrar a la empresa equivocada) → 409.
+    const candidatos = await this.prisma.raw.usuarios.findMany({
+      where: { email, deleted_at: null },
       include: { empresas: true, sucursales: true },
+      orderBy: { created_at: 'asc' },
+      take: 5,
     });
 
-    if (!usuario) throw new UnauthorizedException('Credenciales inválidas');
+    const coincidencias: (typeof candidatos)[number][] = [];
+    for (const candidato of candidatos) {
+      if (await bcrypt.compare(dto.password, candidato.password_hash)) {
+        coincidencias.push(candidato);
+      }
+    }
 
-    const passwordOk = await bcrypt.compare(dto.password, usuario.password_hash);
-    if (!passwordOk) throw new UnauthorizedException('Credenciales inválidas');
+    if (coincidencias.length === 0) throw new UnauthorizedException('Credenciales inválidas');
+    if (coincidencias.length > 1) {
+      throw new ConflictException(
+        'Ese correo está registrado en más de una empresa. Contacta a soporte.',
+      );
+    }
+    const usuario = coincidencias[0];
 
     if (usuario.estado !== 'ACTIVO') {
       throw new ForbiddenException('El usuario no está activo');

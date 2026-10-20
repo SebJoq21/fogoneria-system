@@ -23,11 +23,20 @@ export type Branch = {
   status: "Abierta" | "Cerrada";
 };
 
-export const company = {
+/** Empresa de demostración: solo se usa si la API no está disponible. */
+export const DEMO_COMPANY = {
   legalName: "Mi Restaurante S.A.C.",
-  ruc: "20123456789",
+  ruc: "20123456786",
 };
 
+/** Sucursales del tenant demo del seed (UUID de la API → slug de la demo). */
+export const SEED_BRANCH_SLUGS: Record<string, string> = {
+  "22222222-2222-2222-2222-222222222222": "miraflores",
+  "33333333-3333-3333-3333-333333333333": "surco",
+  "44444444-4444-4444-4444-444444444444": "san-isidro",
+};
+
+/** Sucursales demo (slugs): solo rellenan la operación del tenant demo. */
 export const initialBranches: Branch[] = [
   { id: "miraflores", name: "Miraflores · Matriz", short: "Miraflores", address: "Av. José Pardo 456, Miraflores", phone: "+51 987 654 321", isMain: true, status: "Abierta" },
   { id: "surco", name: "Surco", short: "Surco", address: "Av. Encalada 1420, Surco", phone: "+51 955 231 884", isMain: false, status: "Abierta" },
@@ -97,6 +106,20 @@ export const initialScopes: Record<string, BranchScope> = {
   "san-isidro": { orders: sanIsidroOrders, tables: sanIsidroTables, cash: sanIsidroCash },
 };
 
+/**
+ * Operación de demo para una sucursal real: solo el tenant demo del seed tiene
+ * datos de ejemplo; el resto arranca vacío (la operación aún no está en la API).
+ */
+export function demoScopeFor(branchId: string): BranchScope | null {
+  const slug = SEED_BRANCH_SLUGS[branchId];
+  return slug ? initialScopes[slug] ?? null : null;
+}
+
+/** slug demo → UUID real (para remapear cuentas y turnos del tenant demo). */
+export const SEED_SLUG_BRANCH_IDS: Record<string, string> = Object.fromEntries(
+  Object.entries(SEED_BRANCH_SLUGS).map(([uuid, slug]) => [slug, uuid]),
+);
+
 /** Turnos de caja abiertos de la demo (el fondo coincide con el movimiento seed). */
 export const initialCashShifts: CashShift[] = [
   { id: "CH-miraflores-hoy", branchId: "miraflores", status: "abierto", openedBy: "Rosa Quispe", openedAt: isoToday("09:00"), openingFund: 200, closedBy: null, closedAt: null, countedCash: null, expectedCash: null, difference: null, observations: "" },
@@ -117,8 +140,8 @@ export const initialAccounts: TableAccount[] = [
     closedAt: null,
     status: "abierta",
     items: [
-      { id: "AI-demo-1", productId: 3, name: "Lomo Saltado", qty: 2, unitPrice: 22, modifiers: [{ optionId: "tam-grande", name: "Grande", extra: 4 }], notes: "", sent: true },
-      { id: "AI-demo-2", productId: 6, name: "Chicha Morada", qty: 1, unitPrice: 4, modifiers: [], notes: "Sin azúcar", sent: false },
+      { id: "AI-demo-1", productId: "88888888-8888-8888-8888-888888888883", name: "Lomo Saltado", qty: 2, unitPrice: 22, modifiers: [{ optionId: "tam-grande", name: "Grande", extra: 4 }], notes: "", sent: true },
+      { id: "AI-demo-2", productId: "88888888-8888-8888-8888-888888888886", name: "Chicha Morada", qty: 1, unitPrice: 4, modifiers: [], notes: "Sin azúcar", sent: false },
     ],
     payments: [],
     tip: 0,

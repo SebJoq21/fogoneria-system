@@ -1,5 +1,34 @@
 # SESION — estado entre sesiones
 
+## 2026-10-20 — Revisión estática de 57/63: P0 y P1 aplicados (RUC, onboarding, modificadores, tenant real, cajero)
+
+- Objetivo: cerrar los hallazgos de la revisión de la rama `feat/web-conexion-api` sin depender de Postgres.
+- Hecho:
+  - P0 RUC: `(11 - (sum % 11)) % 10` en `apps/api/src/common/utils/ruc.ts`, `apps/web/lib/onboarding-api.ts` y `apps/web/lib/domain.ts:isValidRuc` (antes invertía los restos 0/1). Casos verificados en `ruc.spec.ts`.
+  - P0 onboarding: el DTO ya no acepta `plan`; el servicio fuerza `TRIAL` + `mrr_monto: 0`, devuelve **400** por RUC inválido, **409** por RUC/email duplicado (sin filtrar `deleted_at`) y mapea `P2002`; auditoría best-effort. Reglas de `logoUrl`/longitudes en `submit-onboarding.dto.ts`.
+  - P1 abuso del endpoint público: `RateLimitGuard` (5/10 min por IP, en memoria) + `ONBOARDING_RATE_LIMIT`/`ONBOARDING_RATE_WINDOW_MS` en `env.validation.ts` y `.env.example`; body parser de 4 MB **solo** en `/api/v1/onboarding` (100 KB global).
+  - P1 login ambiguo: `auth.service.ts:login` compara bcrypt contra los candidatos del email y responde **409** si hay más de un tenant (antes elegía uno al azar).
+  - P0 modificadores: `UpdateModifierGroupDto.opciones[].id` permite renombrar sin borrar; `catalog.service.ts:updateModifierGroup` sincroniza por id en transacción, valida ids ajenos/repetidos y bloquea el borrado de opciones usadas en órdenes (409).
+  - P0 tenant real en web: nuevo `lib/tenant-api.ts`; `ModulesProvider` hidrata `/tenant` + `/tenant/branches`, valida la sucursal guardada, poda combos huérfanos, aborta el catálogo al desmontar y deshace altas de plato/lista si falla el paso siguiente.
+  - Rol **cajero** real: `AppRole`/`API_ROLE.CAJERO`, `proxy.ts`, `canViewPath`, `permissions.ts`, sidebar y mobileLinks; `appUserFromApi` usa `sucursalId` real.
+  - E2E nuevo `test/onboarding.e2e-spec.ts` (400 de DTO, `plan` prohibido, 201 y 429 por rate limit).
+- Verificado: `api lint` 0/0, `api check-types` OK, `api test` 52/52, `api test:e2e` 10/10; `web lint` OK, `web check-types` OK, `web build` OK (45 rutas).
+- Pendiente: verificación en vivo con Postgres (sin Docker/`psql` aquí) para marcar 57/63 como Listo, Jira y PR.
+- Próximo paso: push de la rama y abrir el PR a `development` con la descripción preparada.
+
+## 2026-10-20 — Tareas 57 y 63 de Diego: login real, onboarding y catálogo contra la API
+
+- Objetivo: conectar el frontend a la API — login real (57), wizard de onboarding con RUC/logo (57) y `/app/productos` sin mocks (63).
+- Hecho:
+  - Cliente HTTP `lib/api.ts` (`NEXT_PUBLIC_API_URL` ?? `http://localhost:3001/api/v1`, JWT en `fogoneria:token`, `ApiError`), `lib/auth-api.ts` (`loginRequest`) y `lib/onboarding-api.ts` (RUC módulo 11 + `submitOnboarding`).
+  - 57: `LoginContent.tsx` con `await login(email, password)` y estados de carga/error; `OnboardingContent.tsx` reescrito (3 pasos reales, `DropZone` con archivo/URL de logo, auto-login + redirect por rol). El logo subido se lee como **data URL** (≤2 MB, validado en cliente) y el body parser de Express se subió a 4 MB en `apps/api/src/main.ts`. `lib/auth.ts` mapea rol y sucursal de la API y sigue dejando las cookies `fogoneria.role`/`fogoneria.branch` para no romper el RBAC de `proxy.ts`.
+  - 57 backend (módulo nuevo): `apps/api/src/modules/onboarding/**` expone `POST /api/v1/onboarding` (`@Public()`): valida RUC, 409 si existe, y en transacción crea empresa `TRIAL` con `logo_url`, sucursal matriz, admin bcrypt, lista "Carta", lead `GANADO` y evento de auditoría. Registrado en `app.module.ts`.
+  - 63: `lib/catalog-api.ts` (lecturas de categorías/platos/modificadores/listas + precios y todas las mutaciones); `ModulesProvider.tsx` mantiene el catálogo en estado con `refreshCatalog`/`catalogLoading`/`catalogError` y expone las mutaciones; `ProductsView`, `CategoriesView`, `ModifiersView` y `PriceListsView` dejaron de usar mocks. Los `id` del catálogo pasan a UUID en todo el ERP (`erp`, `domain`, `dashboard`, `tenancy`, `AddItemModal`, resúmenes) y `ErpState` sube a `v2` (`fogoneria:erp:v2`) sin catálogo. `catalog.service.ts` incluye `platos_grupos_modificadores` en el listado.
+  - `apps/web/.env.example` nuevo con `NEXT_PUBLIC_API_URL`.
+- Verificado: `web lint` OK (eslint + `check-styles`), `web check-types` OK, `web build` OK (45 rutas), `api lint` OK, `api test` 28/28 (3 nuevas de onboarding) y `api test:e2e` 7/7.
+- Pendiente: **verificación en vivo con Postgres** (en este entorno no hay Docker ni `psql`; `localhost:5433` no responde), sincronizar Jira y commitear.
+- Próximo paso: levantar `docker compose up` + `db:deploy` + `db:seed`, probar login y onboarding desde la UI, y luego commit/PR.
+
 ## 2026-10-20 — Docker Compose + verificación real de PostgreSQL
 
 - Objetivo: levantar una base local para probar la API como en `dydalo` y cerrar la verificación pendiente de las tareas 44/48/53/60/61.

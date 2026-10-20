@@ -14,43 +14,61 @@ import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
 
 /** Maestro de categorías de producto. */
 export function CategoriesView() {
-  const { categories, setCategories, products, notify } = useModules();
+  const { categories, products, notify, saveCategory, deleteCategory, catalogLoading, catalogError } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   const sorted = [...categories].sort((a, b) => a.position - b.position);
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim()) return;
-    if (editingId) {
-      setCategories(categories.map((c) => (c.id === editingId ? { ...c, name } : c)));
-      notify("Categoría actualizada", `"${name}" guardada.`);
-    } else {
-      const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-      setCategories([
-        ...categories,
-        { id, name, position: Math.max(0, ...categories.map((c) => c.position)) + 1 },
-      ]);
-      notify("Categoría creada", `"${name}" añadida al maestro.`);
+    setSaving(true);
+    try {
+      const position = editingId
+        ? categories.find((c) => c.id === editingId)?.position ?? 0
+        : Math.max(0, ...categories.map((c) => c.position)) + 1;
+      await saveCategory({ id: editingId ?? undefined, name: name.trim(), position });
+      notify(editingId ? "Categoría actualizada" : "Categoría creada", `"${name}" guardada.`);
+      setModalOpen(false);
+      setName("");
+      setEditingId(null);
+    } catch (error) {
+      notify("No se pudo guardar la categoría", error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    setName("");
-    setEditingId(null);
   };
 
-  const remove = (id: string) => {
-    if (products.some((p) => p.categoryId === id)) return;
-    setCategories(categories.filter((c) => c.id !== id));
-    setPendingDelete(null);
-    notify("Categoría eliminada", "Se retiró del maestro.");
+  const remove = async (id: string) => {
+    if (products.some((p) => p.categoryId === id)) {
+      setPendingDelete(null);
+      return;
+    }
+    try {
+      await deleteCategory(id);
+      notify("Categoría eliminada", "Se retiró del maestro.");
+    } catch (error) {
+      notify("No se pudo eliminar la categoría", error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      setPendingDelete(null);
+    }
   };
 
   const summary = useMemo(() => cartaSummary(products, categories, () => 0), [products, categories]);
 
   return (
     <div>
+      {catalogError && (
+        <p className="text-sm text-red-600 mb-4" role="alert">
+          {catalogError}
+        </p>
+      )}
+      {catalogLoading && categories.length === 0 && (
+        <p className="text-sm text-ink-400 mb-4">Cargando categorías…</p>
+      )}
       <ModuleSummary
         kpis={summary.kpis.slice(0, 3).map((k, i) => (i === 1 ? { ...k, value: String(categories.length), hint: "en maestro" } : k))}
         chartTitle="Platos por categoría"
@@ -135,7 +153,7 @@ export function CategoriesView() {
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button disabled={!name.trim()} onClick={save}>
+              <Button disabled={!name.trim() || saving} onClick={save}>
                 Guardar
               </Button>
             </>

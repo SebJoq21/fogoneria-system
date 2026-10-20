@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -16,7 +17,7 @@ function buildPrisma() {
   return {
     raw: {
       usuarios: {
-        findFirst: vi.fn(),
+        findMany: vi.fn().mockResolvedValue([]),
         update: vi.fn().mockResolvedValue({}),
       },
     },
@@ -65,7 +66,7 @@ describe('AuthService', () => {
 
   it('devuelve token y tenant con credenciales válidas', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue(usuarioBase);
+    prisma.raw.usuarios.findMany.mockResolvedValue([usuarioBase]);
     const { service } = buildService(prisma);
 
     const result = await service.login({
@@ -81,7 +82,7 @@ describe('AuthService', () => {
 
   it('rechaza contraseña incorrecta', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue(usuarioBase);
+    prisma.raw.usuarios.findMany.mockResolvedValue([usuarioBase]);
     const { service } = buildService(prisma);
 
     await expect(
@@ -91,7 +92,6 @@ describe('AuthService', () => {
 
   it('rechaza usuario inexistente', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue(null);
     const { service } = buildService(prisma);
 
     await expect(
@@ -101,10 +101,9 @@ describe('AuthService', () => {
 
   it('rechaza tenant suspendido', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue({
-      ...usuarioBase,
-      empresas: { ...usuarioBase.empresas, estado: 'SUSPENDED' },
-    });
+    prisma.raw.usuarios.findMany.mockResolvedValue([
+      { ...usuarioBase, empresas: { ...usuarioBase.empresas, estado: 'SUSPENDED' } },
+    ]);
     const { service } = buildService(prisma);
 
     await expect(
@@ -114,14 +113,16 @@ describe('AuthService', () => {
 
   it('rechaza trial vencido', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue({
-      ...usuarioBase,
-      empresas: {
-        ...usuarioBase.empresas,
-        estado: 'TRIAL',
-        trial_fin: new Date('2020-01-01T00:00:00.000Z'),
+    prisma.raw.usuarios.findMany.mockResolvedValue([
+      {
+        ...usuarioBase,
+        empresas: {
+          ...usuarioBase.empresas,
+          estado: 'TRIAL',
+          trial_fin: new Date('2020-01-01T00:00:00.000Z'),
+        },
       },
-    });
+    ]);
     const { service } = buildService(prisma);
 
     await expect(
@@ -131,14 +132,38 @@ describe('AuthService', () => {
 
   it('rechaza usuario no activo', async () => {
     const prisma = buildPrisma();
-    prisma.raw.usuarios.findFirst.mockResolvedValue({
-      ...usuarioBase,
-      estado: 'SUSPENDIDO',
-    });
+    prisma.raw.usuarios.findMany.mockResolvedValue([
+      { ...usuarioBase, estado: 'SUSPENDIDO' },
+    ]);
     const { service } = buildService(prisma);
 
     await expect(
       service.login({ email: 'ana@fuego.pe', password: PASSWORD }),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('rechaza el login cuando el correo existe en dos empresas', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findMany.mockResolvedValue([
+      usuarioBase,
+      { ...usuarioBase, id: 'u2', empresa_id: 'e2' },
+    ]);
+    const { service } = buildService(prisma);
+
+    await expect(
+      service.login({ email: 'ana@fuego.pe', password: PASSWORD }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('entra a la empresa cuya contraseña coincide cuando el correo se repite', async () => {
+    const prisma = buildPrisma();
+    prisma.raw.usuarios.findMany.mockResolvedValue([
+      { ...usuarioBase, id: 'u2', empresa_id: 'e2', password_hash: bcrypt.hashSync('otra-clave', 4) },
+      usuarioBase,
+    ]);
+    const { service } = buildService(prisma);
+
+    const result = await service.login({ email: 'ana@fuego.pe', password: PASSWORD });
+    expect(result.user.id).toBe('u1');
   });
 });

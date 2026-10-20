@@ -1,6 +1,6 @@
 /** Vista derivada de Carta (nunca se persiste): Plato + precio lista activa + tipo. */
 export type MenuItem = {
-  id: number;
+  id: string;
   name: string;
   description: string;
   price: string;
