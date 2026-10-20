@@ -26,8 +26,15 @@ pnpm --filter api db:generate
 
 ## Base de datos
 
+El `docker-compose.yml` de la raíz levanta PostgreSQL 16 en `localhost:5433` (para no chocar con el 5432 de otros proyectos) y crea la base auxiliar `fogoneria_shadow` que usa `prisma migrate dev`.
+
 | Comando | Uso |
 |---|---|
+| `db:up` | Levanta Postgres y espera a que el healthcheck esté sano |
+| `db:down` | Detiene y elimina el contenedor (el volumen `pgdata` se conserva) |
+| `db:logs` | Sigue los logs de Postgres |
+| `db:status` | Muestra el estado del contenedor |
+| `db:psql` | Abre `psql` dentro del contenedor |
 | `db:generate` | Genera el cliente en `src/generated/prisma` (ignorado por git) |
 | `db:validate` | Valida `prisma/schema.prisma` |
 | `db:deploy` | Aplica migraciones pendientes (CI/producción) |
@@ -39,9 +46,12 @@ pnpm --filter api db:generate
 Flujo inicial:
 
 ```bash
+pnpm --filter api db:up
 pnpm --filter api db:deploy
 pnpm --filter api db:seed
 ```
+
+Si el 5433 también está ocupado, define `POSTGRES_PORT` en un `.env` de la raíz y actualiza `DATABASE_URL`/`SHADOW_DATABASE_URL` en `apps/api/.env`. Para borrar también los datos: `docker compose down -v`.
 
 La migración `20261019000000_init` crea el esquema `fogoneria`, 41 tablas, 27 enums, 22 triggers, 4 vistas y los índices parciales. Requiere permisos para `CREATE EXTENSION`; en producción las extensiones pueden crearse antes con un usuario administrador.
 
@@ -133,4 +143,4 @@ pnpm --filter api test:e2e
 
 `prebuild` y `precheck-types` ejecutan `prisma generate` para que el cliente exista antes de compilar.
 
-> Los tests unitarios y e2e usan Prisma mockeado: no requieren PostgreSQL. La verificación contra una base real queda pendiente del `docker-compose` (tarea 58).
+> Los tests unitarios y e2e usan Prisma mockeado: no requieren PostgreSQL. La verificación contra la base real se hace con `db:up` + `db:deploy` + `db:seed` y la colección Postman.
