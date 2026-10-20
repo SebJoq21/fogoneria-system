@@ -1,0 +1,401 @@
+{
+  "info": {
+    "name": "Fogonería API",
+    "description": "Colección de la API Fogonería (NestJS + Prisma). Ejecuta Login primero para guardar el token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "empresaId", "value": "" },
+    { "key": "sucursalId", "value": "" },
+    { "key": "platoId", "value": "" },
+    { "key": "listaId", "value": "" },
+    { "key": "tenantId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 · Health",
+      "item": [
+        {
+          "name": "GET health",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 · Auth",
+      "item": [
+        {
+          "name": "POST login (admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@mirestaurante.com\",\n  \"password\": \"Fogoneria123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('token', body.accessToken);",
+                  "if (body.user.empresaId) pm.collectionVariables.set('empresaId', body.user.empresaId);",
+                  "if (body.user.sucursalId) pm.collectionVariables.set('sucursalId', body.user.sucursalId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST login (superadmin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"super@fogoneria.com\",\n  \"password\": \"Fogoneria123!\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('token', pm.response.json().accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/me", "host": ["{{baseUrl}}"], "path": ["auth", "me"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 · Tenant",
+      "item": [
+        {
+          "name": "GET context",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/tenant/context",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenant", "context"]
+            }
+          }
+        },
+        {
+          "name": "GET sucursales",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/tenant/branches",
+              "host": ["{{baseUrl}}"],
+              "path": ["tenant", "branches"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 · Catálogo",
+      "item": [
+        {
+          "name": "GET categorías",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories"]
+            }
+          }
+        },
+        {
+          "name": "POST categoría",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Entradas\",\n  \"posicion\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories"]
+            }
+          }
+        },
+        {
+          "name": "GET platos",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/dishes?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "dishes"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST plato",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoriaId\": \"{{categoriaId}}\",\n  \"sku\": \"CEV-001\",\n  \"nombre\": \"Ceviche clásico\",\n  \"costoReal\": 8.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/dishes",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "dishes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 · Precios",
+      "item": [
+        {
+          "name": "GET listas de precios",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/pricing/price-lists",
+              "host": ["{{baseUrl}}"],
+              "path": ["pricing", "price-lists"]
+            }
+          }
+        },
+        {
+          "name": "PUT precios de lista",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"platoId\": \"{{platoId}}\", \"precio\": 24.9 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pricing/price-lists/{{listaId}}/prices",
+              "host": ["{{baseUrl}}"],
+              "path": ["pricing", "price-lists", "{{listaId}}", "prices"]
+            }
+          }
+        },
+        {
+          "name": "GET resolver precio",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/pricing/resolve?platoId={{platoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pricing", "resolve"],
+              "query": [{ "key": "platoId", "value": "{{platoId}}" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 · SaaS (SUPERADMIN)",
+      "item": [
+        {
+          "name": "GET métricas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/saas/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["saas", "metrics"]
+            }
+          }
+        },
+        {
+          "name": "GET empresas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/saas/tenants?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["saas", "tenants"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST alta de tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombreLegal\": \"Parrilla El Fuego S.A.C.\",\n  \"nombreComercial\": \"El Fuego\",\n  \"ruc\": \"20123456786\",\n  \"emailAdmin\": \"admin@elfuego.pe\",\n  \"nombreAdmin\": \"María Torres\",\n  \"password\": \"Fogoneria123!\",\n  \"plan\": \"PROFESIONAL\",\n  \"limiteSucursales\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/saas/tenants",
+              "host": ["{{baseUrl}}"],
+              "path": ["saas", "tenants"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('tenantId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST suspender tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Factura vencida hace 15 días\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/saas/tenants/{{tenantId}}/suspend",
+              "host": ["{{baseUrl}}"],
+              "path": ["saas", "tenants", "{{tenantId}}", "suspend"]
+            }
+          }
+        },
+        {
+          "name": "POST reactivar tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Pago regularizado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/saas/tenants/{{tenantId}}/reactivate",
+              "host": ["{{baseUrl}}"],
+              "path": ["saas", "tenants", "{{tenantId}}", "reactivate"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 · Órdenes",
+      "item": [
+        {
+          "name": "GET órdenes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/orders?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST orden",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origen\": \"MESA\",\n  \"items\": [\n    { \"tipo\": \"PLATO\", \"platoId\": \"{{platoId}}\", \"cantidad\": 2, \"precioUnitario\": 24.9 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
