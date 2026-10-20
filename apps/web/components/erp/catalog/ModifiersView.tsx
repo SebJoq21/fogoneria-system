@@ -32,12 +32,14 @@ export function ModifiersView() {
   const [pendingRemove, setPendingRemove] = useState<{ groupId: string; optionId: string; name: string } | null>(null);
   const [pendingGroup, setPendingGroup] = useState<{ id: string; name: string } | null>(null);
 
+  // Envia el id de cada opción existente: quitarlo borraría la opción y la API
+  // lo rechaza si ya se usó en órdenes.
   const optionsPayload = (id: string, omitOptionId?: string) => {
     const group = modifierGroups.find((g) => g.id === id);
     if (!group) return null;
     return group.options
       .filter((o) => o.id !== omitOptionId)
-      .map((o) => ({ name: o.name, extra: o.extra }));
+      .map((o) => ({ id: o.id, name: o.name, extra: o.extra }));
   };
 
   const addGroup = async () => {

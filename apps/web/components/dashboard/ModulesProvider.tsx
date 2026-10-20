@@ -40,14 +40,17 @@ import {
 import {
   ALL_BRANCHES,
   BRANCH_IDS,
-  company,
+  DEMO_COMPANY,
+  GENERAL_BRANCH,
+  SEED_SLUG_BRANCH_IDS,
+  demoScopeFor,
   initialAccounts,
-  initialBranches,
   initialCashShifts,
   initialScopes,
   type Branch,
   type BranchScope,
 } from "@/lib/tenancy";
+import { fetchBranches, fetchTenant, type Tenant } from "@/lib/tenant-api";
 import type { AppUser } from "@/lib/auth";
 import {
   accountTotals,
@@ -149,7 +152,8 @@ type ModulesContext = {
   priceOf: (productId: string) => number;
   categoryNameOf: (categoryId: string) => string;
   /* Multitenant: sucursales de la empresa (1 RUC → N locales + vista general) */
-  company: typeof company;
+  company: { legalName: string; ruc: string };
+  tenant: Tenant | null;
   branches: Branch[];
   activeBranch: Branch;
   activeBranchId: string;
@@ -252,24 +256,28 @@ function nextSku(products: Product[]): string {
 
 function applyWrite(
   prev: Record<string, BranchScope>,
+  branchIds: string[],
   activeId: string,
   key: "orders",
   value: React.SetStateAction<Order[]>,
 ): Record<string, BranchScope>;
 function applyWrite(
   prev: Record<string, BranchScope>,
+  branchIds: string[],
   activeId: string,
   key: "tables",
   value: React.SetStateAction<Table[]>,
 ): Record<string, BranchScope>;
 function applyWrite(
   prev: Record<string, BranchScope>,
+  branchIds: string[],
   activeId: string,
   key: "cash",
   value: React.SetStateAction<CashMovement[]>,
 ): Record<string, BranchScope>;
 function applyWrite(
   prev: Record<string, BranchScope>,
+  branchIds: string[],
   activeId: string,
   key: "orders" | "tables" | "cash",
   value: unknown,
@@ -282,17 +290,36 @@ function applyWrite(
   }
   // Vista general: se aplica sobre el combinado y se reparte por id;
   // los ítems nuevos (id desconocido) van a la matriz.
-  const combined = BRANCH_IDS.flatMap((id) => ((prev[id]?.[key] ?? []) as ScopeItem[]));
+  const combined = branchIds.flatMap((id) => ((prev[id]?.[key] ?? []) as ScopeItem[]));
   const next = typeof asItems === "function" ? asItems(combined) : asItems;
   const knownIds = new Set(combined.map((o) => o.id));
   const fresh = next.filter((o) => !knownIds.has(o.id));
   const out = { ...prev };
-  BRANCH_IDS.forEach((id, i) => {
+  branchIds.forEach((id, i) => {
     const own = new Set((((prev[id] as BranchScope | undefined)?.[key] ?? []) as ScopeItem[]).map((o) => o.id));
     const slice = next.filter((o) => own.has(o.id));
     out[id] = { ...out[id], [key]: i === 0 ? [...slice, ...fresh] : slice };
   });
   return out;
+}
+
+/**
+ * Alinea la operación mock con las sucursales reales: el tenant demo del seed
+ * recibe sus datos de ejemplo (remapeados a UUID) y los tenants nuevos arrancan
+ * con la operación vacía.
+ */
+function prepareOps(state: ErpState, branchIds: string[]): ErpState {
+  const scopes = { ...state.scopes };
+  for (const id of branchIds) {
+    if (!scopes[id]) scopes[id] = demoScopeFor(id) ?? { orders: [], tables: [], cash: [] };
+  }
+  const remap = (branchId: string) => SEED_SLUG_BRANCH_IDS[branchId] ?? branchId;
+  return {
+    ...state,
+    scopes,
+    accounts: state.accounts.map((account) => ({ ...account, branchId: remap(account.branchId) })),
+    cashShifts: state.cashShifts.map((shift) => ({ ...shift, branchId: remap(shift.branchId) })),
+  };
 }
 
 function buildInitialState(): ErpState {
@@ -328,8 +355,24 @@ export function ModulesProvider({
   const [state, setState] = useState<ErpState>(buildInitialState);
   const [activeBranchId, setActiveBranchId] = useState<string>("todas");
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+  /** `null` = aún no se consultó la API (modo demo/offline). */
+  const [tenantBranches, setTenantBranches] = useState<Branch[] | null>(null);
   const applyingRemote = useRef(false);
   const firstPersist = useRef(true);
+
+  const branchIds = useMemo(
+    () => (tenantBranches ? tenantBranches.map((branch) => branch.id) : BRANCH_IDS),
+    [tenantBranches],
+  );
+  const branches = useMemo<Branch[]>(
+    () => (tenantBranches ? [GENERAL_BRANCH, ...tenantBranches] : ALL_BRANCHES),
+    [tenantBranches],
+  );
+  const company = useMemo(
+    () => (tenant ? { legalName: tenant.legalName, ruc: tenant.ruc } : DEMO_COMPANY),
+    [tenant],
+  );
 
   /* Hidratación desde localStorage (solo cliente) */
   useEffect(() => {
@@ -347,7 +390,8 @@ export function ModulesProvider({
           setActiveBranchId(found.branchId);
         } else {
           const branch = localStorage.getItem("fogoneria:branch");
-          if (branch && (branch === "todas" || initialScopes[branch])) {
+          // La sucursal se revalida contra la API al cargar el tenant.
+          if (branch === GENERAL_BRANCH.id || branch) {
             setActiveBranchId(branch);
           }
         }
@@ -379,23 +423,29 @@ export function ModulesProvider({
     });
   }, []);
 
-  const setActiveBranch = useCallback((id: string) => {
-    if (id !== "todas" && !initialScopes[id]) return;
-    setActiveBranchId(id);
-    try {
-      localStorage.setItem("fogoneria:branch", id);
-    } catch {
-      /* almacenamiento no disponible */
-    }
-  }, []);
+  const setActiveBranch = useCallback(
+    (id: string) => {
+      if (id !== GENERAL_BRANCH.id && !branchIds.includes(id)) return;
+      setActiveBranchId(id);
+      try {
+        localStorage.setItem("fogoneria:branch", id);
+      } catch {
+        /* almacenamiento no disponible */
+      }
+    },
+    [branchIds],
+  );
 
   /* ---------- Catálogo desde la API (tarea 63) ---------- */
 
   const [catalog, setCatalog] = useState<CatalogState>(EMPTY_CATALOG);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  /** Descarta respuestas que llegan después de una recarga más nueva. */
+  const catalogRequest = useRef(0);
 
-  const refreshCatalog = useCallback(async () => {
+  const refreshCatalog = useCallback(async (signal?: AbortSignal) => {
+    const requestId = ++catalogRequest.current;
     if (!getToken()) {
       setCatalog(EMPTY_CATALOG);
       setCatalogError(null);
@@ -404,25 +454,68 @@ export function ModulesProvider({
     setCatalogLoading(true);
     setCatalogError(null);
     try {
-      setCatalog(await catalogApi.fetchCatalog());
+      const snapshot = await catalogApi.fetchCatalog(signal);
+      if (requestId !== catalogRequest.current) return;
+      setCatalog(snapshot);
+      // Los combos del seed apuntan a platos del tenant demo: en un tenant
+      // nuevo se descartan para no mostrar "Plato retirado".
+      const productIds = new Set(snapshot.products.map((product) => product.id));
+      setState((prev) => {
+        const combos = prev.combos.filter((combo) =>
+          combo.productIds.every((productId) => productIds.has(productId)),
+        );
+        return combos.length === prev.combos.length ? prev : { ...prev, combos };
+      });
     } catch (error) {
+      if (requestId !== catalogRequest.current || signal?.aborted) return;
       setCatalogError(
         error instanceof ApiError ? error.message : "No se pudo cargar el catálogo.",
       );
     } finally {
-      setCatalogLoading(false);
+      if (requestId === catalogRequest.current) setCatalogLoading(false);
     }
   }, []);
 
   /* Cargar el catálogo al iniciar sesión y limpiarlo al salir. */
   useEffect(() => {
-    if (currentUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial del catálogo tras login
-      void refreshCatalog();
-    } else {
+    if (!currentUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpiar el catálogo al cerrar sesión
       setCatalog(EMPTY_CATALOG);
+      return;
     }
+    const controller = new AbortController();
+    void refreshCatalog(controller.signal);
+    return () => controller.abort();
   }, [currentUser, refreshCatalog]);
+
+  /* Empresa y sucursales reales del token (tarea 57). */
+  useEffect(() => {
+    if (!currentUser) return;
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        const [tenantData, branchData] = await Promise.all([
+          fetchTenant(controller.signal),
+          fetchBranches(controller.signal),
+        ]);
+        if (controller.signal.aborted) return;
+        setTenant(tenantData);
+        setTenantBranches(branchData);
+        setState((prev) => prepareOps(prev, branchData.map((branch) => branch.id)));
+        setActiveBranchId((prev) => {
+          const ids = branchData.map((branch) => branch.id);
+          if (currentUser.branchId && ids.includes(currentUser.branchId)) return currentUser.branchId;
+          if (ids.includes(prev)) return prev;
+          return branchData.length > 0 ? branchData[0].id : GENERAL_BRANCH.id;
+        });
+      } catch {
+        /* API no disponible: se mantiene el modo demo */
+      }
+    })();
+
+    return () => controller.abort();
+  }, [currentUser]);
 
   const saveProduct = useCallback(
     async (input: ProductInput) => {
@@ -434,12 +527,26 @@ export function ModulesProvider({
         status: input.status,
         modifierGroupIds: input.modifierGroupIds,
       };
+      const isNew = !input.id;
       const id = input.id ?? (await catalogApi.createDish({ ...payload, sku: nextSku(catalog.products) }));
-      if (input.id) await catalogApi.updateDish(input.id, payload);
+      try {
+        if (input.id) await catalogApi.updateDish(input.id, payload);
 
-      const activeList = catalog.priceLists.find((l) => l.active);
-      if (activeList) {
-        await catalogApi.setPrices(activeList.id, [{ platoId: id, precio: input.price }]);
+        const activeList = catalog.priceLists.find((l) => l.active);
+        if (activeList) {
+          await catalogApi.setPrices(activeList.id, [{ platoId: id, precio: input.price }]);
+        }
+      } catch (error) {
+        // El plato y su precio son dos llamadas: si falla la segunda, se
+        // deshace el alta para no dejar platos sin precio.
+        if (isNew) {
+          try {
+            await catalogApi.deleteDish(id);
+          } catch {
+            /* la limpieza es best-effort */
+          }
+        }
+        throw error;
       }
       await refreshCatalog();
     },
@@ -507,9 +614,20 @@ export function ModulesProvider({
     async (name: string, fromListId?: string) => {
       const id = await catalogApi.createPriceList(name);
       const source = fromListId ? catalog.priceLists.find((l) => l.id === fromListId) : undefined;
-      if (source) {
-        const items = Object.entries(source.prices).map(([platoId, precio]) => ({ platoId, precio }));
-        await catalogApi.setPrices(id, items);
+      try {
+        if (source) {
+          const items = Object.entries(source.prices).map(([platoId, precio]) => ({ platoId, precio }));
+          await catalogApi.setPrices(id, items);
+        }
+      } catch (error) {
+        // Copiar precios es una segunda llamada: si falla, se desactiva la lista
+        // recién creada para no dejar una lista vacía activa por error.
+        try {
+          await catalogApi.deletePriceList(id);
+        } catch {
+          /* la limpieza es best-effort */
+        }
+        throw error;
       }
       await refreshCatalog();
     },
@@ -537,6 +655,10 @@ export function ModulesProvider({
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
     const { user, accessToken } = await createSession(email, password);
     setToken(accessToken);
+    // Un login nuevo no hereda la sucursal del usuario anterior.
+    setActiveBranchId("todas");
+    setTenant(null);
+    setTenantBranches(null);
     setCurrentUser(user);
     try {
       localStorage.setItem("fogoneria:user", JSON.stringify(user));
@@ -551,10 +673,15 @@ export function ModulesProvider({
     setToken(null);
     setCurrentUser(null);
     setCatalog(EMPTY_CATALOG);
+    // Resetear tenant/sucursal para que el próximo login no herede datos ajenos.
+    setTenant(null);
+    setTenantBranches(null);
+    setActiveBranchId(GENERAL_BRANCH.id);
     try {
       localStorage.removeItem("fogoneria:user");
       localStorage.removeItem("fogoneria:branch");
       // Limpia cookies planas heredadas de la fase anterior.
+      localStorage.removeItem("fogoneria:tenant");
       document.cookie = "fogoneria.role=; path=/; max-age=0";
       document.cookie = "fogoneria.branch=; path=/; max-age=0";
     } catch {
@@ -563,17 +690,17 @@ export function ModulesProvider({
     await destroySession();
   }, []);
 
-  const isGeneral = activeBranchId === "todas";
-  const writeBranchId = isGeneral ? BRANCH_IDS[0] : activeBranchId;
+  const isGeneral = activeBranchId === GENERAL_BRANCH.id;
+  const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
 
   const activeScope: BranchScope = useMemo(() => {
     if (!isGeneral) return scopesOf(state.scopes, activeBranchId);
     return {
-      orders: BRANCH_IDS.flatMap((id) => state.scopes[id]?.orders ?? []),
-      tables: BRANCH_IDS.flatMap((id) => state.scopes[id]?.tables ?? []),
-      cash: BRANCH_IDS.flatMap((id) => state.scopes[id]?.cash ?? []),
+      orders: branchIds.flatMap((id) => state.scopes[id]?.orders ?? []),
+      tables: branchIds.flatMap((id) => state.scopes[id]?.tables ?? []),
+      cash: branchIds.flatMap((id) => state.scopes[id]?.cash ?? []),
     };
-  }, [state.scopes, activeBranchId, isGeneral]);
+  }, [state.scopes, activeBranchId, isGeneral, branchIds]);
 
   const accounts = useMemo(
     () => (isGeneral ? state.accounts : state.accounts.filter((a) => a.branchId === activeBranchId)),
@@ -592,13 +719,13 @@ export function ModulesProvider({
 
   const branchOf = useCallback(
     (kind: keyof BranchScope, id: number | string): Branch | null => {
-      for (const b of initialBranches) {
+      for (const b of branches) {
         const list = (state.scopes[b.id]?.[kind] ?? []) as Array<{ id: number | string }>;
         if (list.some((o) => o.id === id)) return b;
       }
-      return initialBranches[0] ?? null;
+      return branches.find((b) => b.id !== GENERAL_BRANCH.id) ?? null;
     },
-    [state.scopes],
+    [state.scopes, branches],
   );
 
   /* ---------- Setters (API compatible con las vistas) ---------- */
@@ -608,16 +735,16 @@ export function ModulesProvider({
   }, []);
 
   const setOrders = useCallback<React.Dispatch<React.SetStateAction<Order[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "orders", v) })),
-    [activeBranchId],
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "orders", v) })),
+    [activeBranchId, branchIds],
   );
   const setTables = useCallback<React.Dispatch<React.SetStateAction<Table[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "tables", v) })),
-    [activeBranchId],
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "tables", v) })),
+    [activeBranchId, branchIds],
   );
   const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, activeBranchId, "cash", v) })),
-    [activeBranchId],
+    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "cash", v) })),
+    [activeBranchId, branchIds],
   );
 
   const setRoles = useCallback((r: Role[]) => setPlain("roles", r), [setPlain]);
@@ -1015,7 +1142,7 @@ export function ModulesProvider({
         method: m.method,
         accountId: receipt.accountId,
       }));
-      const branchId = account?.branchId ?? BRANCH_IDS[0];
+      const branchId = account?.branchId ?? branchIds[0];
       const nota: Receipt | null =
         receipt.type === "01"
           ? {
@@ -1061,7 +1188,7 @@ export function ModulesProvider({
       }));
       if (nota) enviarSunat(nota);
     },
-    [state.receipts, state.accounts, enviarSunat],
+    [state.receipts, state.accounts, enviarSunat, branchIds],
   );
 
   /* ---------- Turno de caja ---------- */
@@ -1162,8 +1289,9 @@ export function ModulesProvider({
       priceOf: priceOfCallback,
       categoryNameOf,
       company,
-      branches: ALL_BRANCHES,
-      activeBranch: ALL_BRANCHES.find((b) => b.id === activeBranchId) ?? ALL_BRANCHES[0],
+      tenant,
+      branches,
+      activeBranch: branches.find((b) => b.id === activeBranchId) ?? branches[0],
       activeBranchId,
       isGeneral,
       setActiveBranch,
@@ -1239,6 +1367,9 @@ export function ModulesProvider({
       setPrice,
       priceOfCallback,
       categoryNameOf,
+      company,
+      tenant,
+      branches,
       activeBranchId,
       isGeneral,
       setActiveBranch,

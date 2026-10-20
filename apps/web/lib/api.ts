@@ -71,7 +71,9 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     });
-  } catch {
+  } catch (error) {
+    // Una petición cancelada no es un fallo de conexión.
+    if (signal?.aborted || (error instanceof Error && error.name === "AbortError")) throw error;
     throw new ApiError("No se pudo conectar con el servidor. ¿Está corriendo la API?", 0);
   }
 

@@ -49,7 +49,27 @@ type ApiPriceList = {
 
 type ApiPrice = { lista_id: string; plato_id: string; precio: string | number };
 
-type ApiDishPage = { items: ApiDish[] };
+type ApiDishPage = { items: ApiDish[]; total: number; page: number; limit: number };
+
+/** Tope de `limit` en la API; se pagina hasta traer toda la carta. */
+const DISH_PAGE_SIZE = 100;
+
+async function fetchAllDishes(signal?: AbortSignal): Promise<ApiDish[]> {
+  const first = await apiFetch<ApiDishPage>(
+    `/catalog/dishes?limit=${DISH_PAGE_SIZE}&page=1`,
+    { signal },
+  );
+  const items = [...first.items];
+  const pages = Math.ceil(first.total / DISH_PAGE_SIZE);
+  for (let page = 2; page <= pages; page += 1) {
+    const next = await apiFetch<ApiDishPage>(
+      `/catalog/dishes?limit=${DISH_PAGE_SIZE}&page=${page}`,
+      { signal },
+    );
+    items.push(...next.items);
+  }
+  return items;
+}
 
 export type CatalogSnapshot = {
   categories: ProductCategory[];
@@ -97,17 +117,19 @@ const toPriceList = (l: ApiPriceList, prices: Record<string, number>): PriceList
 });
 
 /** Carga maestros + precios de todas las listas en un solo snapshot. */
-export async function fetchCatalog(): Promise<CatalogSnapshot> {
+export async function fetchCatalog(signal?: AbortSignal): Promise<CatalogSnapshot> {
   const [categories, dishes, groups, lists] = await Promise.all([
-    apiFetch<ApiCategory[]>("/catalog/categories"),
-    apiFetch<ApiDishPage>("/catalog/dishes?limit=100"),
-    apiFetch<ApiModifierGroup[]>("/catalog/modifier-groups"),
-    apiFetch<ApiPriceList[]>("/pricing/price-lists"),
+    apiFetch<ApiCategory[]>("/catalog/categories", { signal }),
+    fetchAllDishes(signal),
+    apiFetch<ApiModifierGroup[]>("/catalog/modifier-groups", { signal }),
+    apiFetch<ApiPriceList[]>("/pricing/price-lists", { signal }),
   ]);
 
   const priceBooks = await Promise.all(
     lists.map(async (list) => {
-      const rows = await apiFetch<ApiPrice[]>(`/pricing/price-lists/${list.id}/prices`);
+      const rows = await apiFetch<ApiPrice[]>(`/pricing/price-lists/${list.id}/prices`, {
+        signal,
+      });
       const prices: Record<string, number> = {};
       rows.forEach((row) => {
         prices[row.plato_id] = num(row.precio);
@@ -118,7 +140,7 @@ export async function fetchCatalog(): Promise<CatalogSnapshot> {
 
   return {
     categories: categories.map(toCategory),
-    products: dishes.items.map(toProduct),
+    products: dishes.map(toProduct),
     modifierGroups: groups.map(toModifierGroup),
     priceLists: priceBooks,
   };
@@ -195,9 +217,14 @@ export async function setDishActive(id: string, active: boolean): Promise<void> 
   await apiFetch(`/catalog/dishes/${id}`, { method: "PATCH", body: { activo: active } });
 }
 
+/** Borra (soft delete) un plato; se usa para deshacer un alta a medias. */
+export async function deleteDish(id: string): Promise<void> {
+  await apiFetch(`/catalog/dishes/${id}`, { method: "DELETE" });
+}
+
 /* ---------- Grupos de modificadores ---------- */
 
-export type ModifierOptionInput = { name: string; extra: number };
+export type ModifierOptionInput = { id?: string; name: string; extra: number };
 
 export async function createModifierGroup(input: {
   name: string;
@@ -231,7 +258,11 @@ export async function updateModifierGroup(
       ...(input.multi !== undefined ? { permiteMultiple: input.multi } : {}),
       ...(input.options
         ? {
-            opciones: input.options.map((o) => ({ nombre: o.name, precioExtra: o.extra })),
+            opciones: input.options.map((o) => ({
+              ...(o.id ? { id: o.id } : {}),
+              nombre: o.name,
+              precioExtra: o.extra,
+            })),
           }
         : {}),
     },
@@ -254,6 +285,11 @@ export async function createPriceList(name: string): Promise<string> {
 
 export async function activatePriceList(id: string): Promise<void> {
   await apiFetch(`/pricing/price-lists/${id}/activate`, { method: "POST" });
+}
+
+/** Desactiva una lista de precios; se usa para deshacer un alta a medias. */
+export async function deletePriceList(id: string): Promise<void> {
+  await apiFetch(`/pricing/price-lists/${id}`, { method: "DELETE" });
 }
 
 export async function setPrices(

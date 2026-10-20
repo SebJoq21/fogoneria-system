@@ -8,15 +8,21 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import {
-  plan_suscripcion,
-  rango_sucursales,
-} from '../../../generated/prisma/enums.js';
+import { rango_sucursales } from '../../../generated/prisma/enums.js';
 
-/** Alta pública de un restaurante: crea el lead y su tenant en trial. */
+/**
+ * Alta pública de un restaurante: crea el lead y su tenant en trial.
+ * El plan no se acepta aquí (siempre entra como TRIAL); cambiarlo es tarea de
+ * la consola SaaS autenticada.
+ */
+
+/** URL http(s) o imagen embebida como data URL (`data:image/png;base64,…`). */
+const LOGO_PATTERN = /^(https?:\/\/\S+|data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+)$/i;
+
 export class SubmitOnboardingDto {
   @ApiProperty({ example: 'Parrilla El Fuego S.A.C.' })
   @IsString()
+  @MinLength(3, { message: 'La razón social debe tener al menos 3 caracteres' })
   @MaxLength(160)
   nombreLegal!: string;
 
@@ -26,13 +32,16 @@ export class SubmitOnboardingDto {
   @MaxLength(160)
   nombreComercial?: string;
 
-  @ApiProperty({ example: '20123456789' })
+  @ApiProperty({ example: '20123456786' })
   @Matches(/^\d{11}$/, { message: 'El RUC debe tener 11 dígitos' })
   ruc!: string;
 
   @ApiPropertyOptional({ example: 'https://cdn.fogoneria.pe/logo.png' })
   @IsOptional()
   @IsString()
+  @Matches(LOGO_PATTERN, {
+    message: 'El logo debe ser una URL http(s) o una imagen en base64',
+  })
   @MaxLength(2_800_000, { message: 'El logo es demasiado grande (máximo 2 MB)' })
   logoUrl?: string;
 
@@ -53,13 +62,9 @@ export class SubmitOnboardingDto {
   @IsEnum(rango_sucursales)
   rangoSucursales?: rango_sucursales;
 
-  @ApiPropertyOptional({ enum: plan_suscripcion, example: 'TRIAL' })
-  @IsOptional()
-  @IsEnum(plan_suscripcion)
-  plan?: plan_suscripcion;
-
   @ApiProperty({ example: 'María Torres' })
   @IsString()
+  @MinLength(3, { message: 'El nombre del administrador debe tener al menos 3 caracteres' })
   @MaxLength(160)
   nombreAdmin!: string;
 

@@ -28,6 +28,15 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   next.PORT = Number(next.PORT ?? 3001);
   next.CORS_ORIGIN = String(next.CORS_ORIGIN ?? 'http://localhost:3000');
   next.DATABASE_SCHEMA = String(next.DATABASE_SCHEMA ?? 'fogoneria');
+  next.TRIAL_DAYS = positiveInt(next.TRIAL_DAYS, 14);
+  next.ONBOARDING_RATE_LIMIT = positiveInt(next.ONBOARDING_RATE_LIMIT, 5);
+  next.ONBOARDING_RATE_WINDOW_MS = positiveInt(next.ONBOARDING_RATE_WINDOW_MS, 600_000);
 
   return next;
+}
+
+/** Entero positivo; si falta o es inválido usa el valor por defecto. */
+function positiveInt(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }

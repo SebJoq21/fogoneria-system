@@ -323,7 +323,8 @@ export function OnboardingContent() {
                 Tu catálogo de sabores
               </h2>
               <p className="text-sm text-ink-600 mb-4">
-                Sube tu carta en formato PDF o fotos claras de tus menús.
+                Adjunta tu carta en PDF o fotos claras de tus menús. Registramos el nombre
+                del archivo para que el equipo la cargue contigo en la activación.
               </p>
               <DropZone
                 type="document"
@@ -340,8 +341,9 @@ export function OnboardingContent() {
                 Último paso: Activa tu web
               </h2>
               <p className="text-sm text-ink-600 mb-4">
-                Sube la captura de tu transferencia o pago por billetera digital y crea
-                la cuenta del administrador.
+                Adjunta la captura de tu transferencia o pago por billetera digital:
+                guardamos el nombre del archivo para validar el pago y crear la cuenta
+                del administrador.
               </p>
               <DropZone
                 type="payment"
