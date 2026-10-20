@@ -26,7 +26,7 @@ export type AccountItemModifier = {
 
 export type AccountItem = {
   id: string;
-  productId: number;
+  productId: string;
   name: string;
   qty: number;
   /** Precio unitario base (lista activa), sin extras de modificadores. */

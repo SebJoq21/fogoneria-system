@@ -68,7 +68,7 @@ export const MODULE_CATALOG: ModuleMeta[] = [
 export type OrderStatus = "pendiente" | "cocina" | "listo" | "entregado" | "anulado";
 
 export type OrderItem = {
-  productId?: number;
+  productId?: string;
   name: string;
   qty: number;
   modifiers?: string[];

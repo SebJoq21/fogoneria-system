@@ -23,7 +23,7 @@ export function AddItemModal({
 }) {
   const { products, priceOf, modifierGroups } = useModules();
   const active = products.filter((p) => p.status === "Activo");
-  const [productId, setProductId] = useState<number | null>(active[0]?.id ?? null);
+  const [productId, setProductId] = useState<string | null>(active[0]?.id ?? null);
   const [qty, setQty] = useState(1);
   const [notes, setNotes] = useState("");
   const [selected, setSelected] = useState<Record<string, string[]>>({});

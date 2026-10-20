@@ -48,11 +48,7 @@ import {
   type Branch,
   type BranchScope,
 } from "@/lib/tenancy";
-import {
-  demoUsers,
-  findDemoUser,
-  type AppUser,
-} from "@/lib/auth";
+import type { AppUser } from "@/lib/auth";
 import {
   accountTotals,
   expectedCashFor,
@@ -72,11 +68,7 @@ import {
 } from "@/lib/domain";
 import {
   categoryName,
-  initialCategories,
   initialCombos,
-  initialModifierGroups,
-  initialPriceLists,
-  initialProducts,
   priceOf,
   type Combo,
   type ModifierGroup,
@@ -84,6 +76,9 @@ import {
   type Product,
   type ProductCategory,
 } from "@/lib/erp-catalog";
+import { ApiError, getToken, setToken } from "@/lib/api";
+import { loginRequest } from "@/lib/auth-api";
+import * as catalogApi from "@/lib/catalog-api";
 import {
   cpeFromReceipt,
   getFacturacionPort,
@@ -108,22 +103,50 @@ export type CheckoutInput = {
   docNumber: string;
 };
 
+/** Entrada de alta/edición de un plato (el precio va aparte, a la lista). */
+export type ProductInput = {
+  id?: string;
+  name: string;
+  description: string;
+  categoryId: string;
+  image: string;
+  status: "Activo" | "Inactivo";
+  modifierGroupIds: string[];
+  price: number;
+};
+
 type ModulesContext = {
   payments: PlanPayment[];
   tickets: Ticket[];
   addTicket: (subject: string) => void;
   setTickets: (tickets: Ticket[]) => void;
-  /* Maestros de catálogo (ERP): el precio vive en la lista activa */
+  /* Maestros de catálogo (ERP): la fuente de verdad es la API (tarea 63) */
   products: Product[];
-  setProducts: (p: Product[]) => void;
   categories: ProductCategory[];
-  setCategories: (c: ProductCategory[]) => void;
   modifierGroups: ModifierGroup[];
-  setModifierGroups: (g: ModifierGroup[]) => void;
   priceLists: PriceList[];
-  setPriceLists: (l: PriceList[]) => void;
-  setActivePriceList: (id: string) => void;
-  priceOf: (productId: number) => number;
+  catalogLoading: boolean;
+  catalogError: string | null;
+  refreshCatalog: () => Promise<void>;
+  saveProduct: (input: ProductInput) => Promise<void>;
+  setProductActive: (id: string, active: boolean) => Promise<void>;
+  saveCategory: (input: { id?: string; name: string; position: number }) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  createModifierGroup: (input: { name: string; required: boolean; multi: boolean }) => Promise<void>;
+  updateModifierGroup: (
+    id: string,
+    input: {
+      name?: string;
+      required?: boolean;
+      multi?: boolean;
+      options?: { name: string; extra: number }[];
+    },
+  ) => Promise<void>;
+  deleteModifierGroup: (id: string) => Promise<void>;
+  createPriceList: (name: string, fromListId?: string) => Promise<void>;
+  activatePriceList: (id: string) => Promise<void>;
+  setPrice: (listId: string, platoId: string, price: number) => Promise<void>;
+  priceOf: (productId: string) => number;
   categoryNameOf: (categoryId: string) => string;
   /* Multitenant: sucursales de la empresa (1 RUC → N locales + vista general) */
   company: typeof company;
@@ -193,15 +216,39 @@ type ModulesContext = {
   clearUnread: () => void;
   /* Demo: volver al estado inicial */
   resetDemoData: () => void;
-  /* Sesión mock (fase 1; la API real llega en fase 3) */
+  /* Sesión real (JWT de la API) */
   currentUser: AppUser | null;
-  login: (email: string) => AppUser | null;
+  login: (email: string, password: string) => Promise<AppUser>;
   logout: () => void;
 };
 
 const Ctx = createContext<ModulesContext | null>(null);
 
 type ScopeItem = { id: number | string };
+
+/** Catálogo de la empresa servido por la API (tarea 63). */
+type CatalogState = {
+  categories: ProductCategory[];
+  products: Product[];
+  modifierGroups: ModifierGroup[];
+  priceLists: PriceList[];
+};
+
+const EMPTY_CATALOG: CatalogState = {
+  categories: [],
+  products: [],
+  modifierGroups: [],
+  priceLists: [],
+};
+
+/** Siguiente SKU secuencial (PLA-00N) a partir del maestro actual. */
+function nextSku(products: Product[]): string {
+  const max = products.reduce((acc, p) => {
+    const suffix = Number(p.sku.match(/(\d+)\s*$/)?.[1] ?? 0);
+    return Number.isFinite(suffix) ? Math.max(acc, suffix) : acc;
+  }, 0);
+  return `PLA-${String(max + 1).padStart(3, "0")}`;
+}
 
 function applyWrite(
   prev: Record<string, BranchScope>,
@@ -250,11 +297,7 @@ function applyWrite(
 
 function buildInitialState(): ErpState {
   return {
-    version: 1,
-    products: initialProducts,
-    categories: initialCategories,
-    modifierGroups: initialModifierGroups,
-    priceLists: initialPriceLists,
+    version: 2,
     roles: initialRoles,
     reservations: initialReservations,
     ingredients: initialIngredients,
@@ -297,8 +340,8 @@ export function ModulesProvider({
     }
     try {
       const raw = localStorage.getItem("fogoneria:user");
-      const found = demoUsers.find((u) => u.id === raw);
-      if (found) {
+      const found = raw ? (JSON.parse(raw) as AppUser) : null;
+      if (found?.id && found.role) {
         setCurrentUser(found);
         if (found.branchId) {
           setActiveBranchId(found.branchId);
@@ -346,12 +389,157 @@ export function ModulesProvider({
     }
   }, []);
 
-  const login = useCallback((email: string): AppUser | null => {
-    const user = findDemoUser(email);
-    if (!user) return null;
+  /* ---------- Catálogo desde la API (tarea 63) ---------- */
+
+  const [catalog, setCatalog] = useState<CatalogState>(EMPTY_CATALOG);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+
+  const refreshCatalog = useCallback(async () => {
+    if (!getToken()) {
+      setCatalog(EMPTY_CATALOG);
+      setCatalogError(null);
+      return;
+    }
+    setCatalogLoading(true);
+    setCatalogError(null);
+    try {
+      setCatalog(await catalogApi.fetchCatalog());
+    } catch (error) {
+      setCatalogError(
+        error instanceof ApiError ? error.message : "No se pudo cargar el catálogo.",
+      );
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
+
+  /* Cargar el catálogo al iniciar sesión y limpiarlo al salir. */
+  useEffect(() => {
+    if (currentUser) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial del catálogo tras login
+      void refreshCatalog();
+    } else {
+      setCatalog(EMPTY_CATALOG);
+    }
+  }, [currentUser, refreshCatalog]);
+
+  const saveProduct = useCallback(
+    async (input: ProductInput) => {
+      const payload = {
+        name: input.name,
+        description: input.description,
+        categoryId: input.categoryId,
+        image: input.image,
+        status: input.status,
+        modifierGroupIds: input.modifierGroupIds,
+      };
+      const id = input.id ?? (await catalogApi.createDish({ ...payload, sku: nextSku(catalog.products) }));
+      if (input.id) await catalogApi.updateDish(input.id, payload);
+
+      const activeList = catalog.priceLists.find((l) => l.active);
+      if (activeList) {
+        await catalogApi.setPrices(activeList.id, [{ platoId: id, precio: input.price }]);
+      }
+      await refreshCatalog();
+    },
+    [catalog.products, catalog.priceLists, refreshCatalog],
+  );
+
+  const setProductActive = useCallback(
+    async (id: string, active: boolean) => {
+      await catalogApi.setDishActive(id, active);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const saveCategory = useCallback(
+    async (input: { id?: string; name: string; position: number }) => {
+      if (input.id) await catalogApi.updateCategory(input.id, { name: input.name, position: input.position });
+      else await catalogApi.createCategory({ name: input.name, position: input.position });
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const deleteCategory = useCallback(
+    async (id: string) => {
+      await catalogApi.deactivateCategory(id);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const createModifierGroup = useCallback(
+    async (input: { name: string; required: boolean; multi: boolean }) => {
+      await catalogApi.createModifierGroup(input);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const updateModifierGroup = useCallback(
+    async (
+      id: string,
+      input: {
+        name?: string;
+        required?: boolean;
+        multi?: boolean;
+        options?: { name: string; extra: number }[];
+      },
+    ) => {
+      await catalogApi.updateModifierGroup(id, input);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const deleteModifierGroup = useCallback(
+    async (id: string) => {
+      await catalogApi.deactivateModifierGroup(id);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const createPriceList = useCallback(
+    async (name: string, fromListId?: string) => {
+      const id = await catalogApi.createPriceList(name);
+      const source = fromListId ? catalog.priceLists.find((l) => l.id === fromListId) : undefined;
+      if (source) {
+        const items = Object.entries(source.prices).map(([platoId, precio]) => ({ platoId, precio }));
+        await catalogApi.setPrices(id, items);
+      }
+      await refreshCatalog();
+    },
+    [catalog.priceLists, refreshCatalog],
+  );
+
+  const activatePriceList = useCallback(
+    async (id: string) => {
+      await catalogApi.activatePriceList(id);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  const setPrice = useCallback(
+    async (listId: string, platoId: string, price: number) => {
+      await catalogApi.setPrices(listId, [{ platoId, precio: price }]);
+      await refreshCatalog();
+    },
+    [refreshCatalog],
+  );
+
+  /* ---------- Sesión (JWT) ---------- */
+
+  const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
+    const { user, accessToken } = await loginRequest(email, password);
+    setToken(accessToken);
     setCurrentUser(user);
     try {
-      localStorage.setItem("fogoneria:user", user.id);
+      localStorage.setItem("fogoneria:user", JSON.stringify(user));
       document.cookie = `fogoneria.role=${user.role}; path=/; max-age=604800`;
       document.cookie = `fogoneria.branch=${user.branchId ?? "todas"}; path=/; max-age=604800`;
     } catch {
@@ -362,9 +550,12 @@ export function ModulesProvider({
   }, []);
 
   const logout = useCallback(() => {
+    setToken(null);
     setCurrentUser(null);
+    setCatalog(EMPTY_CATALOG);
     try {
       localStorage.removeItem("fogoneria:user");
+      localStorage.removeItem("fogoneria:branch");
       document.cookie = "fogoneria.role=; path=/; max-age=0";
       document.cookie = "fogoneria.branch=; path=/; max-age=0";
     } catch {
@@ -429,10 +620,6 @@ export function ModulesProvider({
     [activeBranchId],
   );
 
-  const setProducts = useCallback((p: Product[]) => setPlain("products", p), [setPlain]);
-  const setCategories = useCallback((c: ProductCategory[]) => setPlain("categories", c), [setPlain]);
-  const setModifierGroups = useCallback((g: ModifierGroup[]) => setPlain("modifierGroups", g), [setPlain]);
-  const setPriceLists = useCallback((l: PriceList[]) => setPlain("priceLists", l), [setPlain]);
   const setRoles = useCallback((r: Role[]) => setPlain("roles", r), [setPlain]);
   const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
   const setIngredients = useCallback((i: Ingredient[]) => setPlain("ingredients", i), [setPlain]);
@@ -444,21 +631,14 @@ export function ModulesProvider({
   const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
   const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
 
-  const setActivePriceList = useCallback((id: string) => {
-    setState((s) => ({
-      ...s,
-      priceLists: s.priceLists.map((l) => ({ ...l, active: l.id === id })),
-    }));
-  }, []);
-
   const priceOfCallback = useCallback(
-    (productId: number) => priceOf(productId, state.priceLists),
-    [state.priceLists],
+    (productId: string) => priceOf(productId, catalog.priceLists),
+    [catalog.priceLists],
   );
 
   const categoryNameOf = useCallback(
-    (categoryId: string) => categoryName(categoryId, state.categories),
-    [state.categories],
+    (categoryId: string) => categoryName(categoryId, catalog.categories),
+    [catalog.categories],
   );
 
   const notify = useCallback((title: string, message: string) => {
@@ -501,7 +681,8 @@ export function ModulesProvider({
   const resetDemoData = useCallback(() => {
     resetErpState();
     setState(buildInitialState());
-  }, []);
+    void refreshCatalog();
+  }, [refreshCatalog]);
 
   /* ---------- Cuentas de mesa ---------- */
 
@@ -961,15 +1142,23 @@ export function ModulesProvider({
       tickets: state.tickets,
       addTicket,
       setTickets,
-      products: state.products,
-      setProducts,
-      categories: state.categories,
-      setCategories,
-      modifierGroups: state.modifierGroups,
-      setModifierGroups,
-      priceLists: state.priceLists,
-      setPriceLists,
-      setActivePriceList,
+      products: catalog.products,
+      categories: catalog.categories,
+      modifierGroups: catalog.modifierGroups,
+      priceLists: catalog.priceLists,
+      catalogLoading,
+      catalogError,
+      refreshCatalog,
+      saveProduct,
+      setProductActive,
+      saveCategory,
+      deleteCategory,
+      createModifierGroup,
+      updateModifierGroup,
+      deleteModifierGroup,
+      createPriceList,
+      activatePriceList,
+      setPrice,
       priceOf: priceOfCallback,
       categoryNameOf,
       company,
@@ -1034,11 +1223,20 @@ export function ModulesProvider({
       state,
       addTicket,
       setTickets,
-      setProducts,
-      setCategories,
-      setModifierGroups,
-      setPriceLists,
-      setActivePriceList,
+      catalog,
+      catalogLoading,
+      catalogError,
+      refreshCatalog,
+      saveProduct,
+      setProductActive,
+      saveCategory,
+      deleteCategory,
+      createModifierGroup,
+      updateModifierGroup,
+      deleteModifierGroup,
+      createPriceList,
+      activatePriceList,
+      setPrice,
       priceOfCallback,
       categoryNameOf,
       activeBranchId,

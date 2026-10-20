@@ -16,17 +16,17 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 - `app/` — rutas: `/` login, `/app/*` ERP bajo `DashboardShell`, `/saas` consola superadmin, `/onboarding`, `/demo/[id]`, `/terminos`.
 - `components/ui/` — único DS válido (`Button`, `Card`, `fields`, `data-table`, `Modal`, `Drawer`, `Tabs`, `KpiCard`, `cn`). No crear estilos crudos fuera.
-- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — mocks: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`.
+- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`.
 - `proxy.ts` — RBAC con cookies planas (fase mocks). `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
 
 ## Reglas web (evitan los errores repetidos)
 
-- Precio vive en `PriceList`, nunca en `Product`. Usar `priceOf()` / `categoryNameOf()` de `lib/erp-catalog.ts`.
+- Precio vive en `PriceList`, nunca en `Product`. Usar `priceOf(productId, lists)` / `categoryName(categoryId, categories)` de `lib/erp-catalog.ts` (ids de catálogo = UUID de la API).
 - Catálogo global, operación scoped por sucursal (`ModulesProvider.applyWrite`). Vista `todas` es agregada de lectura.
 - RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`. Roles: `superadmin|admin|sucursal|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`).
 - UI: `Button href` con `<a>` está permitido aquí; no usar `<img>` crudo salvo `app/demo/*` (exento del gate).
 - Solo pesos `400/500`, salvo etiquetas de hub (`Másteres e informes` 18px y títulos de columna 16px) que van en `semibold` (600) por decisión de diseño. Escala `12/13/14/16/18/24`, tokens `@theme` en `app/globals.css`.
-- RSC delgados que delegan a client; sin `fetch`/Server Actions aún (mocks en `ModulesProvider` + `localStorage`).
+- RSC delgados que delegan a client. Login/onboarding y catálogo/precios ya llaman a la API (`lib/api.ts` + `NEXT_PUBLIC_API_URL`); el resto del ERP sigue con estado en `ModulesProvider` + `localStorage`.
 - Toda acción de 1 click que mute estado usa `ui/ConfirmDialog` (Aceptar/Cancelar; `danger` en destructivas). Los formularios con `Guardar` no la necesitan. Precios se confirman con Enter/blur, nunca por tecla.
 - El mesero abre cuenta y atiende (`canOpenAccount`); solo `sucursal` cobra y opera caja (`canCheckout`, `canOperateCash`); cocina solo su KDS. Estados de mesa derivados de cuenta/reserva (`deriveTableStatus`); bloqueo manual de mesa solo sucursal.
 - Norma de hub (dueño): resumen arriba → `Acceso rápido` → `Informes y másteres` (ambos 18px semibold, componente `HubBlocks` en `erp/workspace-ui.tsx`). Si un bloque va vacío no se pinta (ej: Analíticas).

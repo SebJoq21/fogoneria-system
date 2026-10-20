@@ -14,7 +14,7 @@ import { MiniBars } from "@/components/erp/summaries/charts";
 import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
 
 type Form = {
-  id: number | null;
+  id: string | null;
   name: string;
   description: string;
   categoryId: string;
@@ -46,17 +46,20 @@ export function ProductsView({
 }) {
   const {
     products,
-    setProducts,
     categories,
     modifierGroups,
     priceLists,
-    setPriceLists,
     priceOf,
     categoryNameOf,
     notify,
+    catalogLoading,
+    catalogError,
+    saveProduct,
+    setProductActive,
   } = useModules();
   const [modalOpen, setModalOpen] = useState(startCreating);
-  const [pendingToggle, setPendingToggle] = useState<{ id: number; name: string; toActive: boolean } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [pendingToggle, setPendingToggle] = useState<{ id: string; name: string; toActive: boolean } | null>(null);
   const [form, setForm] = useState<Form>(emptyForm(categories[0]?.id ?? ""));
   const handledSignal = useRef(0);
 
@@ -73,7 +76,7 @@ export function ProductsView({
     setModalOpen(true);
   };
 
-  const openEdit = (id: number) => {
+  const openEdit = (id: string) => {
     const p = products.find((x) => x.id === id);
     if (!p) return;
     setForm({
@@ -89,73 +92,53 @@ export function ProductsView({
     setModalOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.name.trim() || !form.categoryId) return;
-    const price = Number(form.price) || 0;
-    let productId = form.id;
-
-    if (form.id) {
-      setProducts(
-        products.map((p) =>
-          p.id === form.id
-            ? {
-                ...p,
-                name: form.name,
-                description: form.description,
-                categoryId: form.categoryId,
-                image: form.image,
-                status: form.status,
-                modifierGroupIds: form.modifierGroupIds,
-              }
-            : p,
-        ),
+    setSaving(true);
+    try {
+      await saveProduct({
+        id: form.id ?? undefined,
+        name: form.name.trim(),
+        description: form.description,
+        categoryId: form.categoryId,
+        image: form.image,
+        status: form.status,
+        modifierGroupIds: form.modifierGroupIds,
+        price: Number(form.price) || 0,
+      });
+      notify(
+        form.id ? "Plato actualizado" : "Plato creado",
+        `"${form.name}" guardado en el maestro.`,
       );
-    } else {
-      productId = Math.max(0, ...products.map((p) => p.id)) + 1;
-      setProducts([
-        {
-          id: productId,
-          sku: `PLA-${String(productId).padStart(3, "0")}`,
-          name: form.name,
-          description: form.description,
-          categoryId: form.categoryId,
-          image:
-            form.image ||
-            "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
-          modifierGroupIds: form.modifierGroupIds,
-          // El alta siempre entra en Activo: si se añade, hay stock.
-          status: "Activo",
-        },
-        ...products,
-      ]);
+      setModalOpen(false);
+    } catch (error) {
+      notify("No se pudo guardar el plato", error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      setSaving(false);
     }
-
-    // El precio vive en la lista activa, no en el producto
-    setPriceLists(
-      priceLists.map((l) =>
-        l.active ? { ...l, prices: { ...l.prices, [productId as number]: price } } : l,
-      ),
-    );
-    notify(
-      form.id ? "Plato actualizado" : "Plato creado",
-      `"${form.name}" guardado en el maestro.`,
-    );
-    setModalOpen(false);
   };
 
-  const toggleStatus = (id: number) => {
-    setProducts(
-      products.map((p) =>
-        p.id === id ? { ...p, status: p.status === "Activo" ? "Inactivo" : "Activo" } : p,
-      ),
-    );
+  const toggleStatus = async (id: string, toActive: boolean) => {
     setPendingToggle(null);
+    try {
+      await setProductActive(id, toActive);
+    } catch (error) {
+      notify("No se pudo actualizar el plato", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
   const summary = useMemo(() => cartaSummary(products, categories, priceOf), [products, categories, priceOf]);
 
   return (
     <div>
+      {catalogError && (
+        <p className="text-sm text-red-600 mb-4" role="alert">
+          {catalogError}
+        </p>
+      )}
+      {catalogLoading && products.length === 0 && (
+        <p className="text-sm text-ink-400 mb-4">Cargando catálogo…</p>
+      )}
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Maestro por categoría"
@@ -257,7 +240,7 @@ export function ProductsView({
             : ""
         }
         confirmLabel={pendingToggle?.toActive ? "Activar" : "Desactivar"}
-        onConfirm={() => pendingToggle && toggleStatus(pendingToggle.id)}
+        onConfirm={() => pendingToggle && toggleStatus(pendingToggle.id, pendingToggle.toActive)}
         onCancel={() => setPendingToggle(null)}
       />
 
@@ -272,7 +255,7 @@ export function ProductsView({
                 Cancelar
               </Button>
               <Button
-                disabled={!form.name.trim() || !form.categoryId}
+                disabled={!form.name.trim() || !form.categoryId || saving}
                 onClick={save}
               >
                 Guardar plato

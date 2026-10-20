@@ -117,8 +117,8 @@ export const initialAccounts: TableAccount[] = [
     closedAt: null,
     status: "abierta",
     items: [
-      { id: "AI-demo-1", productId: 3, name: "Lomo Saltado", qty: 2, unitPrice: 22, modifiers: [{ optionId: "tam-grande", name: "Grande", extra: 4 }], notes: "", sent: true },
-      { id: "AI-demo-2", productId: 6, name: "Chicha Morada", qty: 1, unitPrice: 4, modifiers: [], notes: "Sin azúcar", sent: false },
+      { id: "AI-demo-1", productId: "88888888-8888-8888-8888-888888888883", name: "Lomo Saltado", qty: 2, unitPrice: 22, modifiers: [{ optionId: "tam-grande", name: "Grande", extra: 4 }], notes: "", sent: true },
+      { id: "AI-demo-2", productId: "88888888-8888-8888-8888-888888888886", name: "Chicha Morada", qty: 1, unitPrice: 4, modifiers: [], notes: "Sin azúcar", sent: false },
     ],
     payments: [],
     tip: 0,

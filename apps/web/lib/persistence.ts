@@ -12,26 +12,18 @@ import type {
   Role,
   StockMovement,
 } from "./erp";
-import type {
-  Combo,
-  ModifierGroup,
-  PriceList,
-  Product,
-  ProductCategory,
-} from "./erp-catalog";
+import type { Combo } from "./erp-catalog";
 import type { Notification, Ticket } from "./dashboard";
 import type { CashShift, TableAccount } from "./domain";
 import type { BranchScope } from "./tenancy";
 
-export const ERP_STORAGE_KEY = "fogoneria:erp:v1";
+export const ERP_STORAGE_KEY = "fogoneria:erp:v2";
 export const ERP_SYNC_CHANNEL = "fogoneria:erp-sync";
 
+/* El catálogo (platos, categorías, modificadores y precios) ya no se
+   persiste en el cliente: es la fuente de verdad de la API (tarea 63). */
 export type ErpState = {
-  version: 1;
-  products: Product[];
-  categories: ProductCategory[];
-  modifierGroups: ModifierGroup[];
-  priceLists: PriceList[];
+  version: 2;
   roles: Role[];
   reservations: Reservation[];
   ingredients: Ingredient[];
@@ -56,7 +48,7 @@ export function loadErpState(): ErpState | null {
     const raw = localStorage.getItem(ERP_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ErpState;
-    if (parsed?.version !== 1 || !parsed.scopes) return null;
+    if (parsed?.version !== 2 || !parsed.scopes) return null;
     return parsed;
   } catch {
     return null;
