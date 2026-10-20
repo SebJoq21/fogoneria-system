@@ -123,7 +123,8 @@ export function ProductsView({
             form.image ||
             "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80",
           modifierGroupIds: form.modifierGroupIds,
-          status: form.status,
+          // El alta siempre entra en Activo: si se añade, hay stock.
+          status: "Activo",
         },
         ...products,
       ]);
@@ -334,19 +335,21 @@ export function ProductsView({
                 />
               </Field>
             </div>
-            <div>
-              <Field label="Estado">
-                <Select
-                  value={form.status}
-                  onChange={(e) =>
-                    setForm({ ...form, status: e.target.value as "Activo" | "Inactivo" })
-                  }
-                >
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </Select>
-              </Field>
-            </div>
+            {form.id && (
+              <div>
+                <Field label="Estado">
+                  <Select
+                    value={form.status}
+                    onChange={(e) =>
+                      setForm({ ...form, status: e.target.value as "Activo" | "Inactivo" })
+                    }
+                  >
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </Select>
+                </Field>
+              </div>
+            )}
             <div className="sm:col-span-2">
               <span className="block text-nav font-medium text-ink-600 mb-2">
                 Grupos de modificadores

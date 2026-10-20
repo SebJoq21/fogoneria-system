@@ -35,6 +35,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
   const [pendingConfirm, setPendingConfirm] = useState<Order | null>(null);
   const [pendingListo, setPendingListo] = useState<Order | null>(null);
 
+
   const summary = useMemo(() => (mode === "ordenes" ? ordenesSummary(orders) : null), [orders, mode]);
 
   const confirm = (order: Order) => {
@@ -132,7 +133,9 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                       ))}
                     </ul>
                     <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 pt-3 border-t border-ink-900/[0.06]">
-                      <span className="text-sm font-medium text-ink-900 tnum flex-1">{fmtMoney(o.amount)}</span>
+                      {mode !== "cocina" && (
+                        <span className="text-sm font-medium text-ink-900 tnum flex-1">{fmtMoney(o.amount)}</span>
+                      )}
                       {o.status === "pendiente" && canConfirm && (
                         <Button
                           onClick={() => setPendingConfirm(o)}

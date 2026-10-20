@@ -1,4 +1,4 @@
-/** El layout renderiza el hub (tab Panel); esta página no pinta nada propio. */
-export default function ProductosHubPage() {
+/** El layout renderiza los tabs (Maestro por defecto); esta página no pinta nada propio. */
+export default function ProductosPage() {
   return null;
 }

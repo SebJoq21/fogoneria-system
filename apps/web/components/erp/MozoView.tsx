@@ -26,6 +26,8 @@ export function MozoView() {
     orders,
     setOrders,
     tables,
+    products,
+    priceOf,
     notify,
   } = useModules();
   const me = currentUser?.name ?? "Mesero";
@@ -60,6 +62,13 @@ export function MozoView() {
     setNewOpen(false);
     setMesaId("");
     setCustomer("");
+  };
+
+  /** Precio unitario de un ítem desde PriceList; null si no se puede resolver. */
+  const unitPriceOf = (it: Order["items"][number]): number | null => {
+    if (it.productId != null) return priceOf(it.productId);
+    const found = products.find((p) => p.name === it.name);
+    return found ? priceOf(found.id) : null;
   };
 
   const anular = (order: Order) => {
@@ -180,15 +189,20 @@ export function MozoView() {
                 {o.customer} · {o.time}
               </p>
               <ul className="text-sm text-ink-900">
-                {o.items.map((it, i) => (
-                  <li key={i}>
-                    <span className="font-medium">{it.qty}×</span> {it.name}
-                    {it.modifiers && it.modifiers.length > 0 && (
-                      <span className="text-ink-400"> · {it.modifiers.join(", ")}</span>
-                    )}
-                  </li>
-                ))}
+                {o.items.map((it, i) => {
+                  const unit = unitPriceOf(it);
+                  return (
+                    <li key={i}>
+                      <span className="font-medium">{it.qty}×</span> {it.name}
+                      {it.modifiers && it.modifiers.length > 0 && (
+                        <span className="text-ink-400"> · {it.modifiers.join(", ")}</span>
+                      )}
+                      {unit != null && <span className="text-ink-400"> · ${unit.toFixed(2)}</span>}
+                    </li>
+                  );
+                })}
               </ul>
+              <p className="text-sm font-medium text-ink-900 tnum mt-2">Total {fmtMoney(o.amount)}</p>
               {o.status === "pendiente" && canAnularPendiente(role, o, me) && (
                 <button
                   type="button"
@@ -249,7 +263,7 @@ export function MozoView() {
         title="Marcar entregado"
         message={
           pendingDeliver
-            ? `¿Marcar ${pendingDeliver.id} como entregada? El cobro se registra después en Caja.`
+            ? `¿Marcar ${pendingDeliver.id} como entregada por ${fmtMoney(pendingDeliver.amount)}? El cobro se registra después en Caja.`
             : ""
         }
         confirmLabel="Marcar entregado"

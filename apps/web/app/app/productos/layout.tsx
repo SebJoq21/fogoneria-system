@@ -3,23 +3,15 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ProductsView } from "@/components/erp/catalog/ProductsView";
-import { ProductosHub, type CatalogSection } from "@/components/erp/catalog/ProductosHub";
 import { CartaVirtualView } from "@/components/erp/catalog/CartaVirtualView";
 import { Tabs } from "@/components/ui/Tabs";
 import { CategoriesView } from "@/components/erp/catalog/CategoriesView";
 import { ModifiersView } from "@/components/erp/catalog/ModifiersView";
 import { PriceListsView } from "@/components/erp/catalog/PriceListsView";
-import { ValorizadoView } from "@/components/erp/catalog/ValorizadoView";
 
 const HUB_PATH = "/app/productos";
 
 const tabs = [
-  {
-    id: "panel",
-    label: "Panel",
-    title: "Platos",
-    description: "Resumen, másteres e informes del catálogo.",
-  },
   {
     id: "platos",
     label: "Maestro",
@@ -45,18 +37,6 @@ const tabs = [
     description: "Carta, Delivery y Eventos con vigencia por lista.",
   },
   {
-    id: "valorizado",
-    label: "Valorizado",
-    title: "Valorizado de carta",
-    description: "Detalle por plato con total.",
-  },
-  {
-    id: "resumen",
-    label: "Resumen",
-    title: "Resumen por categoría",
-    description: "Subtotales agrupados por categoría.",
-  },
-  {
     id: "carta",
     label: "Carta virtual",
     title: "Carta virtual",
@@ -72,15 +52,8 @@ type TabId = (typeof tabs)[number]["id"];
  */
 export default function ProductosLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [active, setActive] = useState<TabId>("panel");
-  // Señal para abrir el modal de alta sin navegar (hub "Nuevo plato")
-  const [createSignal, setCreateSignal] = useState(0);
+  const [active, setActive] = useState<TabId>("platos");
   const current = tabs.find((t) => t.id === active) ?? tabs[0];
-
-  const goNewProduct = () => {
-    setActive("platos");
-    setCreateSignal((c) => c + 1);
-  };
 
   if (pathname !== HUB_PATH) {
     return <>{children}</>;
@@ -97,14 +70,8 @@ export default function ProductosLayout({ children }: { children: React.ReactNod
         <Tabs options={tabs.map((t) => ({ id: t.id, label: t.label }))} value={active} onChange={setActive} />
       </div>
 
-      {active === "panel" && (
-        <ProductosHub
-          onSelectSection={(s: CatalogSection) => setActive(s)}
-          onNewProduct={goNewProduct}
-        />
-      )}
       <div hidden={active !== "platos"}>
-        <ProductsView createSignal={createSignal} />
+        <ProductsView />
       </div>
       <div hidden={active !== "categorias"}>
         <CategoriesView />
@@ -114,12 +81,6 @@ export default function ProductosLayout({ children }: { children: React.ReactNod
       </div>
       <div hidden={active !== "precios"}>
         <PriceListsView />
-      </div>
-      <div hidden={active !== "valorizado"}>
-        <ValorizadoView section="detalle" />
-      </div>
-      <div hidden={active !== "resumen"}>
-        <ValorizadoView section="resumen" />
       </div>
       <div hidden={active !== "carta"}>
         <CartaVirtualView />

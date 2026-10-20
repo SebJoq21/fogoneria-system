@@ -1,5 +1,16 @@
 # SESION — estado entre sesiones
 
+## 2026-10-19 — Integración con `origin/main` (Fases 0–3 preservadas)
+
+- Objetivo: traer los cambios del remoto sin perder las fases 0–3 locales.
+- Hecho:
+  - Commit local `5a1d10c` con Fases 0–3 (cuentas, persistencia, SUNAT mock, KDS, reservas).
+  - Merge de `origin/main`: entra `db/fogoneria_schema.sql` (41 tablas), `docs/TAREAS-SEMANAS-5-8.md` y la reorganización del módulo Platos (se retiran `valorizado` y `resumen-categoria`).
+  - Conflictos resueltos respetando ambos lados: `MozoView` conserva cuentas/POS + muestra precio unitario y total al mesero; `OrdersView` conserva timers sin comandas simuladas y oculta totales en modo cocina; `AppTopBar` conserva "Reiniciar datos demo" sin las rutas retiradas. Se mantiene la eliminación de breadcrumbs.
+- Verificado: `web lint` OK, `web check-types` OK (borrando `.next` obsoleto), `web build` OK.
+- Pendiente: Fase 4–6 del ERP mock; tareas Jira 44/48/53/60/61 (David).
+- Próximo paso: arrancar AYCDS-44 (scaffold NestJS modular) o Fase 4.
+
 ## 2026-10-06 — Fase 3: KDS con campana/timers + mesas y reservas reales
 
 - Objetivo: cerrar la operación del salón — avisos reales a cocina/mesero, urgencia por comanda, estados de mesa derivados y reservas con CRUD.
