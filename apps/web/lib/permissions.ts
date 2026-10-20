@@ -32,9 +32,9 @@ export function canOpenAccount(role: AppRole | undefined): boolean {
   return role === "mesero" || role === "sucursal";
 }
 
-/** Solo la sucursal cobra (checkout de la cuenta). El mesero solo atiende. */
+/** Cobran las cuentas la sucursal y el cajero. El mesero solo atiende. */
 export function canCheckout(role: AppRole | undefined): boolean {
-  return role === "sucursal";
+  return role === "sucursal" || role === "cajero";
 }
 
 /** Solo la sucursal anula cuentas (con motivo y auditoría). */
@@ -52,7 +52,7 @@ export function canChangeTableStatus(role: AppRole | undefined): boolean {
   return role === "sucursal";
 }
 
-/** La caja la opera la sucursal. El administrador mira en lectura. */
+/** La caja la operan la sucursal y el cajero. El administrador mira en lectura. */
 export function canOperateCash(role: AppRole | undefined): boolean {
-  return role === "sucursal";
+  return role === "sucursal" || role === "cajero";
 }

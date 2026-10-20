@@ -213,8 +213,8 @@ export function isValidRuc(ruc: string): boolean {
   const factors = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
   let sum = 0;
   for (let i = 0; i < 10; i++) sum += Number(ruc[i]) * factors[i];
-  const rest = 11 - (sum % 11);
-  const check = rest === 11 ? 0 : rest === 10 ? 1 : rest;
+  // SUNAT: (11 - resto) % 10 (resto 0 → 1, resto 1 → 0).
+  const check = (11 - (sum % 11)) % 10;
   return check === Number(ruc[10]);
 }
 

@@ -1,7 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ROLE_HOME, canViewPath, type AppRole } from "./lib/auth";
 
-const VALID_ROLES: AppRole[] = ["superadmin", "admin", "sucursal", "cocina", "mesero"];
+const VALID_ROLES: AppRole[] = [
+  "superadmin",
+  "admin",
+  "sucursal",
+  "cajero",
+  "cocina",
+  "mesero",
+];
 
 /**
  * RBAC optimista (fase mocks): lee rol/branch de cookies planas que fija el
