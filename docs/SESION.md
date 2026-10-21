@@ -1,5 +1,20 @@
 # SESION — estado entre sesiones
 
+## 2026-10-20 — AYCDS-62: índices, RLS, soft-delete e inmutabilidad (rama `feat/db-rls-softdelete`)
+
+- Objetivo: implementar la tarea 62 sobre `development` sin tocar `schema.prisma` de otras tareas.
+- Hecho:
+  - Cuatro migraciones nuevas: `20261020120000_indices_tenant` (21 índices compuestos/parciales), `20261020120100_rls_tenant` (funciones de contexto + `ENABLE RLS` y políticas en 40 tablas), `20261020120200_soft_delete` (`deleted_at`/`deleted_by` en 16 maestras, únicos parciales, trigger `soft_delete_row()`, `restore_row()`), `20261020120300_inmutabilidad_contable` (turnos, caja, comprobantes, kardex, puntos, auditoría, órdenes, líneas y gastos con SQLSTATE `45000`).
+  - `schema.prisma` sincronizado con columnas, índices parciales (`where: raw(...)`) y `prisma validate` OK.
+  - `db/scripts/rls/000-roles.sql` (rol `fogoneria_rls` sin `BYPASSRLS` + grants) y `010-force-rls.sql` (activación diferida).
+  - 25 specs en `apps/api/test/db/**` con `DATABASE_URL_TEST` + `vitest.config.db.ts` y script `test:db`; `pnpm test` normal no los toca.
+  - Docs: `docs/rls-modelo.md`, `docs/errores-db.md`, `docs/modelo-datos.md`, `docs/decisiones.md` y `docs/TAREAS-SEMANAS-5-8.md` (62 al 85%).
+- Pendiente:
+  - Correr `prisma migrate deploy`, `db:rls:roles` y `test:db` contra PostgreSQL 16; adjuntar `EXPLAIN (ANALYZE, BUFFERS)` de órdenes/caja/kardex.
+  - Fijar `app.empresa_id`/`app.sucursal_id`/`app.usuario_id` por transacción desde la API y recién entonces ejecutar `db:rls:force`.
+  - La API sigue conectando como dueño (`fogoneria_app`): el aislamiento efectivo en runtime sigue siendo la extensión de Prisma.
+- Próximo paso: levantar Postgres (Docker) y cerrar la evidencia para pasar la 62 a Listo.
+
 ## 2026-10-20 — Revisión estática de 57/63: P0 y P1 aplicados (RUC, onboarding, modificadores, tenant real, cajero)
 
 - Objetivo: cerrar los hallazgos de la revisión de la rama `feat/web-conexion-api` sin depender de Postgres.

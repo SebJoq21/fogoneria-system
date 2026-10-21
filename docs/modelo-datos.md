@@ -2,10 +2,10 @@
 
 Modelo físico PostgreSQL 16 del ERP gastronómico multitenant. Esquema `fogoneria`.
 
-- **Fuente ejecutable:** `apps/api/prisma/migrations/20261019000000_init/migration.sql`
+- **Fuente ejecutable:** `apps/api/prisma/migrations/**` (la inicial `20261019000000_init` y las cuatro de AYCDS-62)
 - **Modelo ORM:** `apps/api/prisma/schema.prisma` (generado con `prisma db pull`)
-- **Esquema de referencia:** `db/fogoneria_schema.sql` (DDL + datos demo históricos)
-- **Alcance:** 41 tablas, 27 enums, 22 triggers, 4 vistas, 2 índices únicos parciales
+- **Esquema de referencia:** `db/fogoneria_schema.sql` (DDL + datos demo históricos; no incluye la 62)
+- **Alcance:** 41 tablas, 27 enums, 22 triggers `updated_at`, 4 vistas, índices únicos parciales por soft-delete, RLS por tenant
 
 ## Convenciones
 
@@ -15,8 +15,9 @@ Modelo físico PostgreSQL 16 del ERP gastronómico multitenant. Esquema `fogoner
 | Claves primarias | `UUID` con `gen_random_uuid()`; tablas puente usan PK compuesta |
 | Dinero | `NUMERIC(12,2)`; cantidades de inventario `NUMERIC(12,3)` |
 | Fechas | `TIMESTAMPTZ`; fechas calendario `DATE`; horas `TIME` |
-| Multi-tenant | `empresa_id` en casi todas las tablas; `sucursal_id` en operación |
-| Borrado lógico | `deleted_at` en empresas, sucursales, usuarios, platos e insumos |
+| Multi-tenant | `empresa_id` en casi todas las tablas; `sucursal_id` en operación; RLS en `docs/rls-modelo.md` |
+| Borrado lógico | `deleted_at`/`deleted_by` en 16 entidades maestras; únicos parciales |
+| Inmutabilidad | Triggers contables con SQLSTATE `45000`; catálogo en `docs/errores-db.md` |
 | Auditoría | `created_at`/`updated_at`; triggers `set_updated_at()` en 22 tablas |
 | Nombres | snake_case en español, tablas en plural |
 
@@ -260,6 +261,50 @@ En Prisma, `rango_sucursales` usa miembros `UNO`, `DOS_A_TRES` y `CUATRO_O_MAS` 
 - `set_updated_at()` actualiza `NEW.updated_at = now()`.
 - 22 triggers `trg_*_updated_at` cubren las tablas con columna `updated_at`.
 - Las vistas y triggers no son modelados por Prisma: viven en la migración SQL y deben preservarse al crear nuevas migraciones con `prisma migrate dev --create-only`.
+- AYCDS-62 agrega `soft_delete_row()`, `restore_row()`, `raise_immutable()`, las funciones de contexto (`current_empresa_id()`, `current_sucursal_id()`, `current_usuario_id()`, `is_bypass()`) y los triggers de inmutabilidad contable.
+
+## Índices de AYCDS-62
+
+Compuestos por tenant y orden temporal; el detalle está en `docs/rls-modelo.md`.
+
+| Tabla | Índice | Columnas |
+|---|---|---|
+| `ordenes` | `idx_ordenes_tenant_sucursal_estado` | `(empresa_id, sucursal_id, estado, created_at DESC)` |
+| `ordenes` | `idx_ordenes_tenant_fecha` | `(empresa_id, created_at DESC)` |
+| `turnos_caja` | `idx_turnos_tenant_sucursal_estado` | `(empresa_id, sucursal_id, estado)` |
+| `turnos_caja` | `idx_turnos_tenant_fecha` | `(empresa_id, apertura_at DESC)` |
+| `movimientos_caja` | `idx_movcaja_tenant_fecha` | `(empresa_id, created_at DESC)` |
+| `movimientos_caja` | `idx_movcaja_turno_fecha` | `(turno_id, created_at)` |
+| `gastos` | `idx_gastos_tenant_fecha` | `(empresa_id, sucursal_id, created_at DESC)` |
+| `comprobantes` | `idx_comp_tenant_fecha` | `(empresa_id, sucursal_id, created_at DESC)` |
+| `comprobantes` | `idx_comp_tenant_estado` | `(empresa_id, estado, created_at DESC)` |
+| `movimientos_inventario` | `idx_movinv_tenant_insumo_fecha` | `(empresa_id, sucursal_id, insumo_id, created_at DESC)` |
+| `reservas` | `idx_reservas_sucursal_fecha` | `(sucursal_id, fecha_hora)` |
+| `reservas` | `idx_reservas_tenant_estado` | `(empresa_id, estado, fecha_hora)` |
+| `asistencias` | `idx_asis_tenant_fecha` | `(empresa_id, sucursal_id, fecha DESC)` |
+| `turnos_plan` | `idx_tp_sucursal_fecha` | `(sucursal_id, fecha)` |
+| `platos` | `idx_platos_tenant_categoria_activo` | `(empresa_id, categoria_id, activo)` WHERE `deleted_at IS NULL` |
+| `clientes` | `idx_clientes_tenant_visitas` | `(empresa_id, visitas DESC)` |
+| `movimientos_puntos` | `idx_movpuntos_tenant_fecha` | `(empresa_id, created_at DESC)` |
+| `usuarios` | `idx_usuarios_email` | `(email)` |
+| `usuarios` | `idx_usuarios_tenant_estado` | `(empresa_id, estado)` |
+| `auditoria` | `idx_aud_tenant_fecha` | `(empresa_id, created_at DESC)` |
+| `auditoria` | `idx_aud_entidad_fecha` | `(entidad, entidad_id, created_at DESC)` |
+
+## Baja lógica (AYCDS-62)
+
+Entidades con `deleted_at`/`deleted_by`: `empresas`, `sucursales`, `usuarios`,
+`categorias`, `grupos_modificadores`, `platos`, `listas_precios`, `combos`,
+`reglas_horarias_promos`, `cupones`, `proveedores`, `insumos`, `clientes`,
+`roles_empresa`, `empleados`, `mesas`.
+
+Los únicos de negocio pasan a índices parciales `WHERE deleted_at IS NULL`:
+`uq_sucursales_empresa_nombre`, `uq_usuarios_empresa_email`,
+`uq_categorias_empresa_nombre`, `uq_grupos_empresa_nombre`,
+`uq_platos_empresa_sku`, `uq_listas_empresa_nombre`, `uq_combos_empresa_nombre`,
+`uq_reglas_empresa_nombre`, `uq_cupones_empresa_codigo`,
+`uq_proveedores_empresa_nombre`, `uq_insumos_empresa_nombre`,
+`uq_clientes_empresa_tel`, `uq_roles_empresa_nombre`, `uq_mesas_sucursal_numero`.
 
 ## Uso con Prisma
 
