@@ -4,6 +4,7 @@ import {
   SESSION_ABSOLUTE_MAX_SECONDS,
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
+  sessionCookieOptions,
   signSession,
   verifySession,
 } from "./session";
@@ -72,6 +73,14 @@ describe("session", () => {
     const startedAt = Math.floor(Date.now() / 1000) - SESSION_ABSOLUTE_MAX_SECONDS - 1;
     const token = await signSession({ sub: "u-6", role: "admin", branchId: null, startedAt });
     await expect(verifySession(token)).resolves.toBeNull();
+  });
+
+  it("permite desactivar Secure para HTTP local en producción", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("SESSION_COOKIE_SECURE", "false");
+    expect(sessionCookieOptions().secure).toBe(false);
+    vi.stubEnv("SESSION_COOKIE_SECURE", "true");
+    expect(sessionCookieOptions().secure).toBe(true);
   });
 
   it("rechaza cookies vacías o ausentes", async () => {

@@ -41,6 +41,7 @@ import {
   ALL_BRANCHES,
   BRANCH_IDS,
   DEMO_COMPANY,
+  DEMO_EMPRESA_ID,
   GENERAL_BRANCH,
   SEED_SLUG_BRANCH_IDS,
   demoScopeFor,
@@ -87,6 +88,7 @@ import {
   getFacturacionPort,
 } from "@/lib/facturacion";
 import {
+  ANON_TENANT_KEY,
   loadErpState,
   saveErpState,
   resetErpState,
@@ -322,7 +324,32 @@ function prepareOps(state: ErpState, branchIds: string[]): ErpState {
   };
 }
 
-function buildInitialState(): ErpState {
+/** Estado de arranque de un tenant nuevo: sin mocks compartidos. */
+function buildEmptyState(): ErpState {
+  return {
+    version: 2,
+    roles: initialRoles,
+    reservations: [],
+    ingredients: [],
+    movements: [],
+    customers: [],
+    coupons: [],
+    receipts: [],
+    expenses: [],
+    combos: [],
+    tickets: [],
+    notifications: [],
+    hasUnread: false,
+    scopes: {},
+    accounts: [],
+    cashShifts: [],
+    sunatContingencia: false,
+  };
+}
+
+/** Estado inicial: demo para offline o el tenant demo del seed; vacío para el resto. */
+function buildInitialState(empresaId: string | null): ErpState {
+  if (empresaId !== null && empresaId !== DEMO_EMPRESA_ID) return buildEmptyState();
   return {
     version: 2,
     roles: initialRoles,
@@ -344,6 +371,10 @@ function buildInitialState(): ErpState {
   };
 }
 
+function branchStorageKey(tenantKey: string): string {
+  return `fogoneria:branch:${tenantKey}`;
+}
+
 export function ModulesProvider({
   children,
   initialPayments,
@@ -352,14 +383,15 @@ export function ModulesProvider({
   initialPayments: PlanPayment[];
 }) {
   const [payments] = useState<PlanPayment[]>(initialPayments);
-  const [state, setState] = useState<ErpState>(buildInitialState);
+  const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const [activeBranchId, setActiveBranchId] = useState<string>("todas");
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   /** `null` = aún no se consultó la API (modo demo/offline). */
   const [tenantBranches, setTenantBranches] = useState<Branch[] | null>(null);
   const applyingRemote = useRef(false);
-  const firstPersist = useRef(true);
+  /** Namespace de persistencia: una empresa no comparte estado con otra. */
+  const tenantKey = currentUser?.empresaId ?? ANON_TENANT_KEY;
 
   const branchIds = useMemo(
     () =>
@@ -389,66 +421,64 @@ export function ModulesProvider({
     [tenant, currentUser],
   );
 
-  /* Hidratación desde localStorage (solo cliente) */
+  /* Hidratación del usuario al montar (solo cliente). */
   useEffect(() => {
-    const saved = loadErpState();
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación desde localStorage (solo cliente)
-      setState(saved);
-    }
     try {
       const raw = localStorage.getItem("fogoneria:user");
       const found = raw ? (JSON.parse(raw) as AppUser) : null;
       if (found?.id && found.role) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación de sesión (solo cliente)
         setCurrentUser(found);
-        if (found.branchId) {
-          setActiveBranchId(found.branchId);
-        } else {
-          const branch = localStorage.getItem("fogoneria:branch");
-          // La sucursal se revalida contra la API al cargar el tenant.
-          if (branch === GENERAL_BRANCH.id || branch) {
-            setActiveBranchId(branch);
-          }
-        }
       }
     } catch {
       /* almacenamiento no disponible */
     }
   }, []);
 
-  /* Persistir + difundir a otras pestañas (tras la hidratación inicial) */
+  /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
-    if (firstPersist.current) {
-      firstPersist.current = false;
-      return;
-    }
-    saveErpState(state);
+    const saved = loadErpState(tenantKey);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
+    setState(saved ?? buildInitialState(currentUser?.empresaId ?? null));
+    setActiveBranchId(() => {
+      if (currentUser?.branchId) return currentUser.branchId;
+      try {
+        return localStorage.getItem(branchStorageKey(tenantKey)) ?? "todas";
+      } catch {
+        return "todas";
+      }
+    });
+  }, [tenantKey, currentUser]);
+
+  /* Persistir + difundir a otras pestañas de la misma empresa */
+  useEffect(() => {
+    saveErpState(tenantKey, state);
     if (applyingRemote.current) {
       applyingRemote.current = false;
       return;
     }
-    broadcastErpState(state);
-  }, [state]);
+    broadcastErpState(tenantKey, state);
+  }, [state, tenantKey]);
 
-  /* Estado compartido entre pestañas (mesero ↔ cocina) */
+  /* Estado compartido entre pestañas del mismo tenant (mesero ↔ cocina) */
   useEffect(() => {
-    return subscribeErpSync((msg) => {
+    return subscribeErpSync(tenantKey, (msg) => {
       applyingRemote.current = true;
-      setState(msg.type === "state" ? msg.state : buildInitialState());
+      setState(msg.type === "state" ? msg.state : buildInitialState(currentUser?.empresaId ?? null));
     });
-  }, []);
+  }, [tenantKey, currentUser]);
 
   const setActiveBranch = useCallback(
     (id: string) => {
       if (id !== GENERAL_BRANCH.id && !branchIds.includes(id)) return;
       setActiveBranchId(id);
       try {
-        localStorage.setItem("fogoneria:branch", id);
+        localStorage.setItem(branchStorageKey(tenantKey), id);
       } catch {
         /* almacenamiento no disponible */
       }
     },
-    [branchIds],
+    [branchIds, tenantKey],
   );
 
   /* ---------- Catálogo desde la API (tarea 63) ---------- */
@@ -682,20 +712,20 @@ export function ModulesProvider({
   }, []);
 
   const logout = useCallback(() => {
-    // Limpia el estado local y luego navega al logout del servidor, que borra
-    // las cookies HttpOnly y redirige. Si la navegación falla, no se simula un
-    // logout exitoso.
+    // Limpia el estado del tenant actual y luego navega al logout del servidor,
+    // que borra las cookies HttpOnly y redirige. Si la navegación falla, no se
+    // simula un logout exitoso.
     try {
+      resetErpState(tenantKey);
       localStorage.removeItem("fogoneria:user");
-      localStorage.removeItem("fogoneria:branch");
-      localStorage.removeItem("fogoneria:tenant");
+      localStorage.removeItem(branchStorageKey(tenantKey));
       document.cookie = "fogoneria.role=; path=/; max-age=0";
       document.cookie = "fogoneria.branch=; path=/; max-age=0";
     } catch {
       /* almacenamiento no disponible */
     }
     window.location.assign(logoutUrl());
-  }, []);
+  }, [tenantKey]);
 
   const isGeneral = activeBranchId === GENERAL_BRANCH.id;
   const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
@@ -813,10 +843,10 @@ export function ModulesProvider({
   }, []);
 
   const resetDemoData = useCallback(() => {
-    resetErpState();
-    setState(buildInitialState());
+    resetErpState(tenantKey);
+    setState(buildInitialState(currentUser?.empresaId ?? null));
     void refreshCatalog();
-  }, [refreshCatalog]);
+  }, [currentUser, refreshCatalog, tenantKey]);
 
   /* ---------- Cuentas de mesa ---------- */
 

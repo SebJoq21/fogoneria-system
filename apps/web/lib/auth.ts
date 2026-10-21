@@ -3,6 +3,8 @@
    Jerarquía: superadmin (SaaS) > admin (dueño franquicia) >
    sucursal (admin de sucursal) + cocina + mesero (branchId fijo). */
 
+import { DEMO_EMPRESA_ID } from "./tenancy";
+
 export type AppRole = "superadmin" | "admin" | "sucursal" | "cajero" | "cocina" | "mesero";
 
 export type AppUser = {
@@ -10,6 +12,8 @@ export type AppUser = {
   name: string;
   email: string;
   role: AppRole;
+  /** Empresa (tenant) del token; `null` en superadmin sin tenant. */
+  empresaId: string | null;
   /** null = todas las sucursales (superadmin/admin) */
   branchId: string | null;
   initials: string;
@@ -34,11 +38,11 @@ export const ROLE_HOME: Record<AppRole, string> = {
 };
 
 export const demoUsers: AppUser[] = [
-  { id: "u-super", name: "Equipo Fogonería", email: "super@fogoneria.com", role: "superadmin", branchId: null, initials: "SA" },
-  { id: "u-admin", name: "Martín Quispe", email: "admin@mirestaurante.com", role: "admin", branchId: null, initials: "MQ" },
-  { id: "u-suc", name: "Rosa Quispe", email: "sucursal@mirestaurante.com", role: "sucursal", branchId: "miraflores", initials: "RQ" },
-  { id: "u-coc", name: "Luis Huamán", email: "cocina@mirestaurante.com", role: "cocina", branchId: "miraflores", initials: "LH" },
-  { id: "u-moz", name: "Ana Beltrán", email: "mesero@mirestaurante.com", role: "mesero", branchId: "miraflores", initials: "AB" },
+  { id: "u-super", name: "Equipo Fogonería", email: "super@fogoneria.com", role: "superadmin", empresaId: null, branchId: null, initials: "SA" },
+  { id: "u-admin", name: "Martín Quispe", email: "admin@mirestaurante.com", role: "admin", empresaId: DEMO_EMPRESA_ID, branchId: null, initials: "MQ" },
+  { id: "u-suc", name: "Rosa Quispe", email: "sucursal@mirestaurante.com", role: "sucursal", empresaId: DEMO_EMPRESA_ID, branchId: "miraflores", initials: "RQ" },
+  { id: "u-coc", name: "Luis Huamán", email: "cocina@mirestaurante.com", role: "cocina", empresaId: DEMO_EMPRESA_ID, branchId: "miraflores", initials: "LH" },
+  { id: "u-moz", name: "Ana Beltrán", email: "mesero@mirestaurante.com", role: "mesero", empresaId: DEMO_EMPRESA_ID, branchId: "miraflores", initials: "AB" },
 ];
 
 export function findDemoUser(email: string): AppUser | null {
@@ -94,6 +98,7 @@ export function appUserFromApi(user: ApiLoginUser): AppUser | null {
     name: user.nombre,
     email: user.email,
     role,
+    empresaId: user.empresaId ?? null,
     branchId,
     initials: initialsOf(user.nombre),
   };

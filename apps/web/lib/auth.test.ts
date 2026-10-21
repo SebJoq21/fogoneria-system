@@ -77,6 +77,12 @@ describe("appUserFromApi", () => {
     ).toMatchObject({ role: "admin", branchId: null });
   });
 
+  it("conserva la empresa del token para aislar la persistencia", () => {
+    expect(
+      appUserFromApi({ ...base, rol: "ADMIN_GLOBAL", sucursalId: null }),
+    ).toMatchObject({ empresaId: "e-1" });
+  });
+
   it("rechaza roles desconocidos en vez de asumir mesero", () => {
     expect(appUserFromApi({ ...base, rol: "ROOT", sucursalId: "s-1" })).toBeNull();
   });

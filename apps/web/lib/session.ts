@@ -65,10 +65,13 @@ export async function signSession(
 
 /** Opciones de la cookie de sesión (compartidas por el BFF y el proxy). */
 export function sessionCookieOptions() {
+  const configured = process.env.SESSION_COOKIE_SECURE;
+  const secure =
+    configured === "false" ? false : configured === "true" ? true : process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
   };

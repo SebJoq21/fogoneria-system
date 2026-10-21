@@ -5,12 +5,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { API_BASE_URL } from "@/lib/api";
 import { TOKEN_COOKIE } from "@/lib/backend";
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 const MUTATING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+function unauthorized(): NextResponse {
+  return NextResponse.json(
+    { message: "Tu sesión expiró. Vuelve a iniciar sesión." },
+    { status: 401, headers: { "cache-control": "no-store" } },
+  );
+}
+
 async function forward(request: NextRequest, context: RouteContext): Promise<NextResponse> {
+  // El RBAC vive en la cookie firmada; sin sesión válida no se reenvía nada,
+  // aunque el access token siguiera presente.
+  const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
+  if (!session) return unauthorized();
+
   if (MUTATING.has(request.method)) {
     const origin = request.headers.get("origin");
     if (origin && origin !== request.nextUrl.origin) {
