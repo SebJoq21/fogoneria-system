@@ -10,6 +10,8 @@
   - BFF: `Origin` se compara contra `Host`/`x-forwarded-host`; en Docker permitía 0 mutaciones (403).
   - Cookie `fogoneria.token` respeta `SESSION_COOKIE_SECURE` (HTTP local fuera de localhost).
   - Tests: api 59 unit + 16 e2e; web 42. Recorrido de 6 roles y create/delete real por BFF contra el stack limpio.
+  - QA en vivo (Docker y shell): 182/182 checks por corrida, incluidos catálogo, precios, ciclo de órdenes, RBAC, SaaS, onboarding y aislamiento.
+  - Bug extra: el wizard público `/onboarding` daba 401 porque `POST /onboarding` pasaba por el BFF autenticado. El BFF ahora exceptúa solo esa ruta pública; web 44 tests.
   - CI del PR #8 en verde (run `39685369186`).
 - Pendiente: Jira (comentario de evidencia) y firmas del acta QA.
 - Próximo paso: PR de la rama a `development`.

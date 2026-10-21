@@ -39,6 +39,42 @@ describe("BFF /api/backend", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("reenvía POST /onboarding sin sesión (alta pública)", async () => {
+    fetchMock.mockResolvedValue(
+      new Response('{"id":"e-1"}', {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const request = new NextRequest("http://localhost/api/backend/onboarding", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost",
+        host: "localhost",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ nombreLegal: "QA S.A.C." }),
+    });
+    const response = await POST(request, context(["onboarding"]));
+
+    expect(response.status).toBe(201);
+    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(url.toString()).toBe("http://localhost:3001/api/v1/onboarding");
+    expect((init.headers as Headers).get("authorization")).toBeNull();
+  });
+
+  it("no abre otros endpoints sin sesión por accidente", async () => {
+    const request = new NextRequest("http://localhost/api/backend/onboarding/otro", {
+      method: "POST",
+      headers: { origin: "http://localhost", host: "localhost" },
+      body: JSON.stringify({}),
+    });
+    const response = await POST(request, context(["onboarding", "otro"]));
+
+    expect(response.status).toBe(401);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("reenvía GET con el token de la cookie y sin cache", async () => {
     fetchMock.mockResolvedValue(
       new Response('{"ok":true}', {
