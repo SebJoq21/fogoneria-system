@@ -42,6 +42,8 @@ docker compose down -v
 docker compose up --build
 ```
 
+Si el volumen viene de una versión anterior, el seed falla con un mensaje explícito: el dataset demo usaba UUIDs que no cumplían RFC 4122. Ejecuta `docker compose down -v` para recrearlo (no se pierden datos reales, el seed es demo).
+
 `schema=fogoneria` se mantiene en todas las URLs. `SESSION_COOKIE_SECURE=false` solo aplica al Compose local por HTTP; en producción debe quedar en `true`.
 
 ## Pruebas

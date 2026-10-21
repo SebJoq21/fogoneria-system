@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-21 — Ronda QA en Docker: 5 bugs corregidos (rama `fix/qa-docker-bff-uuid-ordenes`)
+
+- Objetivo: recorrer los 6 roles en el stack Docker y corregir los bugs de la ronda.
+- Hecho:
+  - Seed: 98 IDs demo a UUID RFC 4122 (tercer grupo `4`, cuarto `8`) en `prisma/seed.ts`, `lib/tenancy.ts`, `catalog.service.spec.ts` y `db/fogoneria_schema.sql`; guard que detecta el dataset legacy y pide recrear el volumen.
+  - Órdenes: `CreateOrderDto.items` con `@IsArray/@ArrayMinSize(1)/@ArrayMaxSize(100)` y validador `IsConsistentOrderItem` (PLATO↔platoId, COMBO↔comboId). `{}` ahora da 400, no 500.
+  - Logout: `Location: /` relativo (antes `http://0.0.0.0:3000/`).
+  - BFF: `Origin` se compara contra `Host`/`x-forwarded-host`; en Docker permitía 0 mutaciones (403).
+  - Cookie `fogoneria.token` respeta `SESSION_COOKIE_SECURE` (HTTP local fuera de localhost).
+  - Tests: api 59 unit + 16 e2e; web 42. Recorrido de 6 roles y create/delete real por BFF contra el stack limpio.
+- Pendiente: Jira (comentario de evidencia) y firmas del acta QA.
+- Próximo paso: PR de la rama a `development`.
+
 ## 2026-10-20 — Cierre Fases 2–5: RLS runtime, SaaS real, Docker/CI y QA
 
 - Objetivo: cerrar el plan de AYCDS 53/55/57/58/62/63/65/66 con evidencia real.
