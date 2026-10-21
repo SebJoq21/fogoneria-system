@@ -34,6 +34,7 @@ describe("POST /api/session", () => {
         name: "Ana Beltrán",
         email: "ana@fogoneria.com",
         role: "admin",
+        empresaId: "e-1",
         branchId: null,
         initials: "AB",
       },

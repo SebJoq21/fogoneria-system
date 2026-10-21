@@ -34,5 +34,86 @@ services:
       retries: 5
       start_period: 10s
 
+  # Aplica migraciones y carga el demo una sola vez por arranque.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:-fogoneria_app}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    restart: "no"
+
+  # Crea los roles de aplicación y activa FORCE RLS después de migrar.
+  roles:
+    image: postgres:16-alpine
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-fogoneria_app}
+    volumes:
+      - ./db/scripts/rls:/rls:ro
+    command: >-
+      sh -c "psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -f /rls/000-roles.sql
+      && psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -f /rls/010-force-rls.sql"
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: runtime
+    depends_on:
+      roles:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:-fogoneria_app}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      DATABASE_URL_RLS: postgresql://fogoneria_rls:fogoneria_rls@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      DATABASE_URL_SAAS: postgresql://fogoneria_saas:fogoneria_saas@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-32-chars}
+      JWT_EXPIRES_IN: 8h
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3001/api/v1/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://api:3001/api/v1
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      SESSION_SECRET: ${SESSION_SECRET:-dev-only-session-secret-change-me-32chars}
+      # Compose local sirve por HTTP; en producción (HTTPS) quitar esta línea.
+      SESSION_COOKIE_SECURE: "false"
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
 volumes:
   pgdata:

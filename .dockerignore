@@ -1,0 +1,16 @@
+# Contexto del monorepo para Docker (pnpm + Turbo).
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.agents
+.vscode
+docs
+*.log

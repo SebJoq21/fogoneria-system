@@ -1414,11 +1414,25 @@ async function main() {
         orden_id: ORDEN_1040,
         cliente_ref: 'Diego Torres',
         total: 18,
-        estado: 'ANULADA',
+        estado: 'PAGADA',
         emitido_por: CAJERO,
       },
     ],
     skipDuplicates: true,
+  });
+
+  // El comprobante nace PAGADA; la anulación es una transición (trigger AYCDS-62).
+  await prisma.comprobantes.updateMany({
+    where: {
+      id: '60000000-0000-0000-0000-000000001040',
+      estado: 'PAGADA',
+    },
+    data: {
+      estado: 'ANULADA',
+      anulado_por: CAJERO,
+      anulado_at: atLocal(13),
+      motivo_anulacion: 'Anulación demo por error de emisión',
+    },
   });
 
   await prisma.movimientos_puntos.createMany({

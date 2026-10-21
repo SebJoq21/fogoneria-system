@@ -1,5 +1,8 @@
 import type { PrismaClient } from '../generated/prisma/client.js';
-import type { TenantContextService } from '../common/context/tenant-context.service.js';
+import type {
+  TenantContext,
+  TenantContextService,
+} from '../common/context/tenant-context.service.js';
 import {
   TENANT_SCOPED_MODELS,
   TENANT_SCOPE_OPERATIONS,
@@ -12,6 +15,25 @@ interface OperationParams {
   operation: string;
   args: Record<string, any>;
   query: (args: Record<string, any>) => Promise<unknown>;
+}
+
+/**
+ * Si el request abrió una transacción RLS, ejecuta la operación en esa misma
+ * transacción. Así el `SET LOCAL app.*` y las queries comparten conexión.
+ */
+function runInContext(
+  params: OperationParams,
+  context: TenantContext | undefined,
+  args: Record<string, any> = params.args,
+): Promise<unknown> {
+  const delegate = context?.tx
+    ? (context.tx as unknown as Record<string, Record<string, (a: unknown) => Promise<unknown>>>)[
+        params.model ?? ''
+      ]
+    : undefined;
+  const operation = delegate?.[params.operation];
+  if (typeof operation === 'function') return operation.call(delegate, args);
+  return params.query(args);
 }
 
 /**
@@ -28,10 +50,12 @@ export function withTenantScope(client: PrismaClient, tenantContext: TenantConte
         async $allOperations(params: OperationParams) {
           const context = tenantContext.get();
           const model = params.model;
-          if (!context || context.bypass || !model) return params.query(params.args);
+          if (!context || context.bypass || !model) {
+            return runInContext(params, context);
+          }
 
           const scope = TENANT_SCOPED_MODELS[model];
-          if (!scope) return params.query(params.args);
+          if (!scope) return runInContext(params, context);
 
           const args = { ...params.args };
 
@@ -54,7 +78,7 @@ export function withTenantScope(client: PrismaClient, tenantContext: TenantConte
             );
           }
 
-          return params.query(args);
+          return runInContext(params, context, args);
         },
       },
     },

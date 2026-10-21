@@ -29,6 +29,9 @@ export const DEMO_COMPANY = {
   ruc: "20123456786",
 };
 
+/** `empresaId` del tenant demo del seed (ver `apps/api/prisma/seed.ts`). */
+export const DEMO_EMPRESA_ID = "11111111-1111-1111-1111-111111111111";
+
 /** Sucursales del tenant demo del seed (UUID de la API → slug de la demo). */
 export const SEED_BRANCH_SLUGS: Record<string, string> = {
   "22222222-2222-2222-2222-222222222222": "miraflores",

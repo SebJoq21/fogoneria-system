@@ -24,9 +24,9 @@ export class AuthService {
 
   async login(dto: LoginDto): Promise<LoginResponseDto> {
     const email = dto.email.trim();
-    // El email es único por empresa, no global: se buscan todos los candidatos
-    // y se elige el que coincide con la contraseña. Si dos coinciden, el login
-    // sería ambiguo (podría entrar a la empresa equivocada) → 409.
+    // El email es único entre usuarios activos (índice parcial), pero se buscan
+    // candidatos por si datos históricos previos al índice tienen duplicados.
+    // Si dos coinciden, el login sería ambiguo → 409.
     const candidatos = await this.prisma.raw.usuarios.findMany({
       where: { email, deleted_at: null },
       include: { empresas: true, sucursales: true },

@@ -923,7 +923,7 @@ model usuarios {
   empresa_id                                      String?                  @db.Uuid
   sucursal_id                                     String?                  @db.Uuid
   nombre                                          String
-  email                                           String                   @unique(map: "uq_usuarios_email_global", where: raw("(empresa_id IS NULL)")) @db.Citext
+  email                                           String                   @db.Citext
   password_hash                                   String
   rol                                             rol_usuario
   estado                                          estado_usuario           @default(ACTIVO)
@@ -947,7 +947,7 @@ model usuarios {
   empresas                                        empresas?                @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_usuarios_empresa")
   sucursales                                      sucursales?              @relation(fields: [sucursal_id], references: [id], map: "fk_usuarios_sucursal")
 
-  @@unique([empresa_id, email], map: "uq_usuarios_empresa_email", where: raw("deleted_at IS NULL"))
+  @@unique([email], map: "uq_usuarios_email_activo", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_usuarios_empresa")
   @@index([sucursal_id], map: "idx_usuarios_sucursal")
   @@index([email], map: "idx_usuarios_email")

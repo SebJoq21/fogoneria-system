@@ -1,6 +1,10 @@
 /* Persistencia del estado ERP (mocks realistas).
    localStorage versionado + BroadcastChannel para sincronizar
-   varias pestañas (tablet del mesero vs pantalla de cocina). */
+   varias pestañas (tablet del mesero vs pantalla de cocina).
+
+   El estado y el canal se namespacan por empresa (`empresaId` del token) para
+   que dos cuentas en el mismo navegador no compartan operación, tickets ni
+   notificaciones. Sin sesión (offline/demo) se usa `ANON_TENANT_KEY`. */
 
 import type {
   Coupon,
@@ -19,6 +23,17 @@ import type { BranchScope } from "./tenancy";
 
 export const ERP_STORAGE_KEY = "fogoneria:erp:v2";
 export const ERP_SYNC_CHANNEL = "fogoneria:erp-sync";
+
+/** Clave de tenant para el estado mostrado sin sesión (demo offline). */
+export const ANON_TENANT_KEY = "anon";
+
+export function erpStorageKey(tenantKey: string): string {
+  return `${ERP_STORAGE_KEY}:${tenantKey}`;
+}
+
+export function erpSyncChannel(tenantKey: string): string {
+  return `${ERP_SYNC_CHANNEL}:${tenantKey}`;
+}
 
 /* El catálogo (platos, categorías, modificadores y precios) ya no se
    persiste en el cliente: es la fuente de verdad de la API (tarea 63). */
@@ -43,9 +58,9 @@ export type ErpState = {
   sunatContingencia: boolean;
 };
 
-export function loadErpState(): ErpState | null {
+export function loadErpState(tenantKey: string): ErpState | null {
   try {
-    const raw = localStorage.getItem(ERP_STORAGE_KEY);
+    const raw = localStorage.getItem(erpStorageKey(tenantKey));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ErpState;
     if (parsed?.version !== 2 || !parsed.scopes) return null;
@@ -55,19 +70,19 @@ export function loadErpState(): ErpState | null {
   }
 }
 
-export function saveErpState(state: ErpState): void {
+export function saveErpState(tenantKey: string, state: ErpState): void {
   try {
-    localStorage.setItem(ERP_STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(erpStorageKey(tenantKey), JSON.stringify(state));
   } catch {
     /* almacenamiento no disponible */
   }
 }
 
-export function resetErpState(): void {
+export function resetErpState(tenantKey: string): void {
   try {
-    localStorage.removeItem(ERP_STORAGE_KEY);
+    localStorage.removeItem(erpStorageKey(tenantKey));
     if (typeof BroadcastChannel !== "undefined") {
-      const ch = new BroadcastChannel(ERP_SYNC_CHANNEL);
+      const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
       ch.postMessage({ type: "reset" });
       ch.close();
     }
@@ -78,17 +93,20 @@ export function resetErpState(): void {
 
 type SyncMessage = { type: "state"; state: ErpState } | { type: "reset" };
 
-/** Sincroniza el estado entre pestañas. Devuelve la función de limpieza. */
-export function subscribeErpSync(onMessage: (msg: SyncMessage) => void): () => void {
+/** Sincroniza el estado entre pestañas de la misma empresa. Devuelve el cleanup. */
+export function subscribeErpSync(
+  tenantKey: string,
+  onMessage: (msg: SyncMessage) => void,
+): () => void {
   if (typeof BroadcastChannel === "undefined") return () => {};
-  const ch = new BroadcastChannel(ERP_SYNC_CHANNEL);
+  const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
   ch.onmessage = (ev: MessageEvent<SyncMessage>) => onMessage(ev.data);
   return () => ch.close();
 }
 
-export function broadcastErpState(state: ErpState): void {
+export function broadcastErpState(tenantKey: string, state: ErpState): void {
   if (typeof BroadcastChannel === "undefined") return;
-  const ch = new BroadcastChannel(ERP_SYNC_CHANNEL);
+  const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
   ch.postMessage({ type: "state", state });
   ch.close();
 }
