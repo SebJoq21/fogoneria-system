@@ -10,6 +10,7 @@
   - BFF: `Origin` se compara contra `Host`/`x-forwarded-host`; en Docker permitía 0 mutaciones (403).
   - Cookie `fogoneria.token` respeta `SESSION_COOKIE_SECURE` (HTTP local fuera de localhost).
   - Tests: api 59 unit + 16 e2e; web 42. Recorrido de 6 roles y create/delete real por BFF contra el stack limpio.
+  - CI del PR #8 en verde (run `39685369186`).
 - Pendiente: Jira (comentario de evidencia) y firmas del acta QA.
 - Próximo paso: PR de la rama a `development`.
 
