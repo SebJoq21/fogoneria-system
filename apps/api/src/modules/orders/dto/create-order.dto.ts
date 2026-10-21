@@ -1,20 +1,26 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsEnum,
   IsInt,
   IsNumber,
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
 import { origen_orden, tipo_detalle_orden } from '../../../generated/prisma/enums.js';
+import { IsConsistentOrderItem } from './order-item.validator.js';
 
 export class OrderItemDto {
   @ApiProperty({ enum: tipo_detalle_orden, example: 'PLATO' })
   @IsEnum(tipo_detalle_orden)
+  @IsConsistentOrderItem()
   tipo!: tipo_detalle_orden;
 
   @ApiPropertyOptional({ format: 'uuid' })
@@ -40,6 +46,7 @@ export class OrderItemDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   notas?: string;
 }
 
@@ -71,6 +78,9 @@ export class CreateOrderDto {
   descuento?: number;
 
   @ApiProperty({ type: [OrderItemDto] })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items!: OrderItemDto[];

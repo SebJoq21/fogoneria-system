@@ -26,8 +26,20 @@ async function forward(request: NextRequest, context: RouteContext): Promise<Nex
 
   if (MUTATING.has(request.method)) {
     const origin = request.headers.get("origin");
-    if (origin && origin !== request.nextUrl.origin) {
-      return NextResponse.json({ message: "Origen no permitido." }, { status: 403 });
+    if (origin) {
+      // No comparar contra `request.nextUrl.origin`: en Next standalone se arma
+      // con HOSTNAME (0.0.0.0 en Docker) y rechazaría el mismo origen real.
+      const forwarded = request.headers.get("x-forwarded-host");
+      const host = (forwarded ?? request.headers.get("host") ?? "").split(",")[0]?.trim();
+      let originHost = "";
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = "";
+      }
+      if (!originHost || !host || originHost !== host) {
+        return NextResponse.json({ message: "Origen no permitido." }, { status: 403 });
+      }
     }
   }
 

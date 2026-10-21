@@ -63,6 +63,51 @@ describe("BFF /api/backend", () => {
     expect((init.headers as Headers).get("authorization")).toBe("Bearer jwt-123");
   });
 
+  it("permite mutaciones del mismo origen aunque nextUrl sea 0.0.0.0", async () => {
+    fetchMock.mockResolvedValue(
+      new Response('{"id":"c-1"}', {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    // Petición como la arma Next standalone en Docker: url con 0.0.0.0,
+    // pero el navegador manda Origin/Host con localhost.
+    const request = new NextRequest("http://0.0.0.0:3000/api/backend/catalog/categories", {
+      method: "POST",
+      headers: {
+        origin: "http://localhost:3000",
+        host: "localhost:3000",
+        "content-type": "application/json",
+        cookie: `${SESSION_COOKIE}=${await sessionCookie()}; ${TOKEN_COOKIE}=jwt-123`,
+      },
+      body: JSON.stringify({ nombre: "x" }),
+    });
+    const response = await POST(request, context(["catalog", "categories"]));
+
+    expect(response.status).toBe(201);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("usa x-forwarded-host detrás de un proxy", async () => {
+    fetchMock.mockResolvedValue(
+      new Response("{}", { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    const request = new NextRequest("http://0.0.0.0:3000/api/backend/catalog/categories", {
+      method: "POST",
+      headers: {
+        origin: "https://app.example.com",
+        host: "web:3000",
+        "x-forwarded-host": "app.example.com",
+        cookie: `${SESSION_COOKIE}=${await sessionCookie()}`,
+      },
+      body: JSON.stringify({ nombre: "x" }),
+    });
+    const response = await POST(request, context(["catalog", "categories"]));
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("bloquea mutaciones con Origin ajeno", async () => {
     const request = new NextRequest("http://localhost/api/backend/catalog/dishes", {
       method: "POST",

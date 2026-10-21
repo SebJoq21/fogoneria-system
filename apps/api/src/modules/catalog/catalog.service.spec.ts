@@ -12,8 +12,8 @@ const context = {
   bypass: false,
 };
 
-const GRUPO_ID = '11111111-1111-1111-1111-111111111111';
-const OPCION_ID = '22222222-2222-2222-2222-222222222222';
+const GRUPO_ID = '11111111-1111-4111-8111-111111111111';
+const OPCION_ID = '22222222-2222-4222-8222-222222222222';
 
 function buildPrisma() {
   return {
@@ -108,7 +108,7 @@ describe('CatalogService', () => {
 
     await expect(
       service.createDish({
-        categoriaId: '00000000-0000-0000-0000-000000000000',
+        categoriaId: '00000000-0000-4000-8000-000000000000',
         sku: 'CEV-1',
         nombre: 'Ceviche',
       }),
@@ -187,7 +187,7 @@ describe('CatalogService', () => {
 
       await expect(
         service.updateModifierGroup(GRUPO_ID, {
-          opciones: [{ id: '33333333-3333-3333-3333-333333333333', nombre: 'Ajena' }],
+          opciones: [{ id: '33333333-3333-4333-8333-333333333333', nombre: 'Ajena' }],
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });

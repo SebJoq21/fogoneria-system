@@ -30,13 +30,13 @@ export const DEMO_COMPANY = {
 };
 
 /** `empresaId` del tenant demo del seed (ver `apps/api/prisma/seed.ts`). */
-export const DEMO_EMPRESA_ID = "11111111-1111-1111-1111-111111111111";
+export const DEMO_EMPRESA_ID = "11111111-1111-4111-8111-111111111111";
 
 /** Sucursales del tenant demo del seed (UUID de la API → slug de la demo). */
 export const SEED_BRANCH_SLUGS: Record<string, string> = {
-  "22222222-2222-2222-2222-222222222222": "miraflores",
-  "33333333-3333-3333-3333-333333333333": "surco",
-  "44444444-4444-4444-4444-444444444444": "san-isidro",
+  "22222222-2222-4222-8222-222222222222": "miraflores",
+  "33333333-3333-4333-8333-333333333333": "surco",
+  "44444444-4444-4444-8444-444444444444": "san-isidro",
 };
 
 /** Sucursales demo (slugs): solo rellenan la operación del tenant demo. */
