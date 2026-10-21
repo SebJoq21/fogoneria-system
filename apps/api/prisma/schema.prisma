@@ -28,6 +28,7 @@ model asistencias {
   @@index([empleado_id], map: "idx_asis_empleado")
   @@index([empresa_id], map: "idx_asis_empresa")
   @@index([sucursal_id], map: "idx_asis_sucursal")
+  @@index([empresa_id, sucursal_id, fecha(sort: Desc)], map: "idx_asis_tenant_fecha")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -50,6 +51,8 @@ model auditoria {
   @@index([entidad, entidad_id], map: "idx_aud_entidad")
   @@index([sucursal_id], map: "idx_aud_sucursal")
   @@index([usuario_id], map: "idx_aud_usuario")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_aud_tenant_fecha")
+  @@index([entidad, entidad_id, created_at(sort: Desc)], map: "idx_aud_entidad_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -81,12 +84,14 @@ model categorias {
   nombre     String
   posicion   Int      @default(0)
   activa     Boolean  @default(true)
-  created_at DateTime @default(now()) @db.Timestamptz(6)
-  updated_at DateTime @default(now()) @db.Timestamptz(6)
-  empresas   empresas @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_categorias_empresa")
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  deleted_by String?   @db.Uuid
+  empresas   empresas  @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_categorias_empresa")
   platos     platos[]
 
-  @@unique([empresa_id, nombre], map: "uq_categorias_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_categorias_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_categorias_empresa")
 }
 
@@ -103,13 +108,16 @@ model clientes {
   ultima_visita      DateTime?            @db.Date
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  deleted_at         DateTime?            @db.Timestamptz(6)
+  deleted_by         String?              @db.Uuid
   empresas           empresas             @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_clientes_empresa")
   movimientos_puntos movimientos_puntos[]
   ordenes            ordenes[]
 
-  @@unique([empresa_id, telefono], map: "uq_clientes_empresa_tel")
+  @@unique([empresa_id, telefono], map: "uq_clientes_empresa_tel", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_clientes_empresa")
   @@index([telefono], map: "idx_clientes_telefono")
+  @@index([empresa_id, visitas], map: "idx_clientes_tenant_visitas")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -123,11 +131,13 @@ model combos {
   activo         Boolean          @default(true)
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
   updated_at     DateTime         @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?        @db.Timestamptz(6)
+  deleted_by     String?          @db.Uuid
   empresas       empresas         @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_combos_empresa")
   combos_platos  combos_platos[]
   detalles_orden detalles_orden[]
 
-  @@unique([empresa_id, nombre], map: "uq_combos_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_combos_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_combos_empresa")
 }
 
@@ -170,6 +180,8 @@ model comprobantes {
   @@index([empresa_id], map: "idx_comp_empresa")
   @@index([orden_id], map: "idx_comp_orden")
   @@index([sucursal_id], map: "idx_comp_sucursal")
+  @@index([empresa_id, sucursal_id, created_at(sort: Desc)], map: "idx_comp_tenant_fecha")
+  @@index([empresa_id, estado, created_at(sort: Desc)], map: "idx_comp_tenant_estado")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -197,11 +209,13 @@ model cupones {
   activo         Boolean              @default(true)
   created_at     DateTime             @default(now()) @db.Timestamptz(6)
   updated_at     DateTime             @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?            @db.Timestamptz(6)
+  deleted_by     String?              @db.Uuid
   canjes_cupones canjes_cupones[]
   empresas       empresas             @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_cupones_empresa")
   ordenes        ordenes[]
 
-  @@unique([empresa_id, codigo], map: "uq_cupones_empresa_codigo")
+  @@unique([empresa_id, codigo], map: "uq_cupones_empresa_codigo", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_cupones_empresa")
 }
 
@@ -251,6 +265,8 @@ model empleados {
   activo            Boolean             @default(true)
   created_at        DateTime            @default(now()) @db.Timestamptz(6)
   updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  deleted_by        String?             @db.Uuid
   asistencias       asistencias[]
   empresas          empresas            @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_empleados_empresa")
   roles_empresa     roles_empresa       @relation(fields: [rol_id], references: [id], map: "fk_empleados_rol")
@@ -282,6 +298,7 @@ model empresas {
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   deleted_at             DateTime?                @db.Timestamptz(6)
+  deleted_by             String?                  @db.Uuid
   asistencias            asistencias[]
   auditoria              auditoria[]
   canjes_cupones         canjes_cupones[]
@@ -356,6 +373,7 @@ model gastos {
   @@index([proveedor_id], map: "idx_gastos_proveedor")
   @@index([sucursal_id], map: "idx_gastos_sucursal")
   @@index([turno_id], map: "idx_gastos_turno")
+  @@index([empresa_id, sucursal_id, created_at(sort: Desc)], map: "idx_gastos_tenant_fecha")
 }
 
 model grupos_modificadores {
@@ -367,11 +385,13 @@ model grupos_modificadores {
   activo                      Boolean                       @default(true)
   created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
   updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  deleted_at                  DateTime?                     @db.Timestamptz(6)
+  deleted_by                  String?                       @db.Uuid
   empresas                    empresas                      @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_grupos_empresa")
   opciones_modificadores      opciones_modificadores[]
   platos_grupos_modificadores platos_grupos_modificadores[]
 
-  @@unique([empresa_id, nombre], map: "uq_grupos_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_grupos_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_grupos_empresa")
 }
 
@@ -387,13 +407,14 @@ model insumos {
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   deleted_at             DateTime?                @db.Timestamptz(6)
+  deleted_by             String?                  @db.Uuid
   escandallos_recetas    escandallos_recetas[]
   empresas               empresas                 @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_insumos_empresa")
   proveedores            proveedores?             @relation(fields: [proveedor_id], references: [id], map: "fk_insumos_proveedor")
   movimientos_inventario movimientos_inventario[]
   stocks_sucursal        stocks_sucursal[]
 
-  @@unique([empresa_id, nombre], map: "uq_insumos_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_insumos_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_insumos_empresa")
   @@index([proveedor_id], map: "idx_insumos_proveedor")
 }
@@ -430,11 +451,13 @@ model listas_precios {
   vigencia_hasta DateTime?        @db.Date
   created_at     DateTime         @default(now()) @db.Timestamptz(6)
   updated_at     DateTime         @default(now()) @db.Timestamptz(6)
+  deleted_at     DateTime?        @db.Timestamptz(6)
+  deleted_by     String?          @db.Uuid
   empresas       empresas         @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_listas_empresa")
   ordenes        ordenes[]
   precios_platos precios_platos[]
 
-  @@unique([empresa_id, nombre], map: "uq_listas_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_listas_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_listas_empresa")
 }
 
@@ -450,12 +473,14 @@ model mesas {
   estado      estado_mesa @default(LIBRE)
   created_at  DateTime    @default(now()) @db.Timestamptz(6)
   updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime?   @db.Timestamptz(6)
+  deleted_by  String?     @db.Uuid
   empresas    empresas    @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_mesas_empresa")
   sucursales  sucursales  @relation(fields: [sucursal_id], references: [id], onDelete: Cascade, map: "fk_mesas_sucursal")
   ordenes     ordenes[]
   reservas    reservas[]
 
-  @@unique([sucursal_id, numero], map: "uq_mesas_sucursal_numero")
+  @@unique([sucursal_id, numero], map: "uq_mesas_sucursal_numero", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_mesas_empresa")
   @@index([sucursal_id, estado], map: "idx_mesas_estado")
   @@index([sucursal_id], map: "idx_mesas_sucursal")
@@ -484,6 +509,8 @@ model movimientos_caja {
   @@index([gasto_id], map: "idx_movcaja_gasto")
   @@index([orden_id], map: "idx_movcaja_orden")
   @@index([turno_id], map: "idx_movcaja_turno")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_movcaja_tenant_fecha")
+  @@index([turno_id, created_at], map: "idx_movcaja_turno_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -510,6 +537,7 @@ model movimientos_inventario {
   @@index([insumo_id], map: "idx_movinv_insumo")
   @@index([orden_id], map: "idx_movinv_orden")
   @@index([sucursal_id], map: "idx_movinv_sucursal")
+  @@index([empresa_id, sucursal_id, insumo_id, created_at(sort: Desc)], map: "idx_movinv_tenant_insumo_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -531,6 +559,7 @@ model movimientos_puntos {
   @@index([cliente_id], map: "idx_movpuntos_cliente")
   @@index([empresa_id], map: "idx_movpuntos_empresa")
   @@index([sucursal_id], map: "idx_movpuntos_sucursal")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_movpuntos_tenant_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -592,6 +621,8 @@ model ordenes {
   @@index([mesa_id], map: "idx_ordenes_mesa")
   @@index([mesero_id], map: "idx_ordenes_mesero")
   @@index([sucursal_id], map: "idx_ordenes_sucursal")
+  @@index([empresa_id, sucursal_id, estado, created_at(sort: Desc)], map: "idx_ordenes_tenant_sucursal_estado")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_ordenes_tenant_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -609,6 +640,7 @@ model platos {
   created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
   updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
   deleted_at                  DateTime?                     @db.Timestamptz(6)
+  deleted_by                  String?                       @db.Uuid
   combos_platos               combos_platos[]
   detalles_orden              detalles_orden[]
   escandallos_recetas         escandallos_recetas[]
@@ -617,9 +649,10 @@ model platos {
   platos_grupos_modificadores platos_grupos_modificadores[]
   precios_platos              precios_platos[]
 
-  @@unique([empresa_id, sku], map: "uq_platos_empresa_sku")
+  @@unique([empresa_id, sku], map: "uq_platos_empresa_sku", where: raw("deleted_at IS NULL"))
   @@index([categoria_id], map: "idx_platos_categoria")
   @@index([empresa_id], map: "idx_platos_empresa")
+  @@index([empresa_id, categoria_id, activo], map: "idx_platos_tenant_categoria_activo", where: raw("deleted_at IS NULL"))
 }
 
 model platos_grupos_modificadores {
@@ -673,11 +706,13 @@ model proveedores {
   rubro      String?
   created_at DateTime  @default(now()) @db.Timestamptz(6)
   updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  deleted_by String?   @db.Uuid
   gastos     gastos[]
   insumos    insumos[]
   empresas   empresas  @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_proveedores_empresa")
 
-  @@unique([empresa_id, nombre], map: "uq_proveedores_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_proveedores_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_proveedores_empresa")
 }
 
@@ -693,9 +728,11 @@ model reglas_horarias_promos {
   activa      Boolean  @default(true)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime? @db.Timestamptz(6)
+  deleted_by  String?  @db.Uuid
   empresas    empresas @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_reglas_empresa")
 
-  @@unique([empresa_id, nombre], map: "uq_reglas_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_reglas_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_reglas_empresa")
 }
 
@@ -738,6 +775,8 @@ model reservas {
   @@index([empresa_id], map: "idx_reservas_empresa")
   @@index([mesa_id], map: "idx_reservas_mesa")
   @@index([sucursal_id], map: "idx_reservas_sucursal")
+  @@index([sucursal_id, fecha_hora], map: "idx_reservas_sucursal_fecha")
+  @@index([empresa_id, estado, fecha_hora], map: "idx_reservas_tenant_estado")
 }
 
 model roles_empresa {
@@ -748,10 +787,12 @@ model roles_empresa {
   activo      Boolean     @default(true)
   created_at  DateTime    @default(now()) @db.Timestamptz(6)
   updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime?   @db.Timestamptz(6)
+  deleted_by  String?     @db.Uuid
   empleados   empleados[]
   empresas    empresas    @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_roles_empresa")
 
-  @@unique([empresa_id, nombre], map: "uq_roles_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_roles_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_roles_empresa")
 }
 
@@ -787,6 +828,7 @@ model sucursales {
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   deleted_at             DateTime?                @db.Timestamptz(6)
+  deleted_by             String?                  @db.Uuid
   asistencias            asistencias[]
   auditoria              auditoria[]
   canjes_cupones         canjes_cupones[]
@@ -805,7 +847,7 @@ model sucursales {
   turnos_plan            turnos_plan[]
   usuarios               usuarios[]
 
-  @@unique([empresa_id, nombre], map: "uq_sucursales_empresa_nombre")
+  @@unique([empresa_id, nombre], map: "uq_sucursales_empresa_nombre", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_sucursales_empresa")
 }
 
@@ -851,6 +893,8 @@ model turnos_caja {
   @@index([empresa_id], map: "idx_turnos_empresa")
   @@index([sucursal_id, estado], map: "idx_turnos_estado")
   @@index([sucursal_id], map: "idx_turnos_sucursal")
+  @@index([empresa_id, sucursal_id, estado], map: "idx_turnos_tenant_sucursal_estado")
+  @@index([empresa_id, apertura_at(sort: Desc)], map: "idx_turnos_tenant_fecha")
 }
 
 model turnos_plan {
@@ -869,6 +913,7 @@ model turnos_plan {
   @@index([empleado_id], map: "idx_tp_empleado")
   @@index([empresa_id], map: "idx_tp_empresa")
   @@index([sucursal_id], map: "idx_tp_sucursal")
+  @@index([sucursal_id, fecha], map: "idx_tp_sucursal_fecha")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -886,6 +931,7 @@ model usuarios {
   created_at                                      DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at                                      DateTime                 @default(now()) @db.Timestamptz(6)
   deleted_at                                      DateTime?                @db.Timestamptz(6)
+  deleted_by                                      String?                  @db.Uuid
   auditoria                                       auditoria[]
   canjes_cupones                                  canjes_cupones[]
   comprobantes_comprobantes_anulado_porTousuarios comprobantes[]           @relation("comprobantes_anulado_porTousuarios")
@@ -901,9 +947,11 @@ model usuarios {
   empresas                                        empresas?                @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_usuarios_empresa")
   sucursales                                      sucursales?              @relation(fields: [sucursal_id], references: [id], map: "fk_usuarios_sucursal")
 
-  @@unique([empresa_id, email], map: "uq_usuarios_empresa_email")
+  @@unique([empresa_id, email], map: "uq_usuarios_empresa_email", where: raw("deleted_at IS NULL"))
   @@index([empresa_id], map: "idx_usuarios_empresa")
   @@index([sucursal_id], map: "idx_usuarios_sucursal")
+  @@index([email], map: "idx_usuarios_email")
+  @@index([empresa_id, estado], map: "idx_usuarios_tenant_estado")
 }
 
 enum bloque_turno {

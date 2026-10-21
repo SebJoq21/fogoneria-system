@@ -36,7 +36,10 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
+    "test:db": "prisma generate && vitest run --config ./vitest.config.db.ts",
+    "db:rls:roles": "prisma db execute --file ../../db/scripts/rls/000-roles.sql",
+    "db:rls:force": "prisma db execute --file ../../db/scripts/rls/010-force-rls.sql"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

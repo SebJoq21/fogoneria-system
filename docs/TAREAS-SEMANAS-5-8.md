@@ -16,12 +16,12 @@
 |---|---|
 | Tareas del rango | **14** |
 | Cerradas (Listo) | **6** (AYCDS-32, AYCDS-42, AYCDS-44, AYCDS-48, AYCDS-60, AYCDS-61) |
-| En curso | **6** (AYCDS-53, AYCDS-55, AYCDS-57, AYCDS-58, AYCDS-63, AYCDS-65) |
-| Por hacer | **2** (AYCDS-62, AYCDS-66) |
-| Avance global (promedio simple) | **79%** |
+| En curso | **7** (AYCDS-53, AYCDS-55, AYCDS-57, AYCDS-58, AYCDS-62, AYCDS-63, AYCDS-65) |
+| Por hacer | **1** (AYCDS-66) |
+| Avance global (promedio simple) | **84%** |
 | Avance funcional end-to-end | **≈60–65%** |
 
-**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend está implementada y **verificada contra PostgreSQL 16 real** (Docker Compose en `localhost:5433`): Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e. Falta completar Dockerfiles/CI (tarea 58), conectar las UIs 63 y 65 a las APIs y el RLS nativo (tarea 62).
+**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend está implementada y **verificada contra PostgreSQL 16 real** (Docker Compose en `localhost:5433`): Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e. Falta completar Dockerfiles/CI (tarea 58), conectar las UIs 63 y 65 a las APIs y **activar el FORCE de RLS con el contexto de sesión** (AYCDS-62 ya tiene índices, políticas, soft-delete e inmutabilidad en migraciones).
 
 > **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que sus UIs consuman las APIs 60 y 61. La 63 ya consume la API 60 (login JWT + CRUD real) y queda pendiente la verificación en vivo contra PostgreSQL; la 65 sigue con datos mock.
 >
@@ -43,7 +43,7 @@
 | S5 | 32, 44, 55 | 98% |
 | S5-6 | 48, 57, 58 | 73% |
 | S6 | 42, 53 | 98% |
-| S7 | 62 | 15% |
+| S7 | 62 | 85% |
 | S7-8 | 60, 61, 63, 65 | 94% |
 | S8 | 66 | 0% |
 | **Global** | **14 tareas** | **79%** |
@@ -53,7 +53,7 @@
 | Responsable | Tareas | Avance personal |
 |---|---|---|
 | David Piñarreta | 44, 48, 53, 60, 61 | 99% |
-| Sonny De La Cruz | 32, 42, 62 | 72% |
+| Sonny De La Cruz | 32, 42, 62 | 95% |
 | Joshua Chávez | 55, 65 | 88% |
 | Diego Arévalo | 57, 63 | 95% |
 | Sebastián Chicata | 58, 66 | 13% |
@@ -72,7 +72,7 @@
 | AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | En curso | 25% | `docker-compose.yml` con PostgreSQL 16 en 5433 + shadow DB, scripts `db:up/down/logs/status/psql` | Dockerfiles api/web, workflow CI y backlog |
 | AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Listo | 100% | Migración `20261019000000_init`, `prisma/seed.ts` idempotente, scripts `db:*` | — |
 | AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | En curso | 95% | `TenantContextService` (AsyncLocalStorage) + extensión Prisma que inyecta `empresa_id`/`sucursal_id`, bypass SUPERADMIN, tests unitarios y prueba real con 2 empresas | Prueba de escritura cruzada y RLS nativo (tarea 62) |
-| AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | Por hacer | 15% | 22 triggers `updated_at` | Índices, políticas RLS, soft-delete |
+| AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | En curso | 85% | 4 migraciones (índices, RLS, soft-delete, inmutabilidad), `schema.prisma` sincronizado, rol `fogoneria_rls`, 25 pruebas `.db-spec.ts` y docs `rls-modelo.md`/`errores-db.md` | Correr `EXPLAIN` y `test:db` contra Postgres; activar FORCE cuando la API fije contexto |
 | AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | Listo | 100% | CRUD de categorías, platos y modificadores; listas de precios, upsert masivo y `resolvePrice`; DTOs validados, Swagger y tests | — |
 | AYCDS-61 | [24.0] Consola SaaS alta Tenant + cron morosidad | 7-8 | David | Listo | 100% | Endpoints SaaS, alta de tenant transaccional, suspender/reactivar/plan, métricas MRR, cron diario 03:00 y auditoría; tests | — |
 | AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | En curso | 95% | `/app/productos` (5 tabs) consumiendo la API de catálogo (tarea 60): CRUD de productos/categorías/modificadores, listas de precios y carta virtual, con estados de carga/error y sin mocks de catálogo | Verificación en vivo contra PostgreSQL |
@@ -212,7 +212,7 @@
 
 ### AYCDS-62 — [25.0] Índices RLS y triggers soft-delete
 
-- **Semana:** 7 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Por hacer | **Avance:** 15%
+- **Semana:** 7 | **Responsable:** Sonny De La Cruz | **Estado Jira:** En curso | **Avance:** 85%
 - **Descripción Jira:** "Constraints RLS + inmutabilidad contable RD-01 RCAL-03."
 - **Qué debe hacerse:**
   1. Crear índices por `empresa_id`, `sucursal_id` y claves de búsqueda frecuentes.
@@ -220,8 +220,10 @@
   3. Agregar columnas `deleted_at` y triggers/filtros de soft-delete.
   4. Implementar restricciones de inmutabilidad contable (RD-01, RCAL-03) para movimientos de caja/comprobantes.
   5. Verificar planes con `EXPLAIN` y agregar pruebas.
-- **Archivos/rutas:** `db/fogoneria_schema.sql`, `apps/api/prisma/migrations/**`, `docs/modelo-datos.md`
+- **Archivos/rutas:** `apps/api/prisma/migrations/2026102012*/**`, `apps/api/prisma/schema.prisma`, `apps/api/test/db/**`, `db/scripts/rls/**`, `docs/rls-modelo.md`, `docs/errores-db.md`, `docs/modelo-datos.md`
 - **Criterio de aceptación:** `EXPLAIN` usa los índices; RLS bloquea cruces de tenant; el borrado lógico es verificable; no se puede alterar un registro contable cerrado.
+- **Evidencia:** migraciones `20261020120000_indices_tenant`, `20261020120100_rls_tenant`, `20261020120200_soft_delete` y `20261020120300_inmutabilidad_contable`; 21 índices nuevos; RLS en 40 tablas (empresa, empresa+sucursal, hijas por `EXISTS`, `movimientos_caja` vía turno, `usuarios` con superadmin oculto); 16 entidades con `deleted_at`/`deleted_by` y únicos parciales; triggers de turnos, caja, comprobantes, kardex, puntos, auditoría, órdenes, líneas y gastos con SQLSTATE `45000`; `schema.prisma` validado con `prisma validate`; 25 specs en `apps/api/test/db/` (`DATABASE_URL_TEST`); `db/scripts/rls/000-roles.sql` y `010-force-rls.sql`; catálogo de errores en `docs/errores-db.md`.
+- **Pendiente para cerrar:** correr `prisma migrate deploy` + `test:db` contra PostgreSQL 16 y adjuntar `EXPLAIN (ANALYZE, BUFFERS)` de las consultas de órdenes/caja/kardex; activar `FORCE RLS` cuando la API fije `app.*` por transacción.
 
 ---
 
@@ -343,7 +345,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 65 UI SaaS | Joshua Chávez | 61 API SaaS | David Piñarreta | Sin API solo hay mocks |
 | 66 QA | Sebastián Chicata | 48, 53, 60, 61 + 58 | David Piñarreta + Sebastián Chicata | Requiere funcionalidad real y CI |
 
-**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 55 (Joshua), 58 (Sebastián), 57 y 63 (Diego, ya integradas a la API) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 62 parcial (Sonny) y 66 al cerrar 58.
+**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 55 (Joshua), 58 (Sebastián), 57 y 63 (Diego, ya integradas a la API), 62 (Sonny, 85%: falta correr `EXPLAIN`/`test:db` contra Postgres) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 66 al cerrar 58.
 
 ### 5.3 Matriz de inicio: ¿puede cada uno avanzar cuando quiera?
 
@@ -361,7 +363,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 58 Docker/CI | Sebastián Chicata | **Sí** | — | Independiente |
 | 60 API catálogo | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
 | 61 API SaaS | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
-| 62 Índices/RLS | Sonny De La Cruz | Parcial | 32/42 resueltos | Dura para cerrar |
+| 62 Índices/RLS | Sonny De La Cruz | Parcial (85%) | 32/42 resueltos | Dura para cerrar |
 | 63 UI catálogo | Diego Arévalo | **Hecha; falta verificación** | 60 (David) resuelto | Blanda |
 | 65 UI SaaS | Joshua Chávez | **Sí, UI** | 61 (David) para datos reales | Blanda |
 | 66 QA | Sebastián Chicata | No | 48/53 (David) + 60/61 (David) + 58 (Sebastián) | Última |
@@ -398,7 +400,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 ### Sonny De La Cruz — Base de datos
 - [x] **32** `schema.prisma` con 41 tablas y 27 enums + ER documentado
 - [x] **42** Migración inicial + seed demo idempotente + `.env.example`
-- [ ] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable
+- [x] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable — *implementado en migraciones y `schema.prisma`; falta correr `EXPLAIN` y `test:db` contra PostgreSQL y activar FORCE*
 
 ### Joshua Chávez — Frontend / RBAC y SaaS
 - [ ] **55** Protección server-side de rutas, cookie segura/JWT, redirects por rol — *código completo y testeado; falta la verificación en vivo contra API + PostgreSQL*
@@ -464,3 +466,4 @@ docker compose up --build
 | 2026-10-20 | 57 | Diego Arévalo | Revisión P0/P1: RUC SUNAT con dígito verificador correcto (400 si inválido), alta pública sin `plan` (TRIAL forzado), RUC/email duplicado → 409, logo y longitudes validadas, rate limit 5/10 min por IP, body de 4 MB solo en `/onboarding` y login ambiguo → 409 | `apps/api/src/common/utils/ruc.ts`, `apps/api/src/modules/{onboarding,auth}/**`, `apps/api/src/common/guards/rate-limit.guard.ts`, `apps/api/src/main.ts`, `apps/web/lib/{onboarding-api,domain}.ts`; `ruc.spec` 7, `auth.service.spec` 8, `onboarding.e2e-spec` 3 |
 | 2026-10-20 | 63 | Diego Arévalo | Revisión P0/P1: modificadores por `id` (sync transaccional, 400 ids ajenos/repetidos, 409 si la opción está en órdenes), tenant y sucursales hidratados de la API, paginación de platos + abort de peticiones, rol real `cajero` en el RBAC y rollback de altas de plato/lista | `apps/api/src/modules/catalog/{catalog.service.ts,dto/modifier-group.dto.ts}`, `apps/web/lib/{tenant-api,catalog-api,auth,permissions}.ts`, `apps/web/components/dashboard/{ModulesProvider,AppSidebar,DashboardShell}.tsx`, `apps/web/proxy.ts`; `catalog.service.spec` 10; `api test` 52 + e2e 10, `web build` 45 rutas |
 | 2026-10-20 | 55 (95%) | Joshua Chávez | Sesión HttpOnly + BFF sobre `development`: cookie `fogoneria.session` firmada HS256 con ventana deslizante de 15 min y tope de 8 h, refresh en `proxy.ts`; access token de la API movido a cookie HttpOnly (`fogoneria.token`) y BFF `/api/backend`; logout server-side con 303; rate limit 5/10 min; role/sucursal desconocidos fallan cerrado (cajero incluido); sin tenant demo con sesión. 34 tests web (proxy, route, logout, BFF, RBAC). Falta verificación en vivo | `apps/web/lib/{session,backend,session-api,auth}.ts`, `app/api/session/**`, `app/api/backend/[...path]/route.ts`, `proxy.ts`, `components/dashboard/ModulesProvider.tsx`; `test` 34/34, `lint`, `check-types` y `build` (47 rutas) verdes |
+| 2026-10-20 | 62 (85%) | Sonny De La Cruz | Índices compuestos/parciales, RLS en 40 tablas con roles separados y contexto `app.*`, soft-delete en 16 maestras con únicos parciales y `restore_row`, e inmutabilidad de turnos/caja/comprobantes/kardex/puntos/auditoría/órdenes/gastos con SQLSTATE `45000`. `schema.prisma` sincronizado y validado; 25 specs de BD y catálogo de errores | 4 migraciones `2026102012*`, `apps/api/prisma/schema.prisma`, `apps/api/test/db/**`, `db/scripts/rls/**`, `docs/{rls-modelo,errores-db,modelo-datos}.md`; `prisma validate` OK; pendiente `migrate deploy` + `EXPLAIN` + `test:db` en Postgres |
