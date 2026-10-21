@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [development, main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, tipos y pruebas
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fogoneria_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fogoneria_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_RLS: postgresql://fogoneria_rls:fogoneria_rls@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_SAAS: postgresql://fogoneria_saas:fogoneria_saas@localhost:5432/fogoneria_test?schema=fogoneria
+      JWT_SECRET: ci-only-jwt-secret-change-me-32chars
+      SESSION_SECRET: ci-only-session-secret-change-me-32chars
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter api db:generate
+
+      - name: Aplicar migraciones
+        run: pnpm --filter api db:deploy
+
+      - name: Crear roles RLS
+        run: pnpm --filter api db:rls:roles
+
+      - name: Activar FORCE RLS
+        run: pnpm --filter api db:rls:force
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tipos
+        run: pnpm check-types
+
+      - name: Pruebas unitarias API
+        run: pnpm --filter api test
+
+      - name: Pruebas de base de datos (RLS, soft delete, email)
+        run: pnpm --filter api test:db
+
+      - name: Pruebas web
+        run: pnpm --filter web test
+
+      - name: Build
+        run: pnpm build
