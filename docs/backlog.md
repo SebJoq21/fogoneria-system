@@ -12,7 +12,7 @@
 | 2 | Auth JWT + sesión HttpOnly + BFF (AYCDS-48/55) | Listo | Cookie firmada, BFF valida sesión, 37 pruebas web |
 | 3 | Login, onboarding y catálogo reales (AYCDS-57/63) | Listo | Verificado contra PostgreSQL real |
 | 4 | Consola SaaS contra API (AYCDS-65) | Listo | `lib/saas-api.ts`; métricas, suspender/reactivar verificados |
-| 5 | CI + Docker (AYCDS-58) | En curso (90%) | Workflow y Dockerfiles listos; falta ejecutar CI en GitHub y smoke completo de Compose |
+| 5 | CI + Docker (AYCDS-58) | En curso (90%) | CI en verde (run `39540565973`); falta smoke completo de Compose en volumen limpio |
 
 ## P1 — Operación y calidad
 

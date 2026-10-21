@@ -14,8 +14,9 @@
   - Docs: `TAREAS-SEMANAS-5-8.md` al 99% (12 cerradas, 58/66 en curso), `docs/acta-qa-aycds-66.md`, `docs/explain-rls.md`, `docs/backlog.md` y `README.md` con quickstart.
   - Jira sincronizado: 55/57/62/63/65 a Listo; 58 y 66 a En curso con comentarios de evidencia.
   - Verificación final: web 37/37, `check-types`, `lint` (estilos OK), `docker compose config` OK.
+  - CI del PR #7 en verde (run `39540565973`); requirió declarar las variables de Prisma en `globalEnv` de Turbo.
 - Pendiente:
-  - Correr CI en GitHub y smoke completo de `docker compose up` en volumen limpio.
+  - Smoke completo de `docker compose up` en volumen limpio.
   - Firmar el acta QA.
 - Próximo paso: commit/PR de cierre y ejecución del pipeline.
 
