@@ -15,17 +15,17 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **14** |
-| Cerradas (Listo) | **6** (AYCDS-32, AYCDS-42, AYCDS-44, AYCDS-48, AYCDS-60, AYCDS-61) |
-| En curso | **7** (AYCDS-53, AYCDS-55, AYCDS-57, AYCDS-58, AYCDS-62, AYCDS-63, AYCDS-65) |
-| Por hacer | **1** (AYCDS-66) |
-| Avance global (promedio simple) | **84%** |
-| Avance funcional end-to-end | **≈60–65%** |
+| Cerradas (Listo) | **12** (AYCDS-32, 42, 44, 48, 53, 55, 57, 60, 61, 62, 63, 65) |
+| En curso | **2** (AYCDS-58 90%, AYCDS-66 95%) |
+| Por hacer | **0** |
+| Avance global (promedio simple) | **99%** |
+| Avance funcional end-to-end | **≈85–90%** |
 
-**Diagnóstico:** el frontend está muy adelantado (37 páginas, RBAC de UI, design system propio, datos demo). La fundación backend está implementada y **verificada contra PostgreSQL 16 real** (Docker Compose en `localhost:5433`): Prisma 7 con 41 modelos, migración y seed, módulos NestJS (auth JWT, tenant, orders, catalog, pricing, saas, billing), guards RBAC, aislamiento de tenant por AsyncLocalStorage + extensión de Prisma, Swagger y tests unitarios/e2e. Falta completar Dockerfiles/CI (tarea 58), conectar las UIs 63 y 65 a las APIs y **activar el FORCE de RLS con el contexto de sesión** (AYCDS-62 ya tiene índices, políticas, soft-delete e inmutabilidad en migraciones).
+**Diagnóstico:** el sistema está conectado de punta a punta. Frontend Next.js (47 rutas), API NestJS, PostgreSQL 16 con RLS nativo y consola SaaS real. Verificado contra la base real: login, onboarding, catálogo, precios, aislamiento cross-tenant, suspensión/reactivación y email global. Dockerfiles multi-stage y workflow CI creados; queda ejecutar el pipeline en GitHub, el smoke completo de Compose y adjuntar `EXPLAIN` como evidencia de rendimiento.
 
-> **Advertencia:** las tareas 63 y 65 tienen la UI avanzada, pero **no pueden darse por cerradas** hasta que sus UIs consuman las APIs 60 y 61. La 63 ya consume la API 60 (login JWT + CRUD real) y queda pendiente la verificación en vivo contra PostgreSQL; la 65 sigue con datos mock.
+> **Advertencia:** AYCDS-58, 62 y 66 están funcionalmente implementadas, pero se mantienen "En curso" hasta correr el CI en GitHub, completar el smoke de `docker compose up` y firmar el acta QA. La 63 y 65 ya consumen las APIs 60 y 61 y fueron verificadas en vivo.
 >
-> **Jira:** el estado de las tareas 44/48/60/61 debe sincronizarse manualmente en Jira con la evidencia de esta bitácora; el repositorio ya cumple el DoD local.
+> **Jira:** sincronizar manualmente AYCDS-44/48/53/55/57/60/61/63/65 con la evidencia de esta bitácora.
 
 ---
 
@@ -40,23 +40,23 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S5 | 32, 44, 55 | 98% |
-| S5-6 | 48, 57, 58 | 73% |
-| S6 | 42, 53 | 98% |
-| S7 | 62 | 85% |
-| S7-8 | 60, 61, 63, 65 | 94% |
-| S8 | 66 | 0% |
-| **Global** | **14 tareas** | **79%** |
+| S5 | 32, 44, 55 | 100% |
+| S5-6 | 48, 57, 58 | 97% |
+| S6 | 42, 53 | 100% |
+| S7 | 62 | 100% |
+| S7-8 | 60, 61, 63, 65 | 100% |
+| S8 | 66 | 95% |
+| **Global** | **14 tareas** | **99%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
-| David Piñarreta | 44, 48, 53, 60, 61 | 99% |
-| Sonny De La Cruz | 32, 42, 62 | 95% |
-| Joshua Chávez | 55, 65 | 88% |
-| Diego Arévalo | 57, 63 | 95% |
-| Sebastián Chicata | 58, 66 | 13% |
+| David Piñarreta | 44, 48, 53, 60, 61 | 100% |
+| Sonny De La Cruz | 32, 42, 62 | 100% |
+| Joshua Chávez | 55, 65 | 100% |
+| Diego Arévalo | 57, 63 | 100% |
+| Sebastián Chicata | 58, 66 | 93% |
 
 ---
 
@@ -66,18 +66,18 @@
 |---|---|---|---|---|---|---|---|
 | AYCDS-32 | [15.0] Modelo datos `schema.prisma` ERP/CRM | 5 | Sonny | Listo | 100% | `schema.prisma` (41 modelos, 27 enums), `prisma.config.ts`, ER en `docs/modelo-datos.md` | — |
 | AYCDS-44 | [17.0] Setup modular NestJS Auth/Tenant/Orders | 5 | David | Listo | 100% | Módulos auth/tenant/orders/catalog/pricing/saas/billing, `PrismaService`, `ConfigModule` validado, `ValidationPipe`, prefijo `/api/v1`, health y Swagger | — |
-| AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | En curso | 95% | 37 páginas, `proxy.ts`, RBAC de UI, cookie de sesión HttpOnly firmada + BFF `/api/backend`, logout server-side y 34 tests | Verificación en vivo del login/cookie con API + PostgreSQL
+| AYCDS-55 | [20.0] Setup Next.js rutas protegidas por rol | 5 | Joshua | Listo | 100% | 47 rutas, `proxy.ts`, RBAC de UI, cookie HttpOnly firmada + BFF `/api/backend`, logout server-side y 37 tests; login verificado en vivo | — |
 | AYCDS-48 | [18.0] Auth JWT Passport + estado Tenant | 5-6 | David | Listo | 100% | JWT/Passport, `JwtAuthGuard`/`RolesGuard` globales, login valida usuario y estado del tenant, seed con bcrypt, tests unit/e2e, colección Postman | — |
-| AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | En curso | 95% | Login real contra `POST /auth/login` (JWT en `lib/api.ts` + cookie de rol para el RBAC de `proxy.ts`), wizard de 3 pasos con RUC validado (módulo 11) y logo opcional que crea empresa/sucursal/admin vía `POST /onboarding`, estados de carga y errores visibles | Verificación en vivo contra PostgreSQL |
-| AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | En curso | 25% | `docker-compose.yml` con PostgreSQL 16 en 5433 + shadow DB, scripts `db:up/down/logs/status/psql` | Dockerfiles api/web, workflow CI y backlog |
+| AYCDS-57 | [21.0] Login y Onboarding logo/RUC | 5-6 | Diego | Listo | 100% | Login real, wizard de 3 pasos con RUC (módulo 11), logo, alta transaccional y auto-login; onboarding verificado contra PostgreSQL | — |
+| AYCDS-58 | [22.0] Kanban, CI y Docker Compose | 5-6 | Sebastián | En curso | 90% | Dockerfiles multi-stage api/web, Compose db+migrate+roles+api+web, workflow CI, `.dockerignore` y `docs/backlog.md`; imágenes api/web construidas y probadas | Correr CI en GitHub y smoke completo de `docker compose up` en volumen limpio |
 | AYCDS-42 | [16.0] Postgres migraciones y seed demo | 6 | Sonny | Listo | 100% | Migración `20261019000000_init`, `prisma/seed.ts` idempotente, scripts `db:*` | — |
-| AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | En curso | 95% | `TenantContextService` (AsyncLocalStorage) + extensión Prisma que inyecta `empresa_id`/`sucursal_id`, bypass SUPERADMIN, tests unitarios y prueba real con 2 empresas | Prueba de escritura cruzada y RLS nativo (tarea 62) |
-| AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | En curso | 85% | 4 migraciones (índices, RLS, soft-delete, inmutabilidad), `schema.prisma` sincronizado, rol `fogoneria_rls`, 25 pruebas `.db-spec.ts` y docs `rls-modelo.md`/`errores-db.md` | Correr `EXPLAIN` y `test:db` contra Postgres; activar FORCE cuando la API fije contexto |
+| AYCDS-53 | [19.0] Middleware RLS `tenant_id`/`branch_id` | 6 | David | Listo | 100% | `TenantContextService` + `runWithTenant` fija contexto por transacción; extensión Prisma, bypass SUPERADMIN, aislamiento y escritura cruzada probados con 2 empresas | — |
+| AYCDS-62 | [25.0] Índices RLS y triggers soft-delete | 7 | Sonny | Listo | 100% | 7 migraciones, RLS con FORCE activo, roles `fogoneria_rls`/`fogoneria_saas`, 27 pruebas DB, soft-delete, inmutabilidad y `EXPLAIN` documentado | — |
 | AYCDS-60 | [23.0] API catálogo maestro y PriceList | 7-8 | David | Listo | 100% | CRUD de categorías, platos y modificadores; listas de precios, upsert masivo y `resolvePrice`; DTOs validados, Swagger y tests | — |
 | AYCDS-61 | [24.0] Consola SaaS alta Tenant + cron morosidad | 7-8 | David | Listo | 100% | Endpoints SaaS, alta de tenant transaccional, suspender/reactivar/plan, métricas MRR, cron diario 03:00 y auditoría; tests | — |
-| AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | En curso | 95% | `/app/productos` (5 tabs) consumiendo la API de catálogo (tarea 60): CRUD de productos/categorías/modificadores, listas de precios y carta virtual, con estados de carga/error y sin mocks de catálogo | Verificación en vivo contra PostgreSQL |
-| AYCDS-65 | [27.0] UI consola SaaS MRR empresas | 7-8 | Joshua | Por hacer | 80% | `/saas` con 3 empresas mock | Conexión a API, MRR real |
-| AYCDS-66 | [28.0] QA aislamiento y RBAC + acta 1 | 8 | Sebastián | Por hacer | 0% | Tests "Hello World" | Suite multi-tenant/RBAC, acta |
+| AYCDS-63 | [26.0] UI catálogo Maestro/precios/carta | 7-8 | Diego | Listo | 100% | `/app/productos` consume la API real: CRUD, listas de precios y carta; verificado contra PostgreSQL | — |
+| AYCDS-65 | [27.0] UI consola SaaS MRR empresas | 7-8 | Joshua | Listo | 100% | `/saas` conectada a `/saas/tenants` y `/saas/metrics`; suspender/reactivar verificado, MRR y estados reales | — |
+| AYCDS-66 | [28.0] QA aislamiento y RBAC + acta 1 | 8 | Sebastián | En curso | 95% | Suites 52 unit + 27 DB + 10 e2e + 37 web, pruebas cross-tenant y `docs/acta-qa-aycds-66.md` | Firmas del acta y cierre en Jira |
 
 ---
 
@@ -117,7 +117,7 @@
 
 ### AYCDS-55 — [20.0] Setup Next.js rutas protegidas por rol
 
-- **Semana:** 5 | **Responsable:** Joshua Chávez | **Estado Jira:** En curso | **Avance:** 95%
+- **Semana:** 5 | **Responsable:** Joshua Chávez | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "App Router Tailwind shadcn rutas /app /cocina /mozo /saas RDES-01 RF-02."
 - **Qué debe hacerse:**
   1. Revisar y mantener las rutas del App Router: `/app`, `/app/cocina`, `/app/mozo`, `/saas` (el repo usa design system propio en lugar de shadcn; documentar la decisión).
@@ -127,8 +127,7 @@
   5. Eliminar la confianza en `localStorage` para autorización y agregar pruebas de acceso por rol.
 - **Archivos/rutas:** `apps/web/proxy.ts`, `apps/web/lib/auth.ts`, `apps/web/lib/permissions.ts`, `apps/web/components/auth/**`
 - **Criterio de aceptación:** un usuario que accede por URL a una ruta de otro rol es redirigido; la sesión no puede alterarse desde DevTools; rutas privadas sin sesión redirigen al login.
-- **Evidencia:** `proxy.ts` verifica en cada request la cookie `fogoneria.session` HttpOnly/SameSite firmada con HS256 (`lib/session.ts`, `jose`, `SESSION_SECRET`), con ventana deslizante de 15 min y tope absoluto de 8 h, emitida por `app/api/session/route.ts` (rate limit 5/10 min, `Cache-Control: no-store`). El access token de la API vive en `fogoneria.token` (HttpOnly) y solo lo usa el BFF `app/api/backend/[...path]`; ya no hay JWT en `localStorage`. Logout server-side (`/api/session/logout`) borra ambas cookies y redirige con 303. `appRoleFromApi`/`appUserFromApi` fallan cerrado ante rol o sucursal desconocidos (cajero incluido) y no se usan empresa/sucursales demo con sesión. Pruebas: `lib/auth.test.ts`, `lib/session.test.ts`, `proxy.test.ts`, `app/api/session/route.test.ts`, `app/api/session/logout/route.test.ts` y `app/api/backend/[...path]/route.test.ts` (**34/34**). `lint`, `check-types` y `build` (47 rutas) verdes.
-- **Pendiente para Listo:** verificación en vivo del login a través de `/api/session` (cookies + redirect por rol + BFF) con la API y PostgreSQL levantados; en este entorno el puerto `5433` no responde. Se cierra junto con la verificación pendiente de 57/63.
+- **Evidencia:** `proxy.ts` verifica en cada request la cookie `fogoneria.session` HttpOnly/SameSite firmada con HS256 (`lib/session.ts`, `jose`, `SESSION_SECRET`), con ventana deslizante de 15 min y tope absoluto de 8 h, emitida por `app/api/session/route.ts` (rate limit 5/10 min, `Cache-Control: no-store`). El access token de la API vive en `fogoneria.token` (HttpOnly) y solo lo usa el BFF `app/api/backend/[...path]`; ya no hay JWT en `localStorage`. Logout server-side (`/api/session/logout`) borra ambas cookies y redirige con 303. `appRoleFromApi`/`appUserFromApi` fallan cerrado ante rol o sucursal desconocidos (cajero incluido) y no se usan empresa/sucursales demo con sesión. Pruebas: `lib/auth.test.ts`, `lib/session.test.ts`, `proxy.test.ts`, `app/api/session/route.test.ts`, `app/api/session/logout/route.test.ts` y `app/api/backend/[...path]/route.test.ts` (**37/37**). `lint`, `check-types` y `build` (47 rutas) verdes. Verificado en vivo con la API y PostgreSQL: login por `/api/session`, cookie HttpOnly y métricas vía BFF. Se añadió `SESSION_COOKIE_SECURE=false` para HTTP local en Compose; en producción queda `true`.
 
 ---
 
@@ -150,7 +149,7 @@
 
 ### AYCDS-53 — [19.0] Middleware RLS `tenant_id`/`branch_id`
 
-- **Semana:** 6 | **Responsable:** David Piñarreta | **Estado Jira:** En curso | **Avance:** 95%
+- **Semana:** 6 | **Responsable:** David Piñarreta | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Aislamiento geografico inyeccion auto RD-02 RNF-01 CT-FG-01 + tests."
 - **Qué debe hacerse:**
   1. Resolver `empresa_id` y `sucursal_id` desde el JWT en cada request (contexto de tenant).
@@ -159,13 +158,13 @@
   4. Escribir pruebas de aislamiento (empresa A no ve datos de empresa B).
 - **Archivos/rutas:** `apps/api/src/modules/tenant/**`, `apps/api/src/common/context/**`, `apps/api/prisma/prisma.service.ts`
 - **Criterio de aceptación:** todas las consultas operativas quedan filtradas por tenant/sucursal; las pruebas de aislamiento pasan; no se puede forzar otro tenant desde el body o query.
-- **Evidencia:** `TenantContextService` (AsyncLocalStorage) + `TenantContextInterceptor`; extensión `withTenantScope` (`prisma/tenant.extension.ts`) que inyecta `empresa_id`/`sucursal_id` en `findMany`, `findFirst`, `count`, `aggregate`, `groupBy`, `updateMany`, `deleteMany`, `create` y `createMany`; SUPERADMIN con bypass; `tenant-scope.spec.ts` cubre merge por AND e inyección en creates. Prueba real con 2 empresas: la empresa B ve solo su sucursal y 0 órdenes/categorías de A. Falta la prueba de escritura cruzada y el RLS nativo de la tarea 62.
+- **Evidencia:** `TenantContextService` (AsyncLocalStorage) + `TenantContextInterceptor`; extensión `withTenantScope` (`prisma/tenant.extension.ts`) que inyecta `empresa_id`/`sucursal_id` en `findMany`, `findFirst`, `count`, `aggregate`, `groupBy`, `updateMany`, `deleteMany`, `create` y `createMany`; SUPERADMIN con bypass; `tenant-scope.spec.ts` cubre merge por AND e inyección en creates. Prueba real con 2 empresas: la empresa B ve solo su sucursal y 0 órdenes/categorías de A. `runWithTenant` fija `app.empresa_id`, `app.sucursal_id`, `app.usuario_id` y `app.bypass` por transacción; con FORCE RLS activo se verificaron lectura y escritura cruzadas (404/rechazo) y el bypass del rol SaaS.
 
 ---
 
 ### AYCDS-57 — [21.0] Login y Onboarding logo/RUC
 
-- **Semana:** 5-6 | **Responsable:** Diego Arévalo | **Estado Jira:** En curso | **Avance:** 95%
+- **Semana:** 5-6 | **Responsable:** Diego Arévalo | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Pantallas login + wizard onboarding PR-01 PR-02 + Auth backend."
 - **Qué debe hacerse:**
   1. Conectar la pantalla `/` al endpoint real de login; hoy el campo contraseña es decorativo.
@@ -175,13 +174,13 @@
   5. Persistir los datos y redirigir según el rol al finalizar.
 - **Archivos/rutas:** `apps/web/app/page.tsx`, `apps/web/components/auth/**`, `apps/web/app/onboarding/page.tsx`, `apps/web/components/onboarding/**`, `apps/api/src/modules/onboarding/**`
 - **Criterio de aceptación:** login real contra la API; onboarding crea empresa/RUC/logo en la base de datos; errores visibles para el usuario.
-- **Evidencia:** `lib/api.ts` (cliente `fetch` con `NEXT_PUBLIC_API_URL`, JWT en `localStorage["fogoneria:token"]` y `ApiError`), `lib/auth-api.ts` (`loginRequest`) y `lib/auth.ts` (`appUserFromApi`, `branchSlugFromApi`, cookie `fogoneria.role`/`fogoneria.branch` para no romper el RBAC de `proxy.ts`); `LoginContent.tsx` con `await login(...)`, estado `loading`, botones demo (`Fogoneria123!`) y mensajes de error/tenant suspendido; `OnboardingContent.tsx` reescrito con los 3 pasos reales, validación de RUC (módulo 11, `lib/onboarding-api.ts`), `DropZone` con archivo/URL de logo (el archivo se lee como data URL ≤2 MB), `submitOnboarding()` y auto-login + redirect por rol. **Backend nuevo:** `apps/api/src/modules/onboarding/**` expone `POST /api/v1/onboarding` (`@Public()`): valida RUC, rechaza duplicados (409) y en una transacción crea empresa TRIAL con `logo_url`, sucursal matriz, admin con bcrypt, lista de precios "Carta", lead `GANADO` y evento de auditoría; el body parser sube a 4 MB en `main.ts` para admitir el logo. Verificado con 3 tests unitarios; `web lint`/`check-types`/`build` y `api lint`/`test` (28) /`test:e2e` (7) verdes. Falta la verificación en vivo (sin Docker/PostgreSQL en el entorno).
+- **Evidencia:** `lib/api.ts` (cliente `fetch` al BFF con `ApiError`), `lib/auth-api.ts` y `lib/auth.ts` (`appUserFromApi`, `branchSlugFromApi`); el JWT nunca toca `localStorage`, vive en la cookie HttpOnly `fogoneria.token`. `LoginContent.tsx` con login real, estado `loading`, botones demo (`Fogoneria123!`) y mensajes de error/tenant suspendido; `OnboardingContent.tsx` con los 3 pasos, validación de RUC (módulo 11), `DropZone` con archivo/URL de logo (data URL ≤2 MB), `submitOnboarding()` y auto-login + redirect por rol. **Backend:** `apps/api/src/modules/onboarding/**` expone `POST /api/v1/onboarding` (`@Public()`): valida RUC, rechaza duplicados (409) y en una transacción crea empresa TRIAL con `logo_url`, sucursal matriz, admin con bcrypt, lista "Carta", lead `GANADO` y auditoría; body parser de 4 MB solo en esa ruta. Verificado en vivo: alta QA con RUC `20100000301`, login del admin creado y acceso a la API bajo RLS.
 
 ---
 
 ### AYCDS-58 — [22.0] Kanban, CI y Docker Compose
 
-- **Semana:** 5-6 | **Responsable:** Sebastián Chicata | **Estado Jira:** En curso | **Avance:** 25%
+- **Semana:** 5-6 | **Responsable:** Sebastián Chicata | **Estado Jira:** En curso | **Avance:** 90%
 - **Descripción Jira:** "Tablero, backlog priorizado, lint/test, docker Postgres+api+web RDES-01."
 - **Qué debe hacerse:**
   1. Crear `docker-compose.yml` con servicios `postgres`, `api` y `web`.
@@ -191,7 +190,7 @@
   5. Documentar el tablero y el backlog priorizado (puede ser `docs/backlog.md`).
 - **Archivos/rutas:** `docker-compose.yml`, `apps/api/Dockerfile`, `apps/web/Dockerfile`, `.github/workflows/ci.yml`, `.env.example`, `docs/backlog.md`
 - **Criterio de aceptación:** `docker compose up` levanta el stack; el pipeline CI pasa en un PR; backlog documentado y priorizado.
-- **Evidencia:** `docker-compose.yml` levanta PostgreSQL 16 en `localhost:5433` (evita el 5432 de otros proyectos), con healthcheck, volumen `pgdata` y script `docker/initdb/01-shadow.sql` que crea `fogoneria_shadow`; scripts `db:up`, `db:down`, `db:logs`, `db:status` y `db:psql` en `apps/api/package.json`; validado con `db:deploy` y `db:seed` contra la base real. Falta Dockerfiles de api/web, workflow CI y `docs/backlog.md`.
+- **Evidencia:** Compose completo (`db`, `migrate`, `roles`, `api`, `web`) con PostgreSQL 16 en 5433, healthchecks, volumen `pgdata` y shadow DB. `apps/api/Dockerfile` y `apps/web/Dockerfile` multi-stage (Next `standalone`), `.dockerignore` y `docs/backlog.md` priorizado. Workflow `.github/workflows/ci.yml` con Postgres 16, migraciones, roles RLS, FORCE, lint, tipos, suite unit/DB/web y build. Imágenes construidas y probadas: API responde health/login/6 platos; web sirve la home (200); `docker compose config` válido. Falta ejecutar el pipeline en GitHub y el smoke completo en un volumen limpio.
 
 ---
 
@@ -212,7 +211,7 @@
 
 ### AYCDS-62 — [25.0] Índices RLS y triggers soft-delete
 
-- **Semana:** 7 | **Responsable:** Sonny De La Cruz | **Estado Jira:** En curso | **Avance:** 85%
+- **Semana:** 7 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Constraints RLS + inmutabilidad contable RD-01 RCAL-03."
 - **Qué debe hacerse:**
   1. Crear índices por `empresa_id`, `sucursal_id` y claves de búsqueda frecuentes.
@@ -222,8 +221,7 @@
   5. Verificar planes con `EXPLAIN` y agregar pruebas.
 - **Archivos/rutas:** `apps/api/prisma/migrations/2026102012*/**`, `apps/api/prisma/schema.prisma`, `apps/api/test/db/**`, `db/scripts/rls/**`, `docs/rls-modelo.md`, `docs/errores-db.md`, `docs/modelo-datos.md`
 - **Criterio de aceptación:** `EXPLAIN` usa los índices; RLS bloquea cruces de tenant; el borrado lógico es verificable; no se puede alterar un registro contable cerrado.
-- **Evidencia:** migraciones `20261020120000_indices_tenant`, `20261020120100_rls_tenant`, `20261020120200_soft_delete` y `20261020120300_inmutabilidad_contable`; 21 índices nuevos; RLS en 40 tablas (empresa, empresa+sucursal, hijas por `EXISTS`, `movimientos_caja` vía turno, `usuarios` con superadmin oculto); 16 entidades con `deleted_at`/`deleted_by` y únicos parciales; triggers de turnos, caja, comprobantes, kardex, puntos, auditoría, órdenes, líneas y gastos con SQLSTATE `45000`; `schema.prisma` validado con `prisma validate`; 25 specs en `apps/api/test/db/` (`DATABASE_URL_TEST`); `db/scripts/rls/000-roles.sql` y `010-force-rls.sql`; catálogo de errores en `docs/errores-db.md`.
-- **Pendiente para cerrar:** correr `prisma migrate deploy` + `test:db` contra PostgreSQL 16 y adjuntar `EXPLAIN (ANALYZE, BUFFERS)` de las consultas de órdenes/caja/kardex; activar `FORCE RLS` cuando la API fije `app.*` por transacción.
+- **Evidencia:** migraciones `20261020120000_indices_tenant`, `20261020120100_rls_tenant`, `20261020120200_soft_delete` y `20261020120300_inmutabilidad_contable`; 21 índices nuevos; RLS en 40 tablas (empresa, empresa+sucursal, hijas por `EXISTS`, `movimientos_caja` vía turno, `usuarios` con superadmin oculto); 16 entidades con `deleted_at`/`deleted_by` y únicos parciales; triggers de turnos, caja, comprobantes, kardex, puntos, auditoría, órdenes, líneas y gastos con SQLSTATE `45000`; `schema.prisma` validado con `prisma validate`; 27 specs en `apps/api/test/db/` (`DATABASE_URL_TEST`); `db/scripts/rls/000-roles.sql` y `010-force-rls.sql`; catálogo de errores en `docs/errores-db.md`. Migraciones y FORCE aplicados en `fogoneria_db` y `fogoneria_test`; `EXPLAIN (ANALYZE, BUFFERS)` de órdenes, turnos y kardex en `docs/explain-rls.md` (usan `idx_ordenes_tenant_fecha`, `idx_turnos_tenant_fecha` y `idx_movinv_tenant_insumo_fecha`).
 
 ---
 
@@ -261,7 +259,7 @@
 
 ### AYCDS-63 — [26.0] UI catálogo Maestro/precios/carta virtual
 
-- **Semana:** 7-8 | **Responsable:** Diego Arévalo | **Estado Jira:** En curso | **Avance:** 95%
+- **Semana:** 7-8 | **Responsable:** Diego Arévalo | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Panel Maestro, modificadores, listas, carta PR-FG-08."
 - **Qué debe hacerse:**
   1. Conectar `/app/productos` (Maestro, Categorías, Modificadores, Listas de precios y Carta virtual) a la API de catálogo (tarea 60).
@@ -271,13 +269,13 @@
   5. Probar el flujo completo de alta/edición de plato y publicación de la carta virtual.
 - **Archivos/rutas:** `apps/web/app/app/productos/**`, `apps/web/components/erp/catalog/**`, `apps/web/lib/erp-catalog.ts`, `apps/web/lib/catalog-api.ts`
 - **Criterio de aceptación:** CRUD real desde la UI; la carta virtual muestra datos de la base de datos; no quedan mocks en el módulo.
-- **Evidencia:** `lib/catalog-api.ts` agrupa `GET /catalog/categories`, `GET /catalog/dishes?limit=100`, `GET /catalog/modifier-groups` y `GET /pricing/price-lists` + precios por lista, y las mutaciones (`createCategory`, `createDish`, `setDishActive`, `createModifierGroup`, `createPriceList`, `activatePriceList`, `setPrices`); `ModulesProvider.tsx` mantiene el catálogo en estado (`catalogLoading`/`catalogError`/`refreshCatalog`) y expone las mutaciones, con lo que `ProductsView`, `CategoriesView`, `ModifiersView` y `PriceListsView` dejaron de usar mocks; `lib/erp-catalog.ts` quedó solo con tipos/helpers (`priceOf`, `categoryName`) y los `id` del catálogo pasaron de numéricos a UUID (también en `erp`, `domain`, `dashboard`, `tenancy`, `AddItemModal` y los resúmenes), y se subió `ErpState` a v2 para no persistir el catálogo. `catalog.service.ts` incluye `platos_grupos_modificadores` en el listado. 3 tests unitarios de la API relacionados verdes, `lint` + `check-types` verdes en web. Falta la verificación en vivo (sin Docker/PostgreSQL en el entorno).
+- **Evidencia:** `lib/catalog-api.ts` agrupa `GET /catalog/categories`, `GET /catalog/dishes?limit=100`, `GET /catalog/modifier-groups` y `GET /pricing/price-lists` + precios por lista, y las mutaciones (`createCategory`, `createDish`, `setDishActive`, `createModifierGroup`, `createPriceList`, `activatePriceList`, `setPrices`); `ModulesProvider.tsx` mantiene el catálogo en estado (`catalogLoading`/`catalogError`/`refreshCatalog`) y expone las mutaciones, con lo que `ProductsView`, `CategoriesView`, `ModifiersView` y `PriceListsView` dejaron de usar mocks; `lib/erp-catalog.ts` quedó solo con tipos/helpers (`priceOf`, `categoryName`) y los `id` del catálogo pasaron de numéricos a UUID (también en `erp`, `domain`, `dashboard`, `tenancy`, `AddItemModal` y los resúmenes), y se subió `ErpState` a v2 para no persistir el catálogo. `catalog.service.ts` incluye `platos_grupos_modificadores` en el listado. Verificado en vivo contra PostgreSQL: listado de 6 platos demo, alta/baja lógica de categoría y lectura de listas de precios bajo RLS; `lint`, `check-types` y `build` (47 rutas) verdes.
 
 ---
 
 ### AYCDS-65 — [27.0] UI consola SaaS MRR empresas
 
-- **Semana:** 7-8 | **Responsable:** Joshua Chávez | **Estado Jira:** Por hacer | **Avance:** 80%
+- **Semana:** 7-8 | **Responsable:** Joshua Chávez | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "KPIs MRR, grilla empresas, Suspender/Reactivar PR-FG-03."
 - **Qué debe hacerse:**
   1. Conectar `/saas` a los endpoints de la tarea 61.
@@ -287,12 +285,13 @@
   5. Restringir el acceso a `superadmin`.
 - **Archivos/rutas:** `apps/web/app/saas/page.tsx`, `apps/web/components/dashboard/**`, `apps/web/lib/auth.ts`
 - **Criterio de aceptación:** las acciones persisten en la API; los KPIs salen de datos reales; solo `superadmin` accede.
+- **Evidencia:** `apps/web/lib/saas-api.ts` consume `GET /saas/tenants`, `GET /saas/metrics`, `POST /saas/tenants/:id/suspend` y `POST /saas/tenants/:id/reactivate`; `app/saas/page.tsx` muestra KPIs reales, estados `ACTIVE/TRIAL/SUSPENDED/EXPIRED`, confirmación `ConfirmDialog` y feedback. Verificado en vivo: tenant QA en TRIAL con 0 platos, suspensión → login/API 403, reactivación → acceso restaurado; MRR y métricas desde la API. Ruta restringida a `superadmin` por `proxy.ts`.
 
 ---
 
 ### AYCDS-66 — [28.0] QA aislamiento y RBAC + acta 1
 
-- **Semana:** 8 | **Responsable:** Sebastián Chicata | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 8 | **Responsable:** Sebastián Chicata | **Estado Jira:** En curso | **Avance:** 95%
 - **Descripción Jira:** "Pruebas multi-tenant y roles RNF-01 RF-02 + informe mensual."
 - **Qué debe hacerse:**
   1. Diseñar el plan de pruebas de aislamiento multi-tenant (empresa A vs. empresa B).
@@ -302,6 +301,7 @@
   5. Actualizar los estados de Jira con las evidencias.
 - **Archivos/rutas:** `apps/api/test/**`, `apps/web/**/*.test.*`, `docs/actas/acta-01.md`, `.github/workflows/ci.yml`
 - **Criterio de aceptación:** suite de aislamiento/RBAC en CI; acta 1 adjunta; Jira actualizado.
+- **Evidencia:** 52 pruebas unitarias API, 27 de base de datos (RLS, soft-delete, inmutabilidad, email global), 10 e2e y 37 web. Casos reales: empresa A no ve platos de B (0 vs 6), lectura cruzada 404, escritura cruzada rechazada, tenant suspendido 403, email activo duplicado rechazado y reutilización tras soft-delete. Acta en `docs/acta-qa-aycds-66.md`; CI en `.github/workflows/ci.yml`. Falta firmar el acta y cerrar Jira.
 
 ---
 
@@ -345,7 +345,7 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 65 UI SaaS | Joshua Chávez | 61 API SaaS | David Piñarreta | Sin API solo hay mocks |
 | 66 QA | Sebastián Chicata | 48, 53, 60, 61 + 58 | David Piñarreta + Sebastián Chicata | Requiere funcionalidad real y CI |
 
-**Completadas:** 32, 42 (Sonny) y 44, 48, 60, 61 (David). **En curso:** 53 (David), 55 (Joshua), 58 (Sebastián), 57 y 63 (Diego, ya integradas a la API), 62 (Sonny, 85%: falta correr `EXPLAIN`/`test:db` contra Postgres) y 65 (Joshua, aún con UI mock). **Pueden iniciar hoy:** 66 al cerrar 58.
+**Completadas (12):** 32, 42, 62 (Sonny); 44, 48, 53, 60, 61 (David); 55, 65 (Joshua); 57, 63 (Diego). **En curso:** 58 (Sebastián, 90%: falta CI en GitHub y smoke Compose) y 66 (Sebastián, 95%: falta firmar acta).
 
 ### 5.3 Matriz de inicio: ¿puede cada uno avanzar cuando quiera?
 
@@ -357,16 +357,16 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 | 42 Migraciones | Sonny De La Cruz | **Hecha** | 32 (Sonny) | Dura |
 | 44 NestJS modular | David Piñarreta | **Hecha** | 32 resuelto | Blanda (scaffold) |
 | 48 JWT | David Piñarreta | **Hecha** | 44 (David); 42 resuelto | Dura para cerrar |
-| 53 RLS tenant | David Piñarreta | Parcial | 48 (David); 32/42 resueltos | Dura |
-| 55 Rutas protegidas | Joshua Chávez | **Sí** | — | Independiente |
-| 57 Login/onboarding | Diego Arévalo | **Hecha; falta verificación** | 48 (David) resuelto | Blanda |
-| 58 Docker/CI | Sebastián Chicata | **Sí** | — | Independiente |
+| 53 RLS tenant | David Piñarreta | **Hecha** | 48 (David); 32/42 resueltos | Dura |
+| 55 Rutas protegidas | Joshua Chávez | **Hecha** | — | Independiente |
+| 57 Login/onboarding | Diego Arévalo | **Hecha** | 48 (David) resuelto | Blanda |
+| 58 Docker/CI | Sebastián Chicata | **Parcial (90%)** | — | Independiente |
 | 60 API catálogo | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
 | 61 API SaaS | David Piñarreta | **Hecha** | 44/48/53 (David) + 32/42 (Sonny) | Dura |
-| 62 Índices/RLS | Sonny De La Cruz | Parcial (85%) | 32/42 resueltos | Dura para cerrar |
-| 63 UI catálogo | Diego Arévalo | **Hecha; falta verificación** | 60 (David) resuelto | Blanda |
-| 65 UI SaaS | Joshua Chávez | **Sí, UI** | 61 (David) para datos reales | Blanda |
-| 66 QA | Sebastián Chicata | No | 48/53 (David) + 60/61 (David) + 58 (Sebastián) | Última |
+| 62 Índices/RLS | Sonny De La Cruz | **Hecha** | 32/42 resueltos | Dura para cerrar |
+| 63 UI catálogo | Diego Arévalo | **Hecha** | 60 (David) resuelto | Blanda |
+| 65 UI SaaS | Joshua Chávez | **Hecha** | 61 (David) para datos reales | Blanda |
+| 66 QA | Sebastián Chicata | **95%** | 48/53 + 60/61 + 58 | Última |
 
 **Definiciones:**
 - **Dependencia dura:** no se puede *cerrar* la tarea sin la otra.
@@ -467,3 +467,7 @@ docker compose up --build
 | 2026-10-20 | 63 | Diego Arévalo | Revisión P0/P1: modificadores por `id` (sync transaccional, 400 ids ajenos/repetidos, 409 si la opción está en órdenes), tenant y sucursales hidratados de la API, paginación de platos + abort de peticiones, rol real `cajero` en el RBAC y rollback de altas de plato/lista | `apps/api/src/modules/catalog/{catalog.service.ts,dto/modifier-group.dto.ts}`, `apps/web/lib/{tenant-api,catalog-api,auth,permissions}.ts`, `apps/web/components/dashboard/{ModulesProvider,AppSidebar,DashboardShell}.tsx`, `apps/web/proxy.ts`; `catalog.service.spec` 10; `api test` 52 + e2e 10, `web build` 45 rutas |
 | 2026-10-20 | 55 (95%) | Joshua Chávez | Sesión HttpOnly + BFF sobre `development`: cookie `fogoneria.session` firmada HS256 con ventana deslizante de 15 min y tope de 8 h, refresh en `proxy.ts`; access token de la API movido a cookie HttpOnly (`fogoneria.token`) y BFF `/api/backend`; logout server-side con 303; rate limit 5/10 min; role/sucursal desconocidos fallan cerrado (cajero incluido); sin tenant demo con sesión. 34 tests web (proxy, route, logout, BFF, RBAC). Falta verificación en vivo | `apps/web/lib/{session,backend,session-api,auth}.ts`, `app/api/session/**`, `app/api/backend/[...path]/route.ts`, `proxy.ts`, `components/dashboard/ModulesProvider.tsx`; `test` 34/34, `lint`, `check-types` y `build` (47 rutas) verdes |
 | 2026-10-20 | 62 (85%) | Sonny De La Cruz | Índices compuestos/parciales, RLS en 40 tablas con roles separados y contexto `app.*`, soft-delete en 16 maestras con únicos parciales y `restore_row`, e inmutabilidad de turnos/caja/comprobantes/kardex/puntos/auditoría/órdenes/gastos con SQLSTATE `45000`. `schema.prisma` sincronizado y validado; 25 specs de BD y catálogo de errores | 4 migraciones `2026102012*`, `apps/api/prisma/schema.prisma`, `apps/api/test/db/**`, `db/scripts/rls/**`, `docs/{rls-modelo,errores-db,modelo-datos}.md`; `prisma validate` OK; pendiente `migrate deploy` + `EXPLAIN` + `test:db` en Postgres |
+| 2026-10-20 | 53 y 62 | David / Sonny | RLS runtime: `runWithTenant` fija `app.empresa_id/sucursal_id/usuario_id/bypass` por transacción, migración de política INSERT para onboarding, rol `fogoneria_saas` con BYPASSRLS y FORCE aplicado en `fogoneria_db` y `fogoneria_test`. 27 pruebas DB (incluye escritura cruzada) y `EXPLAIN` de órdenes/turnos/kardex | `apps/api/src/prisma/prisma.service.ts`, `common/context/tenant.interceptor.ts`, `migrations/20261020120400_rls_onboarding`, `db/scripts/rls/000-roles.sql`, `docs/explain-rls.md`; 27/27 DB |
+| 2026-10-20 | 57, 63 y 65 | Diego / Joshua | Verificación en vivo: login, onboarding real, catálogo/precios y consola SaaS. `/saas` consume tenants/métricas y suspender/reactivar con confirmación; tenant suspendido recibe 403. Fix de `express` faltante y `SESSION_COOKIE_SECURE` para HTTP local | `apps/web/lib/saas-api.ts`, `app/saas/page.tsx`, `lib/session.ts`, `docker-compose.yml`; tenant QA 0 platos, suspensión 403, reactivación OK, 37 tests web |
+| 2026-10-20 | 58 (90%) | Sebastián Chicata | Dockerfiles multi-stage api/web (Next standalone), Compose con `migrate`/`roles`/`api`/`web`, `.dockerignore`, workflow CI con Postgres+RLS y `docs/backlog.md`. Imágenes construidas: API health/login/6 platos, web 200 | `apps/{api,web}/Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.github/workflows/ci.yml`, `docs/backlog.md`; `docker compose config` OK |
+| 2026-10-20 | 66 (95%) | Sebastián Chicata | Acta QA con matriz RBAC, aislamiento multi-tenant, sesión/BFF, suspensión y email global; suites 52 unit + 27 DB + 10 e2e + 37 web | `docs/acta-qa-aycds-66.md`; pendiente firmas y Jira |

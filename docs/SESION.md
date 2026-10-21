@@ -1,5 +1,24 @@
 # SESION — estado entre sesiones
 
+## 2026-10-20 — Cierre Fases 2–5: RLS runtime, SaaS real, Docker/CI y QA
+
+- Objetivo: cerrar el plan de AYCDS 53/55/57/58/62/63/65/66 con evidencia real.
+- Hecho:
+  - RLS runtime: `runWithTenant` fija `app.*` por transacción, migración `20261020120400_rls_onboarding`, rol `fogoneria_saas` con BYPASSRLS y FORCE activo en `fogoneria_db`/`fogoneria_test`. Pruebas DB 27/27.
+  - Aislamiento verificado: sin contexto 0 filas, demo 6 platos, QA 0; lectura cruzada 404 y escritura cruzada rechazada.
+  - Email global: índice `uq_usuarios_email_activo` (solo activos); 2 pruebas nuevas.
+  - Web: estado/persistencia por tenant, BFF valida `fogoneria.session`; 37 tests.
+  - `/saas` conectada a la API (`lib/saas-api.ts`): métricas, suspender/reactivar con `ConfirmDialog`; tenant suspendido → 403.
+  - Dockerfiles api/web construidos y probados (API health/login/6 platos; web 200), Compose con `migrate`/`roles`/`api`/`web`, `.dockerignore`, CI y `docs/backlog.md`.
+  - Cookie: `SESSION_COOKIE_SECURE=false` para HTTP local en Compose; producción la deja `true`.
+  - Docs: `TAREAS-SEMANAS-5-8.md` al 99% (12 cerradas, 58/66 en curso), `docs/acta-qa-aycds-66.md`, `docs/explain-rls.md`, `docs/backlog.md` y `README.md` con quickstart.
+  - Jira sincronizado: 55/57/62/63/65 a Listo; 58 y 66 a En curso con comentarios de evidencia.
+  - Verificación final: web 37/37, `check-types`, `lint` (estilos OK), `docker compose config` OK.
+- Pendiente:
+  - Correr CI en GitHub y smoke completo de `docker compose up` en volumen limpio.
+  - Firmar el acta QA.
+- Próximo paso: commit/PR de cierre y ejecución del pipeline.
+
 ## 2026-10-20 — AYCDS-62: índices, RLS, soft-delete e inmutabilidad (rama `feat/db-rls-softdelete`)
 
 - Objetivo: implementar la tarea 62 sobre `development` sin tocar `schema.prisma` de otras tareas.
