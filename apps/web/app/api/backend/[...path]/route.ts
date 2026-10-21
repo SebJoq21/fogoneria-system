@@ -19,10 +19,19 @@ function unauthorized(): NextResponse {
 }
 
 async function forward(request: NextRequest, context: RouteContext): Promise<NextResponse> {
-  // El RBAC vive en la cookie firmada; sin sesión válida no se reenvía nada,
-  // aunque el access token siguiera presente.
-  const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
-  if (!session) return unauthorized();
+  const { path } = await context.params;
+  const targetPath = path.map(encodeURIComponent).join("/");
+
+  // El alta pública de restaurantes no tiene sesión: la API la expone con
+  // `@Public()` y rate limit. El resto del BFF sí exige la cookie firmada.
+  const publicOnboarding = request.method === "POST" && targetPath === "onboarding";
+
+  if (!publicOnboarding) {
+    // El RBAC vive en la cookie firmada; sin sesión válida no se reenvía nada,
+    // aunque el access token siguiera presente.
+    const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
+    if (!session) return unauthorized();
+  }
 
   if (MUTATING.has(request.method)) {
     const origin = request.headers.get("origin");
@@ -43,8 +52,7 @@ async function forward(request: NextRequest, context: RouteContext): Promise<Nex
     }
   }
 
-  const { path } = await context.params;
-  const target = new URL(`${API_BASE_URL}/${path.map(encodeURIComponent).join("/")}`);
+  const target = new URL(`${API_BASE_URL}/${targetPath}`);
   target.search = request.nextUrl.search;
 
   const headers = new Headers();
