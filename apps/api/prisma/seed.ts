@@ -34,16 +34,16 @@ const minutesAgo = (minutes: number) =>
 const timeOnly = (hours: number, minutes = 0) =>
   new Date(Date.UTC(1970, 0, 1, hours, minutes, 0, 0));
 
-const EMPRESA = '11111111-1111-1111-1111-111111111111';
-const MIRAFLORES = '22222222-2222-2222-2222-222222222222';
-const SURCO = '33333333-3333-3333-3333-333333333333';
-const SAN_ISIDRO = '44444444-4444-4444-4444-444444444444';
-const SUPERADMIN = '55555555-5555-5555-5555-555555555555';
-const ADMIN = '55555555-5555-5555-5555-555555555556';
-const GERENTE = '55555555-5555-5555-5555-555555555557';
-const COCINERO = '55555555-5555-5555-5555-555555555558';
-const MESERO = '55555555-5555-5555-5555-555555555559';
-const CAJERO = '55555555-5555-5555-5555-555555555560';
+const EMPRESA = '11111111-1111-4111-8111-111111111111';
+const MIRAFLORES = '22222222-2222-4222-8222-222222222222';
+const SURCO = '33333333-3333-4333-8333-333333333333';
+const SAN_ISIDRO = '44444444-4444-4444-8444-444444444444';
+const SUPERADMIN = '55555555-5555-4555-8555-555555555555';
+const ADMIN = '55555555-5555-4555-8555-555555555556';
+const GERENTE = '55555555-5555-4555-8555-555555555557';
+const COCINERO = '55555555-5555-4555-8555-555555555558';
+const MESERO = '55555555-5555-4555-8555-555555555559';
+const CAJERO = '55555555-5555-4555-8555-555555555560';
 
 const CEVICHE = '88888888-8888-8888-8888-888888888881';
 const TEQUENOS = '88888888-8888-8888-8888-888888888882';
@@ -52,56 +52,79 @@ const AJI = '88888888-8888-8888-8888-888888888884';
 const PISCO = '88888888-8888-8888-8888-888888888885';
 const CHICHA = '88888888-8888-8888-8888-888888888886';
 
-const CARTA = '99999999-9999-9999-9999-999999999991';
-const DELIVERY = '99999999-9999-9999-9999-999999999992';
-const EVENTOS = '99999999-9999-9999-9999-999999999993';
+const CARTA = '99999999-9999-4999-8999-999999999991';
+const DELIVERY = '99999999-9999-4999-8999-999999999992';
+const EVENTOS = '99999999-9999-4999-8999-999999999993';
 
-const GRUPO_TAMANO = '77777777-7777-7777-7777-777777777771';
-const GRUPO_EXTRAS = '77777777-7777-7777-7777-777777777772';
-const GRUPO_COCCION = '77777777-7777-7777-7777-777777777773';
+const GRUPO_TAMANO = '77777777-7777-4777-8777-777777777771';
+const GRUPO_EXTRAS = '77777777-7777-4777-8777-777777777772';
+const GRUPO_COCCION = '77777777-7777-4777-8777-777777777773';
 
-const PROVEEDOR_AGRO = 'dddddddd-dddd-dddd-dddd-dddddddddd01';
-const PROVEEDOR_FRUTAS = 'dddddddd-dddd-dddd-dddd-dddddddddd02';
+const PROVEEDOR_AGRO = 'dddddddd-dddd-4ddd-8ddd-dddddddddd01';
+const PROVEEDOR_FRUTAS = 'dddddddd-dddd-4ddd-8ddd-dddddddddd02';
 
-const INSUMO_LOMO = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1';
-const INSUMO_AJI = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2';
-const INSUMO_PISCO = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3';
-const INSUMO_PAPA = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee4';
-const INSUMO_LIMON = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee5';
-const INSUMO_MAIZ = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee6';
+const INSUMO_LOMO = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1';
+const INSUMO_AJI = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2';
+const INSUMO_PISCO = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3';
+const INSUMO_PAPA = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee4';
+const INSUMO_LIMON = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee5';
+const INSUMO_MAIZ = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee6';
 
-const CLIENTE_VALERIA = 'ffffffff-ffff-ffff-ffff-fffffffffff1';
-const CLIENTE_DIEGO = 'ffffffff-ffff-ffff-ffff-fffffffffff2';
-const CLIENTE_CAMILA = 'ffffffff-ffff-ffff-ffff-fffffffffff3';
-const CLIENTE_JORGE = 'ffffffff-ffff-ffff-ffff-fffffffffff4';
-const CLIENTE_LUCIA = 'ffffffff-ffff-ffff-ffff-fffffffffff5';
+const CLIENTE_VALERIA = 'ffffffff-ffff-4fff-8fff-fffffffffff1';
+const CLIENTE_DIEGO = 'ffffffff-ffff-4fff-8fff-fffffffffff2';
+const CLIENTE_CAMILA = 'ffffffff-ffff-4fff-8fff-fffffffffff3';
+const CLIENTE_JORGE = 'ffffffff-ffff-4fff-8fff-fffffffffff4';
+const CLIENTE_LUCIA = 'ffffffff-ffff-4fff-8fff-fffffffffff5';
 
-const ROL_MOZO = '10101010-1010-1010-1010-101010101010';
-const ROL_COCINERO = '20202020-2020-2020-2020-202020202020';
-const ROL_BARMAN = '30303030-3030-3030-3030-303030303030';
-const ROL_CAJERO = '40404040-4040-4040-4040-404040404040';
-const ROL_ANFITRION = '50505050-5050-5050-5050-505050505050';
+const ROL_MOZO = '10101010-1010-4010-8010-101010101010';
+const ROL_COCINERO = '20202020-2020-4020-8020-202020202020';
+const ROL_BARMAN = '30303030-3030-4030-8030-303030303030';
+const ROL_CAJERO = '40404040-4040-4040-8040-404040404040';
+const ROL_ANFITRION = '50505050-5050-4050-8050-505050505050';
 
-const EMP_1 = '11111111-2222-3333-4444-555555555551';
-const EMP_2 = '11111111-2222-3333-4444-555555555552';
-const EMP_3 = '11111111-2222-3333-4444-555555555553';
-const EMP_4 = '11111111-2222-3333-4444-555555555554';
-const EMP_5 = '11111111-2222-3333-4444-555555555555';
-const EMP_6 = '11111111-2222-3333-4444-555555555556';
+const EMP_1 = '11111111-2222-4333-8444-555555555551';
+const EMP_2 = '11111111-2222-4333-8444-555555555552';
+const EMP_3 = '11111111-2222-4333-8444-555555555553';
+const EMP_4 = '11111111-2222-4333-8444-555555555554';
+const EMP_5 = '11111111-2222-4333-8444-555555555555';
+const EMP_6 = '11111111-2222-4333-8444-555555555556';
 
-const MESA_3 = '20000000-0000-0000-0000-000000000003';
-const MESA_7 = '20000000-0000-0000-0000-000000000007';
-const MESA_8 = '20000000-0000-0000-0000-000000000008';
+const MESA_3 = '20000000-0000-4000-8000-000000000003';
+const MESA_7 = '20000000-0000-4000-8000-000000000007';
+const MESA_8 = '20000000-0000-4000-8000-000000000008';
 
-const ORDEN_1042 = '40000000-0000-0000-0000-000000001042';
-const ORDEN_1041 = '40000000-0000-0000-0000-000000001041';
-const ORDEN_1040 = '40000000-0000-0000-0000-000000001040';
-const ORDEN_1039 = '40000000-0000-0000-0000-000000001039';
+const ORDEN_1042 = '40000000-0000-4000-8000-000000001042';
+const ORDEN_1041 = '40000000-0000-4000-8000-000000001041';
+const ORDEN_1040 = '40000000-0000-4000-8000-000000001040';
+const ORDEN_1039 = '40000000-0000-4000-8000-000000001039';
 
-const TURNO_CAJA = '50000000-0000-0000-0000-000000000001';
-const POZO = '90000000-0000-0000-0000-000000000001';
+const TURNO_CAJA = '50000000-0000-4000-8000-000000000001';
+const POZO = '90000000-0000-4000-8000-000000000001';
+
+/**
+ * Id del tenant demo en versiones anteriores. Sus UUIDs no cumplían RFC 4122
+ * y por eso los DTO con `@IsUUID()` los rechazaban. Si este registro existe,
+ * el seed insertaría un demo duplicado con los ids nuevos: mejor fallar con
+ * una instrucción explícita que duplicar datos en silencio.
+ */
+const LEGACY_EMPRESA_ID = '11111111-1111-1111-1111-111111111111';
 
 async function main() {
+  const legacy = await prisma.empresas.findUnique({
+    where: { id: LEGACY_EMPRESA_ID },
+    select: { id: true },
+  });
+  if (legacy) {
+    throw new Error(
+      [
+        'Se detectó el dataset demo con UUIDs legacy (no RFC 4122).',
+        'Para evitar duplicados, recrea la base de datos:',
+        '  pnpm --filter api db:reset',
+        '  o, si usas Docker: docker compose down -v && docker compose up --build',
+      ].join('\n'),
+    );
+  }
+
   await prisma.empresas.createMany({
     data: [
       {
@@ -233,7 +256,7 @@ async function main() {
   await prisma.leads_cotizaciones.createMany({
     data: [
       {
-        id: '80000000-0000-0000-0000-000000000001',
+        id: '80000000-0000-4000-8000-000000000001',
         nombre: 'Carlos',
         apellido: 'Mendoza',
         telefono: '+51 999 111 222',
@@ -251,28 +274,28 @@ async function main() {
   await prisma.categorias.createMany({
     data: [
       {
-        id: '66666666-6666-6666-6666-666666666661',
+        id: '66666666-6666-4666-8666-666666666661',
         empresa_id: EMPRESA,
         nombre: 'Entradas',
         posicion: 1,
         activa: true,
       },
       {
-        id: '66666666-6666-6666-6666-666666666662',
+        id: '66666666-6666-4666-8666-666666666662',
         empresa_id: EMPRESA,
         nombre: 'Fondos',
         posicion: 2,
         activa: true,
       },
       {
-        id: '66666666-6666-6666-6666-666666666663',
+        id: '66666666-6666-4666-8666-666666666663',
         empresa_id: EMPRESA,
         nombre: 'Bebidas',
         posicion: 3,
         activa: true,
       },
       {
-        id: '66666666-6666-6666-6666-666666666664',
+        id: '66666666-6666-4666-8666-666666666664',
         empresa_id: EMPRESA,
         nombre: 'Postres',
         posicion: 4,
@@ -315,37 +338,37 @@ async function main() {
   await prisma.opciones_modificadores.createMany({
     data: [
       {
-        id: '77777777-7777-7777-7777-777777777781',
+        id: '77777777-7777-4777-8777-777777777781',
         grupo_id: GRUPO_TAMANO,
         nombre: 'Regular',
         precio_extra: 0,
       },
       {
-        id: '77777777-7777-7777-7777-777777777782',
+        id: '77777777-7777-4777-8777-777777777782',
         grupo_id: GRUPO_TAMANO,
         nombre: 'Grande',
         precio_extra: 4,
       },
       {
-        id: '77777777-7777-7777-7777-777777777783',
+        id: '77777777-7777-4777-8777-777777777783',
         grupo_id: GRUPO_EXTRAS,
         nombre: 'Queso extra',
         precio_extra: 2,
       },
       {
-        id: '77777777-7777-7777-7777-777777777784',
+        id: '77777777-7777-4777-8777-777777777784',
         grupo_id: GRUPO_EXTRAS,
         nombre: 'Palta',
         precio_extra: 3,
       },
       {
-        id: '77777777-7777-7777-7777-777777777785',
+        id: '77777777-7777-4777-8777-777777777785',
         grupo_id: GRUPO_COCCION,
         nombre: 'Al punto',
         precio_extra: 0,
       },
       {
-        id: '77777777-7777-7777-7777-777777777786',
+        id: '77777777-7777-4777-8777-777777777786',
         grupo_id: GRUPO_COCCION,
         nombre: 'Bien cocido',
         precio_extra: 0,
@@ -359,7 +382,7 @@ async function main() {
       {
         id: CEVICHE,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666661',
+        categoria_id: '66666666-6666-4666-8666-666666666661',
         sku: 'PLA-001',
         nombre: 'Ceviche Clásico',
         descripcion: 'Pesca del día, limón sutil, ají limo, cebolla roja.',
@@ -370,7 +393,7 @@ async function main() {
       {
         id: TEQUENOS,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666661',
+        categoria_id: '66666666-6666-4666-8666-666666666661',
         sku: 'PLA-002',
         nombre: 'Tequeños de Lomo',
         descripcion: 'Masa crujiente rellena de lomo saltado, huancaína.',
@@ -380,7 +403,7 @@ async function main() {
       {
         id: LOMO,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666662',
+        categoria_id: '66666666-6666-4666-8666-666666666662',
         sku: 'PLA-003',
         nombre: 'Lomo Saltado',
         descripcion:
@@ -391,7 +414,7 @@ async function main() {
       {
         id: AJI,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666662',
+        categoria_id: '66666666-6666-4666-8666-666666666662',
         sku: 'PLA-004',
         nombre: 'Ají de Gallina',
         descripcion:
@@ -402,7 +425,7 @@ async function main() {
       {
         id: PISCO,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666663',
+        categoria_id: '66666666-6666-4666-8666-666666666663',
         sku: 'PLA-005',
         nombre: 'Pisco Sour',
         descripcion: 'Pisco Quebranta, limón, jarabe de goma y Angostura.',
@@ -412,7 +435,7 @@ async function main() {
       {
         id: CHICHA,
         empresa_id: EMPRESA,
-        categoria_id: '66666666-6666-6666-6666-666666666663',
+        categoria_id: '66666666-6666-4666-8666-666666666663',
         sku: 'PLA-006',
         nombre: 'Chicha Morada',
         descripcion: 'Maíz morado, piña, manzana, canela y clavo.',
@@ -492,7 +515,7 @@ async function main() {
   await prisma.combos.createMany({
     data: [
       {
-        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
         empresa_id: EMPRESA,
         nombre: 'Dúo Criollo',
         descripcion: 'Ceviche + Chicha para dos.',
@@ -500,7 +523,7 @@ async function main() {
         activo: true,
       },
       {
-        id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2',
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
         empresa_id: EMPRESA,
         nombre: 'Almuerzo Ejecutivo',
         descripcion: 'Fondo + bebida del día.',
@@ -514,22 +537,22 @@ async function main() {
   await prisma.combos_platos.createMany({
     data: [
       {
-        combo_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        combo_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
         plato_id: CEVICHE,
         cantidad: 1,
       },
       {
-        combo_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1',
+        combo_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
         plato_id: CHICHA,
         cantidad: 1,
       },
       {
-        combo_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2',
+        combo_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
         plato_id: LOMO,
         cantidad: 1,
       },
       {
-        combo_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2',
+        combo_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
         plato_id: CHICHA,
         cantidad: 1,
       },
@@ -540,7 +563,7 @@ async function main() {
   await prisma.reglas_horarias_promos.createMany({
     data: [
       {
-        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1',
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
         empresa_id: EMPRESA,
         nombre: 'Happy Hour Pisco',
         beneficio: '2x1 en barra',
@@ -550,7 +573,7 @@ async function main() {
         activa: true,
       },
       {
-        id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2',
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb2',
         empresa_id: EMPRESA,
         nombre: 'Almuerzo Ejecutivo',
         beneficio: '$5.00 off',
@@ -566,7 +589,7 @@ async function main() {
   await prisma.cupones.createMany({
     data: [
       {
-        id: 'cccccccc-cccc-cccc-cccc-cccccccccc01',
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccc01',
         empresa_id: EMPRESA,
         codigo: 'BURGER10',
         tipo_descuento: 'PORCENTAJE',
@@ -577,7 +600,7 @@ async function main() {
         activo: true,
       },
       {
-        id: 'cccccccc-cccc-cccc-cccc-cccccccccc02',
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccc02',
         empresa_id: EMPRESA,
         codigo: 'PISCO5',
         tipo_descuento: 'MONTO',
@@ -588,7 +611,7 @@ async function main() {
         activo: true,
       },
       {
-        id: 'cccccccc-cccc-cccc-cccc-cccccccccc03',
+        id: 'cccccccc-cccc-4ccc-8ccc-cccccccccc03',
         empresa_id: EMPRESA,
         codigo: 'FIEL20',
         tipo_descuento: 'PORCENTAJE',
@@ -956,7 +979,7 @@ async function main() {
   await prisma.mesas.createMany({
     data: [
       {
-        id: '20000000-0000-0000-0000-000000000001',
+        id: '20000000-0000-4000-8000-000000000001',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         numero: 'Mesa 1',
@@ -966,7 +989,7 @@ async function main() {
         estado: 'LIBRE',
       },
       {
-        id: '20000000-0000-0000-0000-000000000002',
+        id: '20000000-0000-4000-8000-000000000002',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         numero: 'Mesa 2',
@@ -986,7 +1009,7 @@ async function main() {
         estado: 'RESERVADA',
       },
       {
-        id: '20000000-0000-0000-0000-000000000004',
+        id: '20000000-0000-4000-8000-000000000004',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         numero: 'Mesa 4',
@@ -996,7 +1019,7 @@ async function main() {
         estado: 'LIBRE',
       },
       {
-        id: '20000000-0000-0000-0000-000000000005',
+        id: '20000000-0000-4000-8000-000000000005',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         numero: 'Mesa 5',
@@ -1006,7 +1029,7 @@ async function main() {
         estado: 'OCUPADA',
       },
       {
-        id: '20000000-0000-0000-0000-000000000006',
+        id: '20000000-0000-4000-8000-000000000006',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         numero: 'Mesa 6',
@@ -1042,7 +1065,7 @@ async function main() {
   await prisma.reservas.createMany({
     data: [
       {
-        id: '30000000-0000-0000-0000-000000000201',
+        id: '30000000-0000-4000-8000-000000000201',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         mesa_id: MESA_3,
@@ -1057,7 +1080,7 @@ async function main() {
         creada_por: GERENTE,
       },
       {
-        id: '30000000-0000-0000-0000-000000000202',
+        id: '30000000-0000-4000-8000-000000000202',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         mesa_id: MESA_8,
@@ -1144,7 +1167,7 @@ async function main() {
   await prisma.detalles_orden.createMany({
     data: [
       {
-        id: 'd0000000-0000-0000-0000-000000000001',
+        id: 'd0000000-0000-4000-8000-000000000001',
         orden_id: ORDEN_1042,
         tipo: 'PLATO',
         plato_id: LOMO,
@@ -1153,7 +1176,7 @@ async function main() {
         subtotal: 44,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000002',
+        id: 'd0000000-0000-4000-8000-000000000002',
         orden_id: ORDEN_1042,
         tipo: 'PLATO',
         plato_id: CHICHA,
@@ -1162,7 +1185,7 @@ async function main() {
         subtotal: 8,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000003',
+        id: 'd0000000-0000-4000-8000-000000000003',
         orden_id: ORDEN_1041,
         tipo: 'PLATO',
         plato_id: CEVICHE,
@@ -1171,7 +1194,7 @@ async function main() {
         subtotal: 15,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000004',
+        id: 'd0000000-0000-4000-8000-000000000004',
         orden_id: ORDEN_1041,
         tipo: 'PLATO',
         plato_id: PISCO,
@@ -1180,7 +1203,7 @@ async function main() {
         subtotal: 20,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000005',
+        id: 'd0000000-0000-4000-8000-000000000005',
         orden_id: ORDEN_1040,
         tipo: 'PLATO',
         plato_id: AJI,
@@ -1189,7 +1212,7 @@ async function main() {
         subtotal: 18,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000006',
+        id: 'd0000000-0000-4000-8000-000000000006',
         orden_id: ORDEN_1039,
         tipo: 'PLATO',
         plato_id: TEQUENOS,
@@ -1198,7 +1221,7 @@ async function main() {
         subtotal: 16,
       },
       {
-        id: 'd0000000-0000-0000-0000-000000000007',
+        id: 'd0000000-0000-4000-8000-000000000007',
         orden_id: ORDEN_1039,
         tipo: 'PLATO',
         plato_id: CHICHA,
@@ -1213,7 +1236,7 @@ async function main() {
   await prisma.movimientos_inventario.createMany({
     data: [
       {
-        id: 'e0000000-0000-0000-0000-000000000001',
+        id: 'e0000000-0000-4000-8000-000000000001',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         insumo_id: INSUMO_LOMO,
@@ -1225,7 +1248,7 @@ async function main() {
         actor_id: COCINERO,
       },
       {
-        id: 'e0000000-0000-0000-0000-000000000002',
+        id: 'e0000000-0000-4000-8000-000000000002',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         insumo_id: INSUMO_PAPA,
@@ -1236,7 +1259,7 @@ async function main() {
         actor_id: GERENTE,
       },
       {
-        id: 'e0000000-0000-0000-0000-000000000003',
+        id: 'e0000000-0000-4000-8000-000000000003',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         insumo_id: INSUMO_AJI,
@@ -1247,7 +1270,7 @@ async function main() {
         actor_id: COCINERO,
       },
       {
-        id: 'e0000000-0000-0000-0000-000000000004',
+        id: 'e0000000-0000-4000-8000-000000000004',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         insumo_id: INSUMO_PISCO,
@@ -1258,7 +1281,7 @@ async function main() {
         actor_id: MESERO,
       },
       {
-        id: 'e0000000-0000-0000-0000-000000000005',
+        id: 'e0000000-0000-4000-8000-000000000005',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         insumo_id: INSUMO_LIMON,
@@ -1293,7 +1316,7 @@ async function main() {
   await prisma.movimientos_caja.createMany({
     data: [
       {
-        id: 'f0000000-0000-0000-0000-000000000001',
+        id: 'f0000000-0000-4000-8000-000000000001',
         empresa_id: EMPRESA,
         turno_id: TURNO_CAJA,
         tipo: 'INGRESO',
@@ -1303,7 +1326,7 @@ async function main() {
         actor_id: CAJERO,
       },
       {
-        id: 'f0000000-0000-0000-0000-000000000002',
+        id: 'f0000000-0000-4000-8000-000000000002',
         empresa_id: EMPRESA,
         turno_id: TURNO_CAJA,
         tipo: 'INGRESO',
@@ -1314,7 +1337,7 @@ async function main() {
         actor_id: CAJERO,
       },
       {
-        id: 'f0000000-0000-0000-0000-000000000003',
+        id: 'f0000000-0000-4000-8000-000000000003',
         empresa_id: EMPRESA,
         turno_id: TURNO_CAJA,
         tipo: 'INGRESO',
@@ -1325,7 +1348,7 @@ async function main() {
         actor_id: CAJERO,
       },
       {
-        id: 'f0000000-0000-0000-0000-000000000004',
+        id: 'f0000000-0000-4000-8000-000000000004',
         empresa_id: EMPRESA,
         turno_id: TURNO_CAJA,
         tipo: 'EGRESO',
@@ -1341,7 +1364,7 @@ async function main() {
   await prisma.gastos.createMany({
     data: [
       {
-        id: '70000000-0000-0000-0000-000000000001',
+        id: '70000000-0000-4000-8000-000000000001',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         concepto: 'Compra insumos AgroAndina',
@@ -1354,7 +1377,7 @@ async function main() {
         registrado_por: GERENTE,
       },
       {
-        id: '70000000-0000-0000-0000-000000000002',
+        id: '70000000-0000-4000-8000-000000000002',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         concepto: 'Recibo Luz del Sur',
@@ -1365,7 +1388,7 @@ async function main() {
         registrado_por: GERENTE,
       },
       {
-        id: '70000000-0000-0000-0000-000000000003',
+        id: '70000000-0000-4000-8000-000000000003',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         concepto: 'Planilla semanal personal',
@@ -1382,7 +1405,7 @@ async function main() {
   await prisma.comprobantes.createMany({
     data: [
       {
-        id: '60000000-0000-0000-0000-000000001042',
+        id: '60000000-0000-4000-8000-000000001042',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         tipo: 'BOLETA',
@@ -1394,7 +1417,7 @@ async function main() {
         emitido_por: CAJERO,
       },
       {
-        id: '60000000-0000-0000-0000-000000001041',
+        id: '60000000-0000-4000-8000-000000001041',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         tipo: 'BOLETA',
@@ -1406,7 +1429,7 @@ async function main() {
         emitido_por: CAJERO,
       },
       {
-        id: '60000000-0000-0000-0000-000000001040',
+        id: '60000000-0000-4000-8000-000000001040',
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
         tipo: 'BOLETA',
@@ -1424,7 +1447,7 @@ async function main() {
   // El comprobante nace PAGADA; la anulación es una transición (trigger AYCDS-62).
   await prisma.comprobantes.updateMany({
     where: {
-      id: '60000000-0000-0000-0000-000000001040',
+      id: '60000000-0000-4000-8000-000000001040',
       estado: 'PAGADA',
     },
     data: {
@@ -1438,7 +1461,7 @@ async function main() {
   await prisma.movimientos_puntos.createMany({
     data: [
       {
-        id: 'a0000000-0000-0000-0000-000000000001',
+        id: 'a0000000-0000-4000-8000-000000000001',
         cliente_id: CLIENTE_VALERIA,
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,
@@ -1448,7 +1471,7 @@ async function main() {
         motivo: 'Pago exitoso #PD-1042: 1pto x $1',
       },
       {
-        id: 'a0000000-0000-0000-0000-000000000002',
+        id: 'a0000000-0000-4000-8000-000000000002',
         cliente_id: CLIENTE_DIEGO,
         empresa_id: EMPRESA,
         sucursal_id: MIRAFLORES,

@@ -4,7 +4,7 @@
 
 **Base:** PostgreSQL 16, `fogoneria_db`, rol `fogoneria_rls` (sin BYPASSRLS)
 
-**Contexto:** `app.empresa_id = 11111111-1111-1111-1111-111111111111`, `app.bypass = false`
+**Contexto:** `app.empresa_id = 11111111-1111-4111-8111-111111111111`, `app.bypass = false`
 
 ## Órdenes
 
