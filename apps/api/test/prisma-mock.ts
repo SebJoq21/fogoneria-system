@@ -17,6 +17,7 @@ export function createPrismaMock(): Record<string, unknown> {
       $transaction: vi.fn(),
     },
     scoped: {},
+    runWithTenant: vi.fn((_context: unknown, callback: () => Promise<unknown>) => callback()),
     $disconnect: vi.fn(),
   };
 }

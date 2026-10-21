@@ -203,7 +203,7 @@ export async function createTurno(
 ): Promise<string> {
   const [turno] = await db.$queryRawUnsafe<{ id: string }[]>(
     `INSERT INTO fogoneria.turnos_caja (empresa_id, sucursal_id, estado, cierre_at)
-     VALUES ($1, $2, $3, CASE WHEN $3 = 'CERRADO' THEN now() + interval '1 minute' ELSE NULL END)
+     VALUES ($1, $2, $3::fogoneria.estado_turno_caja, CASE WHEN $3::text = 'CERRADO' THEN now() + interval '1 minute' ELSE NULL END)
      RETURNING id`,
     tenant.empresaId,
     tenant.sucursalId,

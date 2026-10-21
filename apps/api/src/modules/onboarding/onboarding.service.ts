@@ -44,9 +44,9 @@ export class OnboardingService {
       // Sin filtrar por `deleted_at`: el RUC es único global y una empresa dada
       // de baja no debe poder reutilizarse (rompería sus comprobantes).
       this.prisma.raw.empresas.findFirst({ where: { ruc: dto.ruc } }),
-      // El email es único por empresa en la BD; el login busca por email sin
-      // tenant, así que aquí se exige unicidad global.
-      this.prisma.raw.usuarios.findFirst({ where: { email } }),
+      // El email es único global entre usuarios activos; uno dado de baja
+      // libera el correo (el índice parcial ignora `deleted_at`).
+      this.prisma.raw.usuarios.findFirst({ where: { email, deleted_at: null } }),
     ]);
     if (empresaExistente) throw new ConflictException('Ya existe una empresa con ese RUC');
     if (usuarioExistente) throw new ConflictException('Ese correo ya tiene una cuenta');

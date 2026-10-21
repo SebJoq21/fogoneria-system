@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, it } from 'vitest';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import {
   captureDbError,

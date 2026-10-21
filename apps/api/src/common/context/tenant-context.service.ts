@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../generated/prisma/client.js';
 import type { RolUsuario } from '../types/authenticated-user.js';
 
 export interface TenantContext {
@@ -9,6 +10,8 @@ export interface TenantContext {
   rol: RolUsuario | null;
   /** SUPERADMIN opera sin filtro de tenant (consola SaaS). */
   bypass: boolean;
+  /** Transacción con el contexto `app.*` ya fijado (RLS, tarea 62). */
+  tx?: Prisma.TransactionClient;
 }
 
 const EMPTY_CONTEXT: TenantContext = {
@@ -37,5 +40,11 @@ export class TenantContextService {
 
   getOrEmpty(): TenantContext {
     return this.storage.getStore() ?? EMPTY_CONTEXT;
+  }
+
+  /** Asocia la transacción RLS del request al contexto actual. */
+  setTransaction(tx: Prisma.TransactionClient): void {
+    const store = this.storage.getStore();
+    if (store) store.tx = tx;
   }
 }
