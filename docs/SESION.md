@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-10-26 — Documentación S9–S10 y orden de PRs sin stacked
+
+- Objetivo: documentar las tareas 29.0–35.0 y fijar el orden de PRs.
+- Hecho: `docs/TAREAS-SEMANAS-9-10.md` con 7 tareas, fichas, dependencias, DoD, ramas con el nombre del responsable y la regla de un PR por tarea desde `development`.
+- Revisión: `development` en `372ee0a`; PR #7–#9 mergeados; 0 PRs abiertos. No existen módulos API `tables`, `reservations` ni `realtime`; `MozoView` y `BookingsModule` siguen con estado local; `orders.service.ts` mantiene precio del cliente, `Date.now()` y anulación en preparación.
+- Pendiente: PR docs a `development` y luego PR-1 `AYCDS-16`.
+
 ## 2026-10-21 — Ronda QA en Docker: 5 bugs corregidos (rama `fix/qa-docker-bff-uuid-ordenes`)
 
 - Objetivo: recorrer los 6 roles en el stack Docker y corregir los bugs de la ronda.
