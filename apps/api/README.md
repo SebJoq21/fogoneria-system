@@ -79,10 +79,13 @@ src/
     decorators/   @Public, @Roles, @CurrentUser
     guards/       JwtAuthGuard global + RolesGuard global
     dto/          PaginationQueryDto
+    sequences/    SequencesService: folios por empresa (ORD, RSV)
   prisma/         PrismaService (adapter pg) + PrismaModule global
   modules/
     auth/         POST /auth/login, GET /auth/me
     tenant/       contexto, empresa actual, sucursales
+    tables/       mesas por sucursal + bloqueo/liberación
+    reservations/ reservas con aforo, solapamiento y estados
     orders/       órdenes con transiciones de estado
     catalog/      categorías, platos, grupos/opciones de modificadores
     pricing/      listas de precios y precios por plato
@@ -109,6 +112,12 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | GET | `/auth/me` | autenticado |
 | GET | `/health` | público |
 | GET | `/tenant`, `/tenant/context`, `/tenant/branches` | autenticado |
+| GET | `/tables`, `/tables/:id` | autenticado |
+| POST/PATCH/DELETE | `/tables`, `/tables/:id` | admin, sucursal |
+| PATCH | `/tables/:id/status` (solo `LIBRE`/`MANTENIMIENTO`) | admin, sucursal |
+| GET | `/reservations`, `/reservations/:id` | autenticado |
+| POST/PATCH | `/reservations`, `/reservations/:id` | admin, sucursal, mesero, cajero |
+| PATCH | `/reservations/:id/status` | admin, sucursal, mesero, cajero |
 | GET | `/orders`, `/orders/:id` | autenticado |
 | POST | `/orders` | admin, sucursal, mesero, cajero |
 | PATCH | `/orders/:id/status` | admin, sucursal, cocina, mesero, cajero |
@@ -122,6 +131,20 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | PATCH | `/saas/tenants/:id/plan` | SUPERADMIN |
 
 La colección Postman está en `docs/postman/fogoneria-api.postman_collection.json`.
+
+## Mesas y reservas (AYCDS-16)
+
+- `GET /tables` devuelve las mesas de la sucursal del token, con filtros `estado` y `zona`.
+- `POST/PATCH/DELETE /tables` es de `ADMIN_GLOBAL`/`GERENTE_SUCURSAL`. La baja es lógica (`deleted_at`) y el trigger `soft_delete_row` queda como respaldo.
+- `PATCH /tables/:id/status` solo acepta `LIBRE` y `MANTENIMIENTO`: `OCUPADA` y `RESERVADA` los derivan las órdenes y las reservas. Una mesa con orden abierta o reserva activa no se bloquea ni se borra (409).
+- `POST /reservations` valida aforo contra `mesas.capacidad` (409) y solapamiento de ±90 min en la misma mesa (409). El `codigo` (`RSV-YYYYMMDD-NNNN`) sale de la tabla `secuencias`, no del reloj.
+- `GET /reservations?fecha=YYYY-MM-DD` filtra el día completo en hora de Lima (UTC-05:00).
+- Transiciones: `POR_CONFIRMAR → CONFIRMADA|CANCELADA`, `CONFIRMADA → EJECUTADA|CANCELADA|NO_SHOW`. Los estados terminales no se reabren.
+- La mesa pasa a `RESERVADA` al reservar, a `OCUPADA` al ejecutar y vuelve a `LIBRE` al cancelar/no-show solo si no quedan reservas activas ni órdenes abiertas.
+
+## Folios por empresa
+
+`secuencias` (`empresa_id`, `tipo`, `valor`) se incrementa con una sola sentencia atómica (`INSERT ... ON CONFLICT ... RETURNING`) dentro de la transacción del request. Evita `Date.now()` y `COUNT(*)`, que se repiten bajo concurrencia. Hoy se usa para `numero_orden` (`ORD-000123`) y `codigo` de reserva.
 
 ## Consola SaaS y morosidad
 

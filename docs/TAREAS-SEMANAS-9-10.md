@@ -18,11 +18,11 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
-| Cerradas (Listo) | **0** |
+| Cerradas (Listo) | **1** |
 | En curso | **0** |
-| Por hacer | **7** |
-| Avance global (promedio simple) | **24%** |
-| Avance funcional end-to-end | **≈20%** |
+| Por hacer | **6** |
+| Avance global (promedio simple) | **36%** |
+| Avance funcional end-to-end | **≈28%** |
 
 **Diagnóstico:** la base de autenticación, RLS, catálogo, precios y órdenes ya existe. Sin embargo, el flujo Semanas 9–10 no está conectado: la UI de mesero, KDS, mesas y reservas trabaja con estado local/mocks, no hay API de mesas/reservas, no hay WebSockets y la API de órdenes todavía confía en el precio enviado por el cliente. El objetivo es cerrar el flujo **mesero → cocina → mesero → mesa**, con estados en tiempo real y pruebas end-to-end.
 
@@ -43,15 +43,15 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 24% |
+| S9 | 14, 16, 20, 22, 25, 26 | 42% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **24%** |
+| **Global** | **7 tareas** | **36%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
-| David Piñarreta | 14, 16, 20 | 18% |
+| David Piñarreta | 14, 16, 20 | 48% |
 | Sonny De La Cruz | 22 | 25% |
 | Joshua Chávez | 25 | 40% |
 | Diego Arévalo | 26 | 40% |
@@ -64,7 +64,7 @@
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
 | AYCDS-14 | [29.0] Gateway WebSockets Mesero-Cocina | 9 | David Piñarreta | Por hacer | 0% | `OrdersService.updateStatus` con transiciones; KDS `OrdersView` con estado local | Gateway Socket.io, autenticación WS, rooms por tenant/sucursal, eventos de comanda, cliente web y pruebas |
-| AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Por hacer | 10% | Modelos `mesas` y `reservas`; seed con 8 mesas y reservas demo; UI `BookingsModule` y `SalonTablesView` | Módulos API `tables` y `reservations`, DTOs, estados, aforo, solapamiento, RLS y tests |
+| AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Listo | 100% | Módulos API `tables` y `reservations` (CRUD, estados manuales vs derivados, aforo ±90 min, hora de Lima, folios por secuencia); RLS por empresa con `secuencias`; tests unit/e2e/db; UI `BookingsModule` y `SalonTablesView` | — (conectar la UI a la API queda en AYCDS-26) |
 | AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Por hacer | 45% | `orders.controller.ts` con list/create/status; transiciones; DTO de ítems ya valida PLATO/COMBO y límites (PR #8); triggers de inmutabilidad en DB | Precio resuelto en servidor, `mesero_id` desde JWT, número de orden seguro, estado de mesa, bloqueo de anulación en preparación, auditoría y tests |
 | AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Por hacer | 25% | Índices `idx_ordenes_tenant_sucursal_estado`, `idx_ordenes_tenant_fecha`, `idx_detalles_orden`; baseline en `docs/explain-rls.md` | Script de carga, línea base de comandas, `EXPLAIN`, optimización y documentación de p95/errores |
 | AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | Por hacer | 40% | `MozoView`, `AccountPanel`, `AddItemModal`; UI de cuentas y estados | Conectar a API real, crear pedido, avanzar estados, marcar entregado, anular pendiente, layout tablet y tests |
@@ -92,7 +92,7 @@
 
 ### AYCDS-16 — [30.0] API mesas reservas Libre-Ocupada-Reservada
 
-- **Semana:** 9-10 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 10%
+- **Semana:** 9-10 | **Responsable:** David Piñarreta | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** “Estados + bloqueo aforo RF-05 CT-FG-02 + tests.”
 - **Qué debe hacerse:**
   1. Crear módulo `tables`: listar, crear, editar y cambiar estado de mesas por sucursal.
@@ -104,6 +104,10 @@
 - **Archivos/rutas:** `apps/api/src/modules/tables/**`, `apps/api/src/modules/reservations/**`, `apps/api/src/app.module.ts`, `apps/api/test/**`
 - **Criterio de aceptación:** CRUD y transiciones válidas; reserva con aforo excedido o solapada devuelve 409; cross-tenant devuelve 404; tests verdes.
 - **Evidencia:** Swagger actualizado, tests y prueba real con dos sucursales.
+  - `apps/api/src/modules/tables/**` y `apps/api/src/modules/reservations/**` con DTOs, controladores y servicios.
+  - `apps/api/src/common/sequences/**` + migración `20261027120000_secuencias_tenant` (tabla `secuencias` con RLS por empresa).
+  - Tests: 88 unit (9 nuevos de mesas, 12 de reservas, 5 de secuencias), 32 e2e (16 nuevos) y 34 DB (7 nuevos) verdes.
+  - Prueba real contra PostgreSQL 16 (`localhost:5433`): CRUD de mesas en dos sucursales, duplicado 409, aforo 409, solapamiento 409, bloqueo con reserva 409, liberación de mesa al cancelar la última reserva, `RSV-20261031-0001` por secuencia y aislamiento cross-tenant (404).
 
 ### AYCDS-20 — [31.0] API órdenes POS e inmutabilidad
 
@@ -238,7 +242,7 @@
 
 ### David Piñarreta — Backend
 - [ ] **14** Gateway WebSockets + contrato de eventos
-- [ ] **16** API mesas/reservas + estados/aforo
+- [x] **16** API mesas/reservas + estados/aforo
 - [ ] **20** API órdenes POS: precio servidor, número seguro, mesa, inmutabilidad
 
 ### Sonny De La Cruz — Base de datos
@@ -304,3 +308,4 @@ pnpm --filter api test:db
 | 2026-10-26 | — | — | Línea base S9–S10: 7 tareas, 24% global | Este documento |
 | 2026-10-26 | — | Sebastián Chicata | Revisión post-pull: `development` en `372ee0a`, PR #7–#9 mergeados, 0 PRs abiertos; se define el orden obligatorio de PRs sin stacked y ramas con el nombre del responsable | `git log`, `gh pr list`, sección 5.1 |
 | 2026-10-26 | 14/16/20/22/25/26 | Sebastián Chicata | Revisión de código: no existen módulos API `tables`, `reservations` ni `realtime`; `MozoView` y `BookingsModule` siguen con estado local; `orders.service.ts` mantiene precio del cliente, `Date.now()` y anulación en preparación | `apps/api/src/app.module.ts`, `orders.service.ts`, `ModulesProvider.tsx` |
+| 2026-10-28 | 16 | David Piñarreta | Cierra AYCDS-16: módulos `tables` y `reservations`, tabla `secuencias` con folios atómicos, estados de mesa derivados, aforo y solapamiento ±90 min en hora de Lima; 88 unit + 32 e2e + 34 DB verdes y prueba real con dos sucursales | PR-1 `feat/aycds-16-mesas-reservas-david`, `docs/decisiones.md` |

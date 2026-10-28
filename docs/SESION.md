@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-28 — Sprint 3: AYCDS-16 (mesas y reservas) cerrada
+
+- Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.
+- Hecho (PR-1, `feat/aycds-16-mesas-reservas-david`):
+  - Módulos `apps/api/src/modules/tables/**` y `reservations/**` con DTOs, `@Roles`, Swagger y transiciones explícitas.
+  - `common/sequences` + migración `20261027120000_secuencias_tenant`: tabla `secuencias` con RLS por empresa y `INSERT ... ON CONFLICT ... RETURNING` para folios (`ORD-000123`, `RSV-20261031-0001`). El SQL crudo se califica con `DATABASE_SCHEMA` porque no pasa por Prisma.
+  - Estados de mesa: `PATCH /tables/:id/status` solo `LIBRE|MANTENIMIENTO`; `OCUPADA`/`RESERVADA` los derivan órdenes y reservas. Mesa con orden abierta o reserva activa no se bloquea ni se da de baja (409).
+  - Reservas: aforo contra `mesas.capacidad` (409), solapamiento ±90 min (409), edición solo en `POR_CONFIRMAR`, día filtrado en hora de Lima (`limaDayRange`) y liberación de mesa al cancelar la última reserva.
+  - `ADMIN_GLOBAL` (sin sucursal en el JWT) indica `sucursalId` en `POST /tables` y `GET /tables?sucursalId=`; validado contra su empresa.
+- Verificado: 88 unit, 32 e2e, 34 DB, `lint`, `check-types` y `pnpm build` en verde; prueba real contra PostgreSQL 16 (`localhost:5433`) con dos sucursales y dos empresas (cross-tenant 404). El volumen local tenía el dataset demo legacy: se recreó el esquema (`DROP SCHEMA` + `db:deploy` + `db:rls:roles` + `db:rls:force` + `db:seed`) porque `prisma migrate reset` está bloqueado para agentes.
+- Pendiente: PR-2 (AYCDS-20) y PR-3 (AYCDS-14); Jira 16 pasa a Listo con la evidencia del PR.
+- Próximo paso: mergear PR-1 y crear `feat/aycds-20-ordenes-pos-david` desde `development`.
+
 ## 2026-10-26 — Documentación S9–S10 y orden de PRs sin stacked
 
 - Objetivo: documentar las tareas 29.0–35.0 y fijar el orden de PRs.
