@@ -17,6 +17,11 @@ import {
 import { origen_orden, tipo_detalle_orden } from '../../../generated/prisma/enums.js';
 import { IsConsistentOrderItem } from './order-item.validator.js';
 
+/**
+ * Línea de comanda. No acepta `precioUnitario`: el importe lo resuelve el
+ * servidor con la lista de precios (AYCDS-20). Al no estar en el DTO, el
+ * `ValidationPipe` global rechaza el campo con 400 si algún cliente lo envía.
+ */
 export class OrderItemDto {
   @ApiProperty({ enum: tipo_detalle_orden, example: 'PLATO' })
   @IsEnum(tipo_detalle_orden)
@@ -38,11 +43,6 @@ export class OrderItemDto {
   @Min(1)
   cantidad!: number;
 
-  @ApiProperty({ example: 24.9, minimum: 0 })
-  @IsNumber()
-  @Min(0)
-  precioUnitario!: number;
-
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -51,6 +51,15 @@ export class OrderItemDto {
 }
 
 export class CreateOrderDto {
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description:
+      'Solo ADMIN_GLOBAL: sucursal de una orden sin mesa. Con mesa se deduce de ella.',
+  })
+  @IsOptional()
+  @IsUUID()
+  sucursalId?: string;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
@@ -66,7 +75,10 @@ export class CreateOrderDto {
   @IsEnum(origen_orden)
   origen?: origen_orden;
 
-  @ApiPropertyOptional({ format: 'uuid' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Sin este valor se usa la lista de precios activa.',
+  })
   @IsOptional()
   @IsUUID()
   listaPrecioId?: string;

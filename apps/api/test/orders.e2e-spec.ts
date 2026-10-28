@@ -80,18 +80,29 @@ describe('Orders (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/orders')
       .set('Authorization', `Bearer ${token}`)
-      .send({ items: [{ tipo: 'PLATO', cantidad: 1, precioUnitario: 10 }] })
+      .send({ items: [{ tipo: 'PLATO', cantidad: 1 }] })
       .expect(400);
   });
 
-  it('crea una orden válida', async () => {
+  it('rechaza un precio enviado por el cliente (lo pone el servidor)', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/orders')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        items: [{ tipo: 'PLATO', platoId: PLATO, cantidad: 1, precioUnitario: 0.01 }],
+      })
+      .expect(400);
+    expect(orders.create).not.toHaveBeenCalled();
+  });
+
+  it('crea una orden válida sin precio en el body', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/orders')
       .set('Authorization', `Bearer ${token}`)
       .send({
         items: [
-          { tipo: 'PLATO', platoId: PLATO, cantidad: 2, precioUnitario: 24.9 },
-          { tipo: 'COMBO', comboId: COMBO, cantidad: 1, precioUnitario: 39.9 },
+          { tipo: 'PLATO', platoId: PLATO, cantidad: 2 },
+          { tipo: 'COMBO', comboId: COMBO, cantidad: 1 },
         ],
       })
       .expect(201);
