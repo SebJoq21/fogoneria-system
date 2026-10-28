@@ -1,5 +1,21 @@
 # SESION — estado entre sesiones
 
+## 2026-10-28 — Sprint 3: AYCDS-22 (comanda en alta concurrencia) cerrada
+
+- Objetivo: llevar el alta de comandas a p95 ≤ 500 ms con 50 concurrentes y 0 errores 5xx, con script de carga reproducible, línea base y `EXPLAIN`.
+- Hecho (rama `feat/aycds-22-carga-comandas-sonny`, desde `development` en `67e3d28`):
+  - Script de carga Node puro `apps/api/test/load/orders-load.mjs` (bucle cerrado, rampa, calentamiento, 4xx/5xx por status y muestreo de `pg_stat_activity` con `maxWaiting`); scripts `perf:seed`/`perf:reset`/`perf:load` en `apps/api/package.json`.
+  - Dataset `db/scripts/perf/seed-perf.sql` (50 000 órdenes `PERF-%` + 150 000 líneas, 23 MB) y `reset-perf.sql`; `explain-orders.sql` (6 `EXPLAIN ANALYZE BUFFERS` como `fogoneria_rls`) y `explain-bypassrls.sql` (comparación con estadísticas visibles). Resultados en `ops/perf/results/`.
+  - Causa raíz: el upsert de `secuencias` dentro de la transacción del request retenía el lock de `(empresa_id, tipo)` durante toda la comanda (p95 1034–1092 ms, 64–66 órdenes/s, 8–9 sesiones esperando lock).
+  - `apps/api/src/common/sequences/sequences.service.ts:61` — el folio corre en **autocommit sobre `prisma.raw`**, fuera de la transacción. Se acepta hueco de folio (`docs/decisiones.md:34`).
+  - `apps/api/src/prisma/prisma.service.ts` — los 4 `set_config` del contexto RLS pasan a una sola sentencia; `DATABASE_POOL_MAX` configurable (default 10; 20 no mejoró porque la base estaba ociosa).
+  - `apps/api/src/modules/orders/orders.service.ts` — precios en lote (platos, combos y `precios_platos`), sin N+1 por línea.
+  - Test `apps/api/test/db/sequences-concurrency.db-spec.ts` (50 altas simultáneas, contador por empresa, ORD vs RSV).
+  - Resultado: p95 **307–326 ms** a 50 concurrentes (r3–r6 de 6 corridas), ~**186 órdenes/s**, 0 5xx, 0 esperas de lock. Sin índices nuevos: el plan de escritura ya era correcto.
+- Pendiente / hallazgo abierto: el listado del KDS bajo RLS no ve `pg_statistic`, estima 20 % para `estado` y recorre ~50k filas (157 ms vs 0,075 ms con estadísticas). No se tocó la seguridad; opciones (BYPASSRLS, vista `SECURITY DEFINER`, contadores denormalizados, `pg_hint_plan`) en `docs/explain-orders.md` §6.
+- Entorno: no hay Docker aquí (sin admin/WSL); se usó un clúster PostgreSQL 18 propio en `127.0.0.1:5433` con datos en `%TEMP%\opencode\pg-fogoneria`. `DATABASE_URL_TEST` debe apuntar a `fogoneria_test`.
+- Próximo paso: push de la rama y PR a `development` (lo hace el usuario), comentario de evidencia en Jira `AYCDS-22`; el sprint sigue con 25 (Joshua), 26 (Diego) y 28 (Sebastián).
+
 ## 2026-10-28 — Sprint 3: AYCDS-14 (WebSockets) cerrada
 
 - Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.

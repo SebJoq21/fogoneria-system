@@ -1,0 +1,41 @@
+{
+  "label": "final2-escritura-c10",
+  "startedAt": "1970-01-01T00:00:00.648Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 10,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 10927,
+    "rps": 182.04,
+    "ok": 10927,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 51.31,
+    "p95": 70.15,
+    "p99": 99.55,
+    "max": 374.95,
+    "avg": 52.74,
+    "byStatus": {
+      "201": 10927
+    }
+  },
+  "kdsReads": {
+    "total": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0,
+    "byStatus": {}
+  },
+  "database": {
+    "samples": 59,
+    "maxTotal": 21,
+    "maxActive": 4,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

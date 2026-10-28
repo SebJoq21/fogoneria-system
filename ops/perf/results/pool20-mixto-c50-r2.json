@@ -1,0 +1,43 @@
+{
+  "label": "pool20-mixto-c50-r2",
+  "startedAt": "1970-01-01T00:00:00.917Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 50,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0.1,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 2406,
+    "rps": 38.86,
+    "ok": 2406,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 996.07,
+    "p95": 1433.32,
+    "p99": 1589.07,
+    "max": 1682.95,
+    "avg": 965.46,
+    "byStatus": {
+      "201": 2406
+    }
+  },
+  "kdsReads": {
+    "total": 252,
+    "p50": 2392.71,
+    "p95": 3013.09,
+    "p99": 3127.6,
+    "byStatus": {
+      "200": 252
+    }
+  },
+  "database": {
+    "samples": 61,
+    "maxTotal": 30,
+    "maxActive": 12,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

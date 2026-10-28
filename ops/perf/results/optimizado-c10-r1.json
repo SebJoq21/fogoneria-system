@@ -1,0 +1,43 @@
+{
+  "label": "optimizado-c10-r1",
+  "startedAt": "1970-01-01T00:00:01.724Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 10,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0.1,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 3677,
+    "rps": 60.74,
+    "ok": 3677,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 100.73,
+    "p95": 131.64,
+    "p99": 160.59,
+    "max": 311.72,
+    "avg": 96.42,
+    "byStatus": {
+      "201": 3677
+    }
+  },
+  "kdsReads": {
+    "total": 351,
+    "p50": 696.9,
+    "p95": 932.29,
+    "p99": 1231.61,
+    "byStatus": {
+      "200": 351
+    }
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 18,
+    "maxActive": 10,
+    "maxWaiting": 0
+  },
+  "errors": []
+}
