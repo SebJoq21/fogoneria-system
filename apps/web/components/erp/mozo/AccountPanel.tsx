@@ -32,6 +32,8 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
   const role = currentUser?.role;
   const [adding, setAdding] = useState(false);
   const [pendingSend, setPendingSend] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
   const [pendingAnnul, setPendingAnnul] = useState(false);
 
@@ -39,6 +41,26 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
   const totals = accountTotals(account);
   const canEdit = canOpenAccount(role) && account.status === "abierta";
   const canSend = canCreateOrder(role) && account.status === "abierta";
+
+  /**
+   * La comanda se crea en la API (AYCDS-25): el diálogo se cierra antes de
+   * esperar la respuesta y el panel muestra el envío en curso o el error.
+   */
+  const send = () => {
+    setPendingSend(false);
+    setSendError(null);
+    setSending(true);
+    void sendToKitchen(account.id)
+      .then((order) => {
+        if (order) notify("Comanda enviada", `${order.id} · ${account.label}`);
+      })
+      .catch((error: unknown) => {
+        setSendError(
+          error instanceof Error ? error.message : "No se pudo enviar la comanda.",
+        );
+      })
+      .finally(() => setSending(false));
+  };
 
   return (
     <div>
@@ -161,11 +183,21 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
             <p className="text-lg font-medium text-ink-900 tnum">{fmtMoney(totals.total)}</p>
           </div>
           {canSend && (
-            <Button disabled={unsent.length === 0} onClick={() => setPendingSend(true)}>
-              Enviar a cocina{unsent.length > 0 ? ` (${unsent.length})` : ""}
+            <Button
+              disabled={unsent.length === 0 || sending}
+              onClick={() => setPendingSend(true)}
+            >
+              {sending
+                ? "Enviando…"
+                : `Enviar a cocina${unsent.length > 0 ? ` (${unsent.length})` : ""}`}
             </Button>
           )}
         </div>
+        {sendError && (
+          <p className="text-xs text-persimmon-600 mt-2" role="alert">
+            {sendError}
+          </p>
+        )}
         {!canSend && account.status === "abierta" && (
           <p className="text-xs text-ink-400 mt-2">
             El cobro se realiza en Caja, con el turno de caja abierto.
@@ -186,11 +218,7 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
           unsent.reduce((s, i) => s + itemLineTotal(i), 0),
         )}?`}
         confirmLabel="Enviar"
-        onConfirm={() => {
-          const order = sendToKitchen(account.id);
-          if (order) notify("Comanda enviada", `${order.id} · ${account.label}`);
-          setPendingSend(false);
-        }}
+        onConfirm={send}
         onCancel={() => setPendingSend(false)}
       />
       <ConfirmDialog

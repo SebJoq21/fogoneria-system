@@ -39,15 +39,30 @@ function timerTone(createdAt: string): "neutral" | "warning" | "danger" {
 }
 
 export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
-  const { orders, setOrders, activeBranch, isGeneral, branchOf, currentUser, notify } = useModules();
+  const {
+    orders,
+    advanceOrder,
+    ordersLoading,
+    ordersError,
+    refreshOrders,
+    activeBranch,
+    isGeneral,
+    branchOf,
+    currentUser,
+    notify,
+  } = useModules();
   useNow(30000);
   const canConfirm = canConfirmRecepcion(currentUser?.role, mode);
   const canListo = canMarkListo(currentUser?.role, mode);
   const [pendingConfirm, setPendingConfirm] = useState<Order | null>(null);
   const [pendingListo, setPendingListo] = useState<Order | null>(null);
   // El canal en vivo solo aplica a la cocina/ordenes con sesión real.
+  // Cada evento relee la API: el estado lo manda el servidor (AYCDS-20).
   const { status: liveStatus, lastEvent } = useOrdersRealtime(
     Boolean(currentUser?.empresaId),
+    () => {
+      void refreshOrders();
+    },
   );
   const live = liveState(liveStatus);
 
@@ -57,18 +72,27 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
   const confirm = (order: Order) => {
     // Cocina confirma la recepción: pendiente → en cocina.
     if (order.status !== "pendiente" || !canConfirm) return;
-    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: "cocina" as const } : o)));
     setPendingConfirm(null);
-    notify("Pedido en cocina", `${order.id} · ${order.customer}`);
+    void advanceOrder(order, "cocina").then((ok) => {
+      if (ok) notify("Pedido en cocina", `${order.id} · ${order.customer}`);
+      else notify("No se pudo confirmar", "Revisa el estado de la comanda.");
+    });
   };
 
   const advance = (order: Order) => {
     // En cocina se marca listo (el entregado lo hace el mesero).
     if (order.status !== "cocina" || !canListo) return;
-    const next: OrderStatus = "listo";
-    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
     setPendingListo(null);
-    notify("Orden lista", `${order.id} · ${order.customer}${order.waiter ? ` · avisar a ${order.waiter}` : ""}`);
+    void advanceOrder(order, "listo").then((ok) => {
+      if (ok) {
+        notify(
+          "Orden lista",
+          `${order.id} · ${order.customer}${order.waiter ? ` · avisar a ${order.waiter}` : ""}`,
+        );
+      } else {
+        notify("No se pudo marcar listo", "Revisa el estado de la comanda.");
+      }
+    });
   };
 
   const pendingCount = orders.filter((o) => o.status === "pendiente").length;
@@ -102,6 +126,22 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
           )}
         </div>
       </div>
+
+      {(ordersLoading || ordersError) && (
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          {ordersLoading && <p className="text-sm text-ink-400">Cargando comandas…</p>}
+          {ordersError && (
+            <>
+              <p className="text-sm text-persimmon-600" role="alert">
+                {ordersError}
+              </p>
+              <Button variant="secondary" onClick={() => void refreshOrders()}>
+                Reintentar
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {mode === "ordenes" && summary && (
         <ModuleSummary
@@ -155,6 +195,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
                       {o.items.map((it, i) => (
                         <li key={i}>
                           <span className="font-medium">{it.qty}×</span> {it.name}
+                          {it.notes && <span className="text-ink-400"> · {it.notes}</span>}
                         </li>
                       ))}
                     </ul>

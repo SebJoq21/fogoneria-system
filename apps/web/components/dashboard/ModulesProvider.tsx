@@ -30,6 +30,7 @@ import {
   type Expense,
   type Ingredient,
   type Order,
+  type OrderStatus,
   type Receipt,
   type ReceiptType,
   type Reservation,
@@ -83,6 +84,8 @@ import {
 import { ApiError } from "@/lib/api";
 import { createSession, logoutUrl } from "@/lib/session-api";
 import * as catalogApi from "@/lib/catalog-api";
+import * as ordersApi from "@/lib/orders-api";
+import { UI_TO_API_STATUS, orderFromApi, orderItemsFromAccount } from "@/lib/order-mapping";
 import {
   cpeFromReceipt,
   getFacturacionPort,
@@ -165,6 +168,14 @@ type ModulesContext = {
   /* Operación por sucursal (órdenes, mesas, caja) */
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
+  /** Comandas reales de la API (AYCDS-25): solo con sesión. */
+  ordersLoading: boolean;
+  ordersError: string | null;
+  refreshOrders: () => Promise<void>;
+  /** Crea la comanda de las líneas pendientes de la cuenta (POST /orders). */
+  createOrderFromAccount: (accountId: string) => Promise<Order | null>;
+  /** Avanza el estado de una comanda (PATCH /orders/:id/status o local en demo). */
+  advanceOrder: (order: Order, next: OrderStatus) => Promise<boolean>;
   tables: Table[];
   setTables: React.Dispatch<React.SetStateAction<Table[]>>;
   roles: Role[];
@@ -200,6 +211,7 @@ type ModulesContext = {
   accounts: TableAccount[];
   openAccount: (input: {
     tableId: number | null;
+    tableApiId?: string | null;
     label: string;
     customer: string;
     waiter: string;
@@ -207,7 +219,7 @@ type ModulesContext = {
   addAccountItems: (accountId: string, items: AccountItem[]) => void;
   updateAccountItem: (accountId: string, itemId: string, qty: number) => void;
   removeAccountItem: (accountId: string, itemId: string) => void;
-  sendToKitchen: (accountId: string) => Order | null;
+  sendToKitchen: (accountId: string) => Promise<Order | null>;
   annulAccount: (accountId: string, motivo: string) => void;
   checkoutAccount: (input: CheckoutInput) => Receipt | null;
   /* Turno de caja */
@@ -527,6 +539,72 @@ export function ModulesProvider({
     void refreshCatalog(controller.signal);
     return () => controller.abort();
   }, [currentUser, refreshCatalog]);
+
+  /* ---------- Comandas reales de la API (AYCDS-25) ---------- */
+
+  /**
+   * Comandas de la API. `null` = sin sesión real (demo): las vistas usan el
+   * estado local del `scopes` como hasta ahora.
+   */
+  const [liveOrders, setLiveOrders] = useState<Order[] | null>(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  /** Descarta respuestas que llegan después de una recarga más nueva. */
+  const ordersRequest = useRef(0);
+
+  /** `detalles_orden` solo trae `plato_id`: el nombre sale del catálogo. */
+  const platoNames = useMemo(
+    () => new Map(catalog.products.map((product) => [product.id, product.name])),
+    [catalog.products],
+  );
+  const platoNameOf = useCallback(
+    (platoId: string | null, tipo: string): string =>
+      (platoId ? platoNames.get(platoId) : undefined) ?? (tipo === "COMBO" ? "Combo" : "Plato"),
+    [platoNames],
+  );
+
+  const refreshOrders = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!currentUser?.empresaId) {
+        setLiveOrders(null);
+        return;
+      }
+      const requestId = ++ordersRequest.current;
+      setOrdersLoading(true);
+      setOrdersError(null);
+      try {
+        const list = await ordersApi.listOrders({
+          // `todas` es una vista agregada: sin filtro la API devuelve la empresa.
+          sucursalId: activeBranchId !== GENERAL_BRANCH.id ? activeBranchId : undefined,
+          limit: 100,
+          signal,
+        });
+        if (requestId !== ordersRequest.current) return;
+        setLiveOrders(list.items.map((order) => orderFromApi(order, { nameOf: platoNameOf })));
+      } catch (error) {
+        if (requestId !== ordersRequest.current || signal?.aborted) return;
+        setOrdersError(
+          error instanceof ApiError ? error.message : "No se pudieron cargar las comandas.",
+        );
+      } finally {
+        if (requestId === ordersRequest.current) setOrdersLoading(false);
+      }
+    },
+    [activeBranchId, currentUser, platoNameOf],
+  );
+
+  /* Cargar comandas al iniciar sesión y al cambiar de sucursal. */
+  useEffect(() => {
+    if (!currentUser?.empresaId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpiar comandas al cerrar sesión
+      setLiveOrders(null);
+      setOrdersError(null);
+      return;
+    }
+    const controller = new AbortController();
+    void refreshOrders(controller.signal);
+    return () => controller.abort();
+  }, [currentUser, refreshOrders]);
 
   /* Empresa y sucursales reales del token (tarea 57). */
   useEffect(() => {
@@ -851,12 +929,19 @@ export function ModulesProvider({
   /* ---------- Cuentas de mesa ---------- */
 
   const openAccount = useCallback(
-    (input: { tableId: number | null; label: string; customer: string; waiter: string }): string | null => {
+    (input: {
+      tableId: number | null;
+      tableApiId?: string | null;
+      label: string;
+      customer: string;
+      waiter: string;
+    }): string | null => {
       const id = newId("CT");
       const account: TableAccount = {
         id,
         branchId: writeBranchId,
         tableId: input.tableId,
+        tableApiId: input.tableApiId ?? null,
         label: input.label,
         customer: input.customer,
         waiter: input.waiter,
@@ -917,7 +1002,8 @@ export function ModulesProvider({
     [patchAccount],
   );
 
-  const sendToKitchen = useCallback(
+  /** Modo demo (sin sesión): arma la comanda en el estado local. */
+  const localSendToKitchen = useCallback(
     (accountId: string): Order | null => {
       const account = state.accounts.find((a) => a.id === accountId);
       const pending = account?.items.filter((i) => !i.sent) ?? [];
@@ -959,6 +1045,82 @@ export function ModulesProvider({
       return order;
     },
     [state.accounts],
+  );
+
+  /**
+   * Crea la comanda en la API con las líneas pendientes de la cuenta.
+   * El servidor resuelve precio, folio y mesero (AYCDS-20): aquí solo viajan
+   * `platoId`, `cantidad` y `notas`.
+   */
+  const createOrderFromAccount = useCallback(
+    async (accountId: string): Promise<Order | null> => {
+      const account = state.accounts.find((a) => a.id === accountId);
+      if (!account) return null;
+      const items = orderItemsFromAccount(account);
+      if (items.length === 0) return null;
+
+      const created = await ordersApi.createOrder({
+        ...(account.tableApiId ? { mesaId: account.tableApiId } : {}),
+        origen: account.tableApiId ? "MESA" : "BARRA",
+        items,
+      });
+
+      // La línea queda enviada solo si el servidor aceptó la comanda.
+      setState((s) => ({
+        ...s,
+        accounts: s.accounts.map((a) =>
+          a.id === accountId
+            ? { ...a, items: a.items.map((i) => (i.sent ? i : { ...i, sent: true })) }
+            : a,
+        ),
+      }));
+      await refreshOrders();
+      return orderFromApi(created, { nameOf: platoNameOf });
+    },
+    [platoNameOf, refreshOrders, state.accounts],
+  );
+
+  /** Con sesión real manda la comanda a la API; sin sesión queda el modo demo. */
+  const sendToKitchen = useCallback(
+    async (accountId: string): Promise<Order | null> => {
+      if (!currentUser?.empresaId) return localSendToKitchen(accountId);
+      try {
+        return await createOrderFromAccount(accountId);
+      } catch (error) {
+        setOrdersError(
+          error instanceof ApiError ? error.message : "No se pudo enviar la comanda.",
+        );
+        throw error;
+      }
+    },
+    [createOrderFromAccount, currentUser, localSendToKitchen],
+  );
+
+  /**
+   * Avanza una comanda: `PATCH /orders/:id/status` cuando es una orden real y
+   * cambio local en el modo demo. Devuelve `false` si la API lo rechaza
+   * (p. ej. anular una comanda que ya está en cocina).
+   */
+  const advanceOrder = useCallback(
+    async (order: Order, next: OrderStatus): Promise<boolean> => {
+      const apiStatus = UI_TO_API_STATUS[next];
+      if (order.apiId && currentUser?.empresaId) {
+        if (!apiStatus) return false;
+        try {
+          await ordersApi.updateOrderStatus(order.apiId, apiStatus);
+          await refreshOrders();
+          return true;
+        } catch (error) {
+          setOrdersError(
+            error instanceof ApiError ? error.message : "No se pudo actualizar la comanda.",
+          );
+          return false;
+        }
+      }
+      setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: next } : o)));
+      return true;
+    },
+    [currentUser, refreshOrders, setOrders],
   );
 
   const annulAccount = useCallback(
@@ -1333,8 +1495,13 @@ export function ModulesProvider({
       isGeneral,
       setActiveBranch,
       branchOf,
-      orders: activeScope.orders,
+      orders: liveOrders ?? activeScope.orders,
       setOrders,
+      ordersLoading,
+      ordersError,
+      refreshOrders,
+      createOrderFromAccount,
+      advanceOrder,
       tables: activeScope.tables,
       setTables,
       roles: state.roles,
@@ -1412,6 +1579,10 @@ export function ModulesProvider({
       setActiveBranch,
       branchOf,
       activeScope,
+      liveOrders,
+      ordersLoading,
+      ordersError,
+      refreshOrders,
       setOrders,
       setTables,
       setRoles,
@@ -1434,6 +1605,8 @@ export function ModulesProvider({
       updateAccountItem,
       removeAccountItem,
       sendToKitchen,
+      createOrderFromAccount,
+      advanceOrder,
       annulAccount,
       checkoutAccount,
       cashShifts,
