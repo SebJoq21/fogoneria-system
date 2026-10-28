@@ -20,6 +20,8 @@ import { PricingModule } from './modules/pricing/pricing.module.js';
 import { SaasModule } from './modules/saas/saas.module.js';
 import { BillingModule } from './modules/billing/billing.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
+import { TablesModule } from './modules/tables/tables.module.js';
+import { ReservationsModule } from './modules/reservations/reservations.module.js';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
     SaasModule,
     BillingModule,
     OnboardingModule,
+    TablesModule,
+    ReservationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
