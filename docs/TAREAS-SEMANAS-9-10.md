@@ -43,16 +43,16 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 68% |
+| S9 | 14, 16, 20, 22, 25, 26 | 80% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **58%** |
+| **Global** | **7 tareas** | **69%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
 | David Piñarreta | 14, 16, 20 | 100% |
-| Sonny De La Cruz | 22 | 25% |
+| Sonny De La Cruz | 22 | 100% |
 | Joshua Chávez | 25 | 40% |
 | Diego Arévalo | 26 | 40% |
 | Sebastián Chicata | 28 | 0% |
@@ -66,7 +66,7 @@
 | AYCDS-14 | [29.0] Gateway WebSockets Mesero-Cocina | 9 | David Piñarreta | Listo | 100% | Gateway Socket.io `/orders` con rooms por empresa/sucursal y `order:<id>`, ticket efímero de 60 s (`POST /auth/ws-ticket` + BFF `/api/session/ws-ticket`), eventos `order.created`/`order.updated`/`table.status` con sobre `{ eventId, at, data }`, cliente web con backoff y deduplicación, `docs/websockets.md`, 127 unit + 38 e2e | — (el pintado de la comanda en el KDS queda en AYCDS-25/26/28) |
 | AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Listo | 100% | Módulos API `tables` y `reservations` (CRUD, estados manuales vs derivados, aforo ±90 min, hora de Lima, folios por secuencia); RLS por empresa con `secuencias`; tests unit/e2e/db; UI `BookingsModule` y `SalonTablesView` | — (conectar la UI a la API queda en AYCDS-26) |
 | AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Listo | 100% | Precio resuelto en servidor, `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`→liberada en estado terminal, `ANULADA` solo desde `POR_CONFIRMAR` (API 400 + trigger `DB_ORDEN_ANULACION_TARDIA`), auditoría; 19 unit + e2e + 6 DB | — |
-| AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Por hacer | 25% | Índices `idx_ordenes_tenant_sucursal_estado`, `idx_ordenes_tenant_fecha`, `idx_detalles_orden`; baseline en `docs/explain-rls.md` | Script de carga, línea base de comandas, `EXPLAIN`, optimización y documentación de p95/errores |
+| AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Listo | 100% | Script de carga (`apps/api/test/load/orders-load.mjs`), seed de 50k órdenes (`db/scripts/perf/**`), línea base y `EXPLAIN`; folio en autocommit fuera de la transacción, `set_config` en una sentencia y precios en lote; p95 307–326 ms a 50 concurrentes (antes 1034–1092 ms) | — (la lectura del KDS bajo RLS queda documentada como deuda en `docs/explain-orders.md` §6) |
 | AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | Por hacer | 40% | `MozoView`, `AccountPanel`, `AddItemModal`; UI de cuentas y estados | Conectar a API real, crear pedido, avanzar estados, marcar entregado, anular pendiente, layout tablet y tests |
 | AYCDS-26 | [34.0] Mapa mesas croquis + agenda reservas | 9-10 | Diego Arévalo | Por hacer | 40% | Mapa/agenda en `BookingsModule`, `SalonTablesView` y `/app/mesas`; CRUD local | API real, estados en vivo, reservas por fecha, bloqueo/liberación y permisos |
 | AYCDS-28 | [35.0] Integración Mesero-Cocina-Mesas e2e | 10 | Sebastián Chicata | Por hacer | 0% | Suites unit/DB/e2e existentes; CI verde | Flujo completo mesero → KDS → entregado, prueba e2e, guion y video demo |
@@ -114,7 +114,7 @@
 - **Semana:** 9-10 | **Responsable:** David Piñarreta | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** "Captura comanda, envío cocina, bloquea anular en preparación RF-06 RF-07 CT-FG-02."
 - **Qué se hizo:**
-  1. Precio resuelto en el servidor: `CreateOrderDto` ya no acepta `precioUnitario` (400 con `forbidNonWhitelisted`); `OrdersService` usa `PricingService.resolvePrice` para platos y `combos.precio_fijo` para combos, validando existencia y estado activo.
+  1. Precio resuelto en el servidor: `CreateOrderDto` ya no acepta `precioUnitario` (400 con `forbidNonWhitelisted`); `OrdersService` validaba cada plato contra la lista de precios activa y usaba `combos.precio_fijo` para combos (AYCDS-22 lo pasó a consultas en lote, mismo criterio).
   2. `mesero_id` sale del JWT (`TenantContextService`), nunca del body.
   3. `numero_orden` sale de `SequencesService` (`ORD-000123`) sobre la tabla `secuencias` con RLS por empresa.
   4. La mesa pasa a `OCUPADA` al crear la orden y se libera (a `LIBRE`, o `RESERVADA` si queda reserva activa) al llegar a un estado terminal, sin pisar `MANTENIMIENTO`.
@@ -127,17 +127,18 @@
 
 ### AYCDS-22 — [32.0] Optimizar Comanda alta concurrencia
 
-- **Semana:** 9-10 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Por hacer | **Avance:** 25%
+- **Semana:** 9-10 | **Responsable:** Sonny De La Cruz | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** “Índices tablas pico almuerzo/cena RNF-03 + carga.”
-- **Qué debe hacerse:**
-  1. Crear un script de carga reproducible para creación de comandas en pico.
-  2. Medir línea base: latencia p50/p95, errores 5xx y conexiones.
-  3. Revisar `EXPLAIN (ANALYZE, BUFFERS)` de las consultas de orden/detalle/mesa.
-  4. Ajustar índices o queries solo si el plan lo justifica.
-  5. Documentar resultados antes/después en `docs/explain-orders.md`.
-- **Archivos/rutas:** `apps/api/test/load/**` o `ops/load/**`, `docs/explain-orders.md`, migración de índices si aplica
-- **Criterio de aceptación:** carga reproducible; p95 dentro del umbral acordado; sin errores 5xx; mejoras documentadas.
-- **Evidencia:** script, salida de carga, `EXPLAIN` y conclusión técnica.
+- **Qué se hizo:**
+  1. Script de carga Node puro (`apps/api/test/load/orders-load.mjs`): login `MESERO`, altas de 2 líneas en bucle cerrado con rampa y calentamiento, 4xx/5xx por status y muestreo de `pg_stat_activity` (conexiones totales/activas y **esperando lock**). Scripts `perf:seed`, `perf:reset` y `perf:load` en `apps/api/package.json`.
+  2. Dataset reproducible: `db/scripts/perf/seed-perf.sql` genera 50 000 órdenes `PERF-%` + 150 000 líneas repartidas en 8 mesas; `reset-perf.sql` borra solo ese dataset. `explain-orders.sql` corre 6 `EXPLAIN (ANALYZE, BUFFERS)` como `fogoneria_rls` dentro de `BEGIN/ROLLBACK`, y `explain-bypassrls.sql` compara el mismo listado con estadísticas visibles.
+  3. Línea base (solo altas, 50 concurrentes): 64–66 rps, p95 **1034–1092 ms**, 8–9 sesiones esperando lock. Causa: el upsert de `secuencias` se ejecutaba dentro de la transacción del request y retenía el lock de la fila `(empresa_id, tipo)` durante toda la comanda.
+  4. Optimización: el folio pasa a **una sentencia autocommit en el pool de plataforma** (`prisma.raw`), fuera de la transacción del request; los cuatro `set_config` del contexto RLS se juntan en una sentencia; los precios se resuelven en lote (platos + combos + `precios_platos`, sin N+1 por línea); `DATABASE_POOL_MAX` queda configurable (default 10, se midió 20 sin mejora). Sin índices nuevos: el plan de escritura ya era correcto.
+  5. Test de concurrencia real de folios (`test/db/sequences-concurrency.db-spec.ts`): 50 altas simultáneas sin repetir número, contador por empresa y series `ORD`/`RSV` independientes.
+  6. Documentación de resultados, `EXPLAIN` y límites en `docs/explain-orders.md`; decisiones en `docs/decisiones.md`.
+- **Archivos/rutas:** `apps/api/src/common/sequences/sequences.service.ts`, `apps/api/src/prisma/prisma.service.ts`, `apps/api/src/modules/orders/orders.service.ts`, `apps/api/src/config/env.validation.ts`, `apps/api/test/load/orders-load.mjs`, `apps/api/test/db/sequences-concurrency.db-spec.ts`, `db/scripts/perf/**`, `ops/perf/results/**`, `docs/explain-orders.md`
+- **Criterio de aceptación:** carga reproducible; p95 dentro del umbral acordado (≤ 500 ms a 50 concurrentes); sin errores 5xx; mejoras documentadas. **Cumplido** en el escenario de altas: p95 307–326 ms, ~186 órdenes/s y 0 errores.
+- **Evidencia:** 127 unit, 43 DB (3 nuevos), `lint`/`check-types`/`build` en verde; 6 corridas de 50 concurrentes (`ops/perf/results/final-escritura-c50-r*.json`), 2 de 25 y 2 de 10; `explain-before.txt` vs `explain-after.txt` con el mismo plan (no se agregaron índices). Hallazgo abierto: el listado del KDS bajo RLS no ve estadísticas y recorre ~50k filas (157 ms vs 0,075 ms con estadísticas); no se cambió la seguridad y queda documentado con opciones.
 
 ### AYCDS-25 — [33.0] App Mesero generar-estados-entregado
 
@@ -311,3 +312,4 @@ pnpm --filter api test:db
 | 2026-10-28 | 16 | David Piñarreta | Cierra AYCDS-16: módulos `tables` y `reservations`, tabla `secuencias` con folios atómicos, estados de mesa derivados, aforo y solapamiento ±90 min en hora de Lima; 88 unit + 32 e2e + 34 DB verdes y prueba real con dos sucursales | PR-1 `feat/aycds-16-mesas-reservas-david`, `docs/decisiones.md` |
 | 2026-10-28 | 20 | David Piñarreta | Cierra AYCDS-20: precio resuelto en servidor (`precioUnitario` fuera del DTO), `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`/liberada, `ANULADA` solo desde `POR_CONFIRMAR` + trigger `DB_ORDEN_ANULACION_TARDIA`, auditoría y tests. Global 44% | PR [#12](https://github.com/SebJoq21/fogoneria-system/pull/12); 107 unit, 33 e2e, 40 DB; smoke con 2 órdenes concurrentes |
 | 2026-10-28 | 14 | David Piñarreta | Cierra AYCDS-14 ([PR #13](https://github.com/SebJoq21/fogoneria-system/pull/13), merge `f1f7b2d`): gateway `/orders` con rooms por tenant/sucursal, ticket WS de 60 s (`scope: ws`, no abre la API HTTP), eventos `order.created`/`order.updated`/`table.status`, cliente web con backoff + dedupe y contrato en `docs/websockets.md`. Global 58% | 127 unit, 38 e2e (Socket.io real, aislamiento A/B), 40 DB, 55 web; smoke real 16/16 contra PostgreSQL 16; CI 40641677208 en verde |
+| 2026-10-28 | 22 | Sonny De La Cruz | Cierra AYCDS-22: script de carga y dataset de 50k órdenes; línea base 1034–1092 ms p95 a 50 concurrentes por el lock del folio dentro de la transacción; folio en autocommit, `set_config` único y precios en lote → p95 307–326 ms, ~186 órdenes/s y 0 esperas de lock. Sin índices nuevos. Global 69% | 127 unit, 43 DB, `explain-before/after/bypassrls` en `ops/perf/results/`; `docs/explain-orders.md` |

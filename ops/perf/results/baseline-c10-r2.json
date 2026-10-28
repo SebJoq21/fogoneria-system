@@ -1,0 +1,43 @@
+{
+  "label": "baseline-c10-r2",
+  "startedAt": "1970-01-01T00:00:01.182Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 10,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0.1,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 3087,
+    "rps": 51.26,
+    "ok": 3087,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 80.97,
+    "p95": 266.83,
+    "p99": 456.04,
+    "max": 752.55,
+    "avg": 108.23,
+    "byStatus": {
+      "201": 3087
+    }
+  },
+  "kdsReads": {
+    "total": 315,
+    "p50": 763.67,
+    "p95": 1071.64,
+    "p99": 1244,
+    "byStatus": {
+      "200": 315
+    }
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 13,
+    "maxActive": 11,
+    "maxWaiting": 7
+  },
+  "errors": []
+}

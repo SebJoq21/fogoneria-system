@@ -1,0 +1,41 @@
+{
+  "label": "final-escritura-c50-r3",
+  "startedAt": "1970-01-01T00:00:00.650Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 50,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 11149,
+    "rps": 185.13,
+    "ok": 11149,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 258.55,
+    "p95": 314.83,
+    "p99": 338.21,
+    "max": 500.25,
+    "avg": 258.54,
+    "byStatus": {
+      "201": 11149
+    }
+  },
+  "kdsReads": {
+    "total": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0,
+    "byStatus": {}
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 20,
+    "maxActive": 5,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

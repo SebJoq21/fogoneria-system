@@ -1,0 +1,41 @@
+{
+  "label": "final-escritura-c25-r1",
+  "startedAt": "1970-01-01T00:00:01.003Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 25,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 5528,
+    "rps": 91.85,
+    "ok": 5528,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 256.6,
+    "p95": 351.26,
+    "p99": 413.45,
+    "max": 637.24,
+    "avg": 260.82,
+    "byStatus": {
+      "201": 5528
+    }
+  },
+  "kdsReads": {
+    "total": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0,
+    "byStatus": {}
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 18,
+    "maxActive": 4,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

@@ -1,0 +1,43 @@
+{
+  "label": "final-mixto-c50-r1",
+  "startedAt": "1970-01-01T00:00:00.638Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 50,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0.1,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 3281,
+    "rps": 52.32,
+    "ok": 3281,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 534.65,
+    "p95": 1381.64,
+    "p99": 1563,
+    "max": 1701.4,
+    "avg": 658.6,
+    "byStatus": {
+      "201": 3281
+    }
+  },
+  "kdsReads": {
+    "total": 329,
+    "p50": 2205.72,
+    "p95": 3029.65,
+    "p99": 3222.05,
+    "byStatus": {
+      "200": 329
+    }
+  },
+  "database": {
+    "samples": 62,
+    "maxTotal": 19,
+    "maxActive": 11,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

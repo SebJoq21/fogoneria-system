@@ -8,7 +8,6 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/audit.service.js';
-import { PricingService } from '../pricing/pricing.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
@@ -50,7 +49,6 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly sequences: SequencesService,
-    private readonly pricing: PricingService,
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
   ) {}
@@ -116,9 +114,7 @@ export class OrdersService {
     }
 
     const listaId = await this.resolveList(dto.listaPrecioId);
-    const items = await Promise.all(
-      dto.items.map((item) => this.priceItem(item, listaId)),
-    );
+    const items = await this.priceItems(dto.items, listaId);
 
     const subtotal = round2(
       items.reduce((sum, item) => sum + item.subtotal, 0),
@@ -280,66 +276,124 @@ export class OrdersService {
     return this.findOne(id);
   }
 
-  /** Precio del servidor. Ignora cualquier importe que llegue del cliente. */
-  private async priceItem(item: OrderItemDto, listaId: string | null) {
-    if (item.tipo === 'PLATO') {
-      if (!item.platoId) {
+  /**
+   * Precio del servidor para toda la comanda. Ignora cualquier importe que
+   * llegue del cliente.
+   *
+   * Antes se resolvía línea por línea (1 consulta de plato + 1 de precio por
+   * ítem). En el pico de comandas eso era un N+1 que la base no justificaba
+   * (AYCDS-22): ahora se traen todos los platos, combos y precios en tres
+   * consultas, sin importar cuántas líneas tenga la orden.
+   */
+  private async priceItems(
+    items: OrderItemDto[],
+    listaId: string | null,
+  ) {
+    for (const item of items) {
+      if (item.tipo === 'PLATO' && !item.platoId) {
         throw new BadRequestException('Un ítem PLATO requiere platoId');
       }
-      const plato = await this.prisma.scoped.platos.findFirst({
-        where: { id: item.platoId, deleted_at: null },
-        select: { id: true, nombre: true, activo: true },
-      });
-      if (!plato) throw new NotFoundException('Plato no encontrado');
-      if (!plato.activo) {
-        throw new BadRequestException(`El plato ${plato.nombre} está inactivo`);
+      if (item.tipo === 'COMBO' && !item.comboId) {
+        throw new BadRequestException('Un ítem COMBO requiere comboId');
       }
-      if (!listaId) {
-        throw new BadRequestException(
-          'No hay lista de precios activa: indica listaPrecioId',
-        );
+    }
+
+    const platoIds = [
+      ...new Set(
+        items
+          .filter((item) => item.tipo === 'PLATO')
+          .map((item) => item.platoId as string),
+      ),
+    ];
+    const comboIds = [
+      ...new Set(
+        items
+          .filter((item) => item.tipo === 'COMBO')
+          .map((item) => item.comboId as string),
+      ),
+    ];
+
+    // Van en serie a propósito: comparten la conexión de la transacción del
+    // request, así que `Promise.all` solo intercalaría queries en el mismo
+    // cliente pg sin ganar paralelismo.
+    const platos =
+      platoIds.length > 0
+        ? await this.prisma.scoped.platos.findMany({
+            where: { id: { in: platoIds }, deleted_at: null },
+            select: { id: true, nombre: true, activo: true },
+          })
+        : [];
+    const combos =
+      comboIds.length > 0
+        ? await this.prisma.scoped.combos.findMany({
+            where: { id: { in: comboIds }, deleted_at: null },
+            select: { id: true, nombre: true, activo: true, precio_fijo: true },
+          })
+        : [];
+
+    const platoPorId = new Map(platos.map((plato) => [plato.id, plato]));
+    const comboPorId = new Map(combos.map((combo) => [combo.id, combo]));
+
+    if (platoIds.length > 0 && !listaId) {
+      throw new BadRequestException(
+        'No hay lista de precios activa: indica listaPrecioId',
+      );
+    }
+
+    const precios =
+      listaId && platoIds.length > 0
+        ? await this.prisma.scoped.precios_platos.findMany({
+            where: { lista_id: listaId, plato_id: { in: platoIds } },
+            select: { plato_id: true, precio: true },
+          })
+        : [];
+    const precioPorPlato = new Map(
+      precios.map((precio) => [precio.plato_id, Number(precio.precio)]),
+    );
+
+    return items.map((item) => {
+      if (item.tipo === 'PLATO') {
+        const plato = platoPorId.get(item.platoId as string);
+        if (!plato) throw new NotFoundException('Plato no encontrado');
+        if (!plato.activo) {
+          throw new BadRequestException(`El plato ${plato.nombre} está inactivo`);
+        }
+
+        const precio = precioPorPlato.get(plato.id);
+        if (precio === undefined) {
+          throw new BadRequestException(
+            `El plato ${plato.nombre} no tiene precio en la lista`,
+          );
+        }
+
+        return {
+          tipo: item.tipo,
+          plato_id: plato.id,
+          combo_id: null,
+          cantidad: item.cantidad,
+          precio_unitario: precio,
+          subtotal: round2(item.cantidad * precio),
+          notas: item.notas ?? null,
+        };
       }
 
-      const { precio } = await this.pricing.resolvePrice(plato.id, listaId);
-      if (precio === null) {
-        throw new BadRequestException(
-          `El plato ${plato.nombre} no tiene precio en la lista`,
-        );
+      const combo = comboPorId.get(item.comboId as string);
+      if (!combo) throw new NotFoundException('Combo no encontrado');
+      if (!combo.activo) {
+        throw new BadRequestException(`El combo ${combo.nombre} está inactivo`);
       }
 
+      const precio = round2(Number(combo.precio_fijo));
       return {
         tipo: item.tipo,
-        plato_id: plato.id,
-        combo_id: null,
+        plato_id: null,
+        combo_id: combo.id,
         cantidad: item.cantidad,
         precio_unitario: precio,
         subtotal: round2(item.cantidad * precio),
         notas: item.notas ?? null,
       };
-    }
-
-    if (!item.comboId) {
-      throw new BadRequestException('Un ítem COMBO requiere comboId');
-    }
-    const combo = await this.prisma.scoped.combos.findFirst({
-      where: { id: item.comboId, deleted_at: null },
-      select: { id: true, nombre: true, activo: true, precio_fijo: true },
     });
-    if (!combo) throw new NotFoundException('Combo no encontrado');
-    if (!combo.activo) {
-      throw new BadRequestException(`El combo ${combo.nombre} está inactivo`);
-    }
-
-    const precio = round2(Number(combo.precio_fijo));
-    return {
-      tipo: item.tipo,
-      plato_id: null,
-      combo_id: combo.id,
-      cantidad: item.cantidad,
-      precio_unitario: precio,
-      subtotal: round2(item.cantidad * precio),
-      notas: item.notas ?? null,
-    };
   }
 
   /**

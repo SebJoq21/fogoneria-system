@@ -28,6 +28,10 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   next.PORT = Number(next.PORT ?? 3001);
   next.CORS_ORIGIN = String(next.CORS_ORIGIN ?? 'http://localhost:3000');
   next.DATABASE_SCHEMA = String(next.DATABASE_SCHEMA ?? 'fogoneria');
+  // Tamaño de cada pool de Prisma (negocio y plataforma). AYCDS-22 mostró que
+  // 10 no era el cuello de botella (la base estaba ociosa), así que se deja el
+  // valor histórico y se expone para escalar sin recompilar.
+  next.DATABASE_POOL_MAX = positiveInt(next.DATABASE_POOL_MAX, 10);
   next.TRIAL_DAYS = positiveInt(next.TRIAL_DAYS, 14);
   next.ONBOARDING_RATE_LIMIT = positiveInt(next.ONBOARDING_RATE_LIMIT, 5);
   next.ONBOARDING_RATE_WINDOW_MS = positiveInt(next.ONBOARDING_RATE_WINDOW_MS, 600_000);
