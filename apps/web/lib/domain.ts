@@ -50,6 +50,8 @@ export type TableAccount = {
   id: string;
   branchId: string;
   tableId: number | null;
+  /** UUID de la mesa en la API: es lo que viaja en `POST /orders` (AYCDS-25). */
+  tableApiId?: string | null;
   /** "Mesa 4" o "Para llevar" */
   label: string;
   customer: string;
