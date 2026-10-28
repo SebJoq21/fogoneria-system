@@ -40,12 +40,15 @@ export class PrismaService implements OnModuleDestroy {
     const schema = config.get<string>('DATABASE_SCHEMA') ?? 'fogoneria';
     const rawConnection = config.get<string>('DATABASE_URL_SAAS') ?? connectionString;
     const rlsConnection = config.get<string>('DATABASE_URL_RLS') ?? connectionString;
+    const poolMax = Number(config.get('DATABASE_POOL_MAX') ?? 10);
 
+    // Cada cliente tiene su propio pool: el de negocio (RLS) y el de plataforma
+    // (auth/SaaS/folios). Se dimensionan juntos para no superar `max_connections`.
     this.raw = new PrismaClient({
-      adapter: new PrismaPg(rawConnection, { schema }),
+      adapter: new PrismaPg({ connectionString: rawConnection, max: poolMax }, { schema }),
     });
     this.rls = new PrismaClient({
-      adapter: new PrismaPg(rlsConnection, { schema }),
+      adapter: new PrismaPg({ connectionString: rlsConnection, max: poolMax }, { schema }),
     });
     this.scoped = withTenantScope(this.rls, tenantContext);
   }
@@ -62,20 +65,16 @@ export class PrismaService implements OnModuleDestroy {
       if (!context.empresaId && !context.bypass) return callback();
 
       return this.rls.$transaction(async (tx) => {
-        await tx.$executeRawUnsafe(
-          "SELECT set_config('app.empresa_id', $1, true)",
+        // Una sola sentencia: cuatro `set_config` separados eran cuatro
+        // round-trips por request y pesaban en el pico de comandas (AYCDS-22).
+        await tx.$queryRawUnsafe(
+          `SELECT set_config('app.empresa_id', $1, true),
+                  set_config('app.sucursal_id', $2, true),
+                  set_config('app.usuario_id', $3, true),
+                  set_config('app.bypass', $4, true)`,
           context.empresaId ?? '',
-        );
-        await tx.$executeRawUnsafe(
-          "SELECT set_config('app.sucursal_id', $1, true)",
           context.sucursalId ?? '',
-        );
-        await tx.$executeRawUnsafe(
-          "SELECT set_config('app.usuario_id', $1, true)",
           context.userId ?? '',
-        );
-        await tx.$executeRawUnsafe(
-          "SELECT set_config('app.bypass', $1, true)",
           context.bypass ? 'on' : 'off',
         );
 

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { TenantContextService } from '../context/tenant-context.service.js';
 import { limaDayKey } from '../utils/lima-day.js';
 
 /** Tipos de secuencia soportados. Se agregan aquí cuando haga falta otro folio. */
@@ -13,18 +12,28 @@ interface ValorRow {
 
 interface RawExecutor {
   $queryRawUnsafe: <T>(query: string, ...values: unknown[]) => Promise<T>;
-  $executeRawUnsafe: (query: string, ...values: unknown[]) => Promise<number>;
 }
 
 const SCHEMA_PATTERN = /^[a-z_][a-z0-9_]*$/;
 
 /**
- * Folios por empresa (AYCDS-16/20).
+ * Folios por empresa (AYCDS-16/20, optimizado en AYCDS-22).
  *
  * El incremento es una sola sentencia atómica (`INSERT ... ON CONFLICT ... DO
- * UPDATE ... RETURNING`) dentro de la transacción del request, así dos comandas
- * simultáneas nunca reciben el mismo número. No se usa el reloj del servidor
- * ni `COUNT(*)`: ambos se repiten bajo concurrencia o tras un borrado.
+ * UPDATE ... RETURNING`): dos comandas simultáneas nunca reciben el mismo
+ * número y no se depende del reloj ni de `COUNT(*)`.
+ *
+ * **Por qué NO dentro de la transacción del request** (AYCDS-22): el upsert
+ * bloquea la fila `(empresa_id, tipo)` hasta el commit. Si se ejecuta dentro de
+ * la transacción de la comanda, ese lock se retiene mientras se resuelven
+ * precios, se insertan líneas, se audita y se emiten eventos (~20 ms), así que
+ * todas las altas de una empresa se serializan. Con 50 meseros concurrentes el
+ * throughput se estancaba en ~50 órdenes/s y el p95 pasaba de 1 s.
+ *
+ * Ahora la sentencia corre en autocommit sobre el pool de plataforma
+ * (`prisma.raw`, conexiones propias) y el lock dura lo que tarda el propio
+ * upsert (~1 ms). Se acepta un hueco en la numeración si la creación falla
+ * después: un folio sin comanda es preferible a una cola de 1 s en el pico.
  *
  * El SQL crudo no pasa por Prisma, así que la tabla se califica con el esquema
  * configurado (`DATABASE_SCHEMA`); el `search_path` de la conexión no lo cubre.
@@ -35,7 +44,6 @@ export class SequencesService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
     config: ConfigService,
   ) {
     const schema = config.get<string>('DATABASE_SCHEMA') ?? 'fogoneria';
@@ -47,25 +55,11 @@ export class SequencesService {
 
   /**
    * Siguiente valor de la secuencia (1, 2, 3…) para la empresa y el tipo.
-   * Si el request ya abrió la transacción RLS, se reutiliza para que el
-   * incremento y el resto de la operación sean atómicos.
+   * El `empresaId` sale del JWT, nunca del body: la fila del contador queda
+   * atada al tenant aunque la sentencia use el pool de plataforma.
    */
   async next(empresaId: string, tipo: SecuenciaTipo): Promise<number> {
-    const tx = this.tenantContext.get()?.tx;
-    if (tx) {
-      const [row] = await this.bump(tx, empresaId, tipo);
-      return Number(row.valor);
-    }
-
-    // Sin request (cron, script): se abre una transacción propia y se fija el
-    // contexto para que la política RLS de `secuencias` permita el INSERT.
-    const [row] = await this.prisma.rls.$transaction(async (inner) => {
-      await inner.$executeRawUnsafe(
-        "SELECT set_config('app.empresa_id', $1, true)",
-        empresaId,
-      );
-      return this.bump(inner, empresaId, tipo);
-    });
+    const [row] = await this.bump(this.prisma.raw, empresaId, tipo);
     return Number(row.valor);
   }
 
