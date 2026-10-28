@@ -1,6 +1,6 @@
 # SESION — estado entre sesiones
 
-## 2026-10-28 — Sprint 3: AYCDS-25 (app del mesero) implementada, PR #17 en revisión
+## 2026-10-28 — Sprint 3: AYCDS-25 (app del mesero) cerrada y mergeada
 
 - Objetivo: conectar el panel del mesero (`/app/mozo`) y el KDS a la API real, sin mocks en el flujo de comandas.
 - Hecho (rama `feat/aycds-25-app-mesero-joshua`, desde `development` en `3353036`):
@@ -10,8 +10,8 @@
   - `MozoView`/`AccountPanel`: mesa real, envío asíncrono con resultado visible, "Mis comandas" por `mesero_id`, entregar/anular según el servidor, badge de canal en vivo y recarga por eventos.
   - `OrdersView` (KDS): confirmar y marcar listo con `PATCH`, sin mutar estado local.
   - Tests: 72 web (17 nuevos en `order-mapping.test.ts` y `orders-api.test.ts`).
-- Pendiente: revisión del PR #17, CI en verde y smoke real con API + PostgreSQL; recién entonces Jira a "Listo".
-- Próximo paso: AYCDS-26 (Diego) sobre `development` con este PR mergeado; `ModulesProvider` gana `orders`/`refreshOrders` y hay que rebasar.
+- Pendiente: smoke real con API + PostgreSQL como evidencia adicional (el CI y las suites 72 web + 127 api ya están en verde).
+- Próximo paso: AYCDS-26 (Diego) desde `origin/development` con `b56865b`; `ModulesProvider` ya expone `orders`/`refreshOrders`/`advanceOrder` y hay que rebasar su rama.
 
 ## 2026-10-28 — Sprint 3: AYCDS-22 (comanda en alta concurrencia) cerrada
 
