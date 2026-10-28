@@ -10,8 +10,9 @@
   - Web: `lib/realtime.ts` (reconexión propia con backoff 1 s → 30 s + jitter y ticket nuevo por intento, dedupe por `eventId`), BFF `GET /api/session/ws-ticket` (401 sin sesión, `no-store`) y hook `components/erp/useOrdersRealtime.ts`; `OrdersView` muestra el badge *En vivo / Reconectando… / Sin canal en vivo* y la última novedad.
   - `docs/websockets.md` con flujo, rooms, contrato y límites (sin Redis adapter; el pintado de la comanda en el KDS es AYCDS-25/26/28).
 - Verificado: 127 unit, 38 e2e (Socket.io real con aislamiento A/B), 55 web, `lint`, `check-types` y `build` en verde; smoke real 16/16 contra PostgreSQL 16 (`localhost:5433`): ticket 200/60 s, ticket rechazado por la API HTTP (401), handshake de cocina, `order.created` con el folio, `order.updated` en la transición, `table.status` al ocupar y al liberar, empresa B sin eventos.
-- Pendiente: merge del PR-3 y `AYCDS-14 → Listo`; siguientes tareas del sprint son de Sonny/Joshua/Diego/Sebastián.
-- Próximo paso: commit + PR-3 a `development`, CI verde, merge, comentario de evidencia en Jira y cierre del Sprint 3 para David.
+- Cerrado: PR [#13](https://github.com/SebJoq21/fogoneria-system/pull/13) mergeado en `development` (`f1f7b2d`), CI `40641677208` en verde (3m08s), `AYCDS-14 → Listo` con comentario de evidencia. PR [#14](https://github.com/SebJoq21/fogoneria-system/pull/14) enlaza la bitácora (`d12d570`).
+- Pendiente: nada de David en el Sprint 3; quedan AYCDS-22 (Sonny), 25 (Joshua), 26 (Diego), 28 (Sebastián) y los heredados 58/66 (Sebastián).
+- Próximo paso: ninguno para David; el sprint cierra el 2026-11-03 y las tareas restantes dependen de `development` con `14` mergeado.
 
 ## 2026-10-28 — Sprint 3: AYCDS-20 (órdenes POS e inmutabilidad) cerrada
 
