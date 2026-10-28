@@ -10,6 +10,7 @@ import type { TenantContextService } from '../../common/context/tenant-context.s
 import type { SequencesService } from '../../common/sequences/sequences.service.js';
 import type { AuditService } from '../audit/audit.service.js';
 import type { PricingService } from '../pricing/pricing.service.js';
+import type { RealtimeService } from '../realtime/realtime.service.js';
 
 const context = {
   userId: 'u1',
@@ -51,6 +52,11 @@ describe('OrdersService (AYCDS-20)', () => {
   let sequences: { nextNumeroOrden: ReturnType<typeof vi.fn> };
   let pricing: { resolvePrice: ReturnType<typeof vi.fn> };
   let audit: { record: ReturnType<typeof vi.fn> };
+  let realtime: {
+    orderCreated: ReturnType<typeof vi.fn>;
+    orderUpdated: ReturnType<typeof vi.fn>;
+    tableStatus: ReturnType<typeof vi.fn>;
+  };
 
   function buildService(tenant: Record<string, unknown> = context) {
     return new OrdersService(
@@ -59,6 +65,7 @@ describe('OrdersService (AYCDS-20)', () => {
       sequences as unknown as SequencesService,
       pricing as unknown as PricingService,
       audit as unknown as AuditService,
+      realtime as unknown as RealtimeService,
     );
   }
 
@@ -67,6 +74,11 @@ describe('OrdersService (AYCDS-20)', () => {
     sequences = { nextNumeroOrden: vi.fn().mockResolvedValue('ORD-000001') };
     pricing = { resolvePrice: vi.fn().mockResolvedValue({ precio: 24.9 }) };
     audit = { record: vi.fn().mockResolvedValue(undefined) };
+    realtime = {
+      orderCreated: vi.fn(),
+      orderUpdated: vi.fn(),
+      tableStatus: vi.fn(),
+    };
     vi.clearAllMocks();
 
     prisma.scoped.listas_precios.findFirst.mockResolvedValue({ id: 'l1' });
@@ -403,5 +415,94 @@ describe('OrdersService (AYCDS-20)', () => {
     await expect(service.updateStatus('ajena', 'EN_COCINA')).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  describe('eventos en vivo (AYCDS-14)', () => {
+    it('publica order.created y table.status al crear una orden con mesa', async () => {
+      prisma.scoped.mesas.findFirst.mockResolvedValue({
+        id: MESA,
+        numero: 'Mesa 1',
+        sucursal_id: 's1',
+        estado: 'LIBRE',
+      });
+      prisma.scoped.ordenes.create.mockResolvedValue({
+        id: 'o1',
+        total: 24.9,
+        created_at: new Date('2026-10-28T10:00:00.000Z'),
+        detalles_orden: [],
+      });
+      const service = buildService();
+
+      await service.create({
+        mesaId: MESA,
+        items: [{ tipo: 'PLATO', platoId: PLATO, cantidad: 1 }],
+      });
+
+      expect(realtime.orderCreated).toHaveBeenCalledWith(
+        'e1',
+        expect.objectContaining({
+          ordenId: 'o1',
+          numeroOrden: 'ORD-000001',
+          sucursalId: 's1',
+          mesaId: MESA,
+        }),
+      );
+      expect(realtime.tableStatus).toHaveBeenCalledWith(
+        'e1',
+        expect.objectContaining({ mesaId: MESA, de: 'LIBRE', a: 'OCUPADA' }),
+      );
+    });
+
+    it('publica order.updated y table.status al liberar la mesa', async () => {
+      prisma.scoped.ordenes.findFirst.mockResolvedValue({
+        id: 'o1',
+        numero_orden: 'ORD-000001',
+        estado: 'ENTREGADO',
+        mesa_id: MESA,
+        sucursal_id: 's1',
+        mesas: { numero: 'Mesa 1' },
+      });
+      prisma.scoped.mesas.updateMany.mockResolvedValue({ count: 1 });
+      const service = buildService();
+
+      await service.updateStatus('o1', 'PAGADA');
+
+      expect(realtime.orderUpdated).toHaveBeenCalledWith(
+        'e1',
+        expect.objectContaining({
+          ordenId: 'o1',
+          de: 'ENTREGADO',
+          a: 'PAGADA',
+          sucursalId: 's1',
+        }),
+      );
+      expect(realtime.tableStatus).toHaveBeenCalledWith(
+        'e1',
+        expect.objectContaining({
+          mesaId: MESA,
+          numero: 'Mesa 1',
+          de: 'OCUPADA',
+          a: 'LIBRE',
+        }),
+      );
+    });
+
+    it('no publica table.status si la mesa sigue con otra orden abierta', async () => {
+      prisma.scoped.ordenes.findFirst.mockResolvedValue({
+        id: 'o1',
+        numero_orden: 'ORD-000001',
+        estado: 'POR_CONFIRMAR',
+        mesa_id: MESA,
+        sucursal_id: 's1',
+        mesas: { numero: 'Mesa 1' },
+      });
+      prisma.scoped.ordenes.count.mockResolvedValue(1);
+      const service = buildService();
+
+      await service.updateStatus('o1', 'ANULADA');
+
+      expect(realtime.orderUpdated).toHaveBeenCalledOnce();
+      expect(realtime.tableStatus).not.toHaveBeenCalled();
+    });
   });
 });

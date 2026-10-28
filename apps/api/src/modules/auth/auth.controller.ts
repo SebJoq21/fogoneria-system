@@ -10,6 +10,7 @@ import {
   LoginTenantDto,
   LoginUserDto,
 } from './dto/login-response.dto.js';
+import { WsTicketDto } from './dto/ws-ticket.dto.js';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -29,5 +30,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Devuelve el usuario y tenant del token actual' })
   me(@CurrentUser() user: JwtPayload): Promise<LoginUserDto & { tenant: LoginTenantDto | null }> {
     return this.authService.me(user);
+  }
+
+  @Post('ws-ticket')
+  @HttpCode(200)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Emite un ticket efímero para el handshake de WebSockets (AYCDS-14)',
+  })
+  wsTicket(@CurrentUser() user: JwtPayload): Promise<WsTicketDto> {
+    return this.authService.issueWsTicket(user);
   }
 }

@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-28 — Sprint 3: AYCDS-14 (WebSockets) cerrada
+
+- Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.
+- Hecho (PR-3, `feat/aycds-14-websockets-david`):
+  - API: módulo `src/modules/realtime/**` (`@Global`) con `OrdersGateway` (namespace `/orders`), `RealtimeService` y el contrato en `realtime.types.ts`. Rooms `empresa:<id>`, `empresa:<id>:sucursal:<id>` y `order:<id>` (`order:subscribe` valida el tenant). Sobre `{ eventId, at, data }` y eventos `order.created`, `order.updated` y `table.status`.
+  - Handshake con **ticket de 60 s** (`POST /api/v1/auth/ws-ticket`, `scope: 'ws'`); `JwtStrategy` rechaza cualquier token con `scope`, así que el ticket no abre la API HTTP.
+  - `OrdersService` publica el alta, cada transición y el cambio de mesa (`OCUPADA`/`LIBRE`/`RESERVADA`); `releaseTable` devuelve el estado nuevo para poder emitirlo.
+  - Web: `lib/realtime.ts` (reconexión propia con backoff 1 s → 30 s + jitter y ticket nuevo por intento, dedupe por `eventId`), BFF `GET /api/session/ws-ticket` (401 sin sesión, `no-store`) y hook `components/erp/useOrdersRealtime.ts`; `OrdersView` muestra el badge *En vivo / Reconectando… / Sin canal en vivo* y la última novedad.
+  - `docs/websockets.md` con flujo, rooms, contrato y límites (sin Redis adapter; el pintado de la comanda en el KDS es AYCDS-25/26/28).
+- Verificado: 127 unit, 38 e2e (Socket.io real con aislamiento A/B), 55 web, `lint`, `check-types` y `build` en verde; smoke real 16/16 contra PostgreSQL 16 (`localhost:5433`): ticket 200/60 s, ticket rechazado por la API HTTP (401), handshake de cocina, `order.created` con el folio, `order.updated` en la transición, `table.status` al ocupar y al liberar, empresa B sin eventos.
+- Pendiente: merge del PR-3 y `AYCDS-14 → Listo`; siguientes tareas del sprint son de Sonny/Joshua/Diego/Sebastián.
+- Próximo paso: commit + PR-3 a `development`, CI verde, merge, comentario de evidencia en Jira y cierre del Sprint 3 para David.
+
 ## 2026-10-28 — Sprint 3: AYCDS-20 (órdenes POS e inmutabilidad) cerrada
 
 - Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.

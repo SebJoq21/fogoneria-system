@@ -166,4 +166,44 @@ describe('AuthService', () => {
     const result = await service.login({ email: 'ana@fuego.pe', password: PASSWORD });
     expect(result.user.id).toBe('u1');
   });
+
+  describe('ws-ticket (AYCDS-14)', () => {
+    const payload = {
+      sub: 'u1',
+      email: 'ana@fuego.pe',
+      nombre: 'Ana',
+      rol: 'MESERO' as const,
+      empresaId: 'e1',
+      sucursalId: 's1',
+    };
+
+    it('emite un ticket de 60 s con scope ws y sin datos de sesión HTTP', async () => {
+      const prisma = buildPrisma();
+      const { service, jwt } = buildService(prisma);
+
+      const result = await service.issueWsTicket(payload);
+
+      expect(result).toEqual({ ticket: 'jwt-token', expiresIn: 60 });
+      expect(jwt.signAsync).toHaveBeenCalledWith(
+        {
+          sub: 'u1',
+          empresaId: 'e1',
+          sucursalId: 's1',
+          rol: 'MESERO',
+          scope: 'ws',
+        },
+        { expiresIn: 60 },
+      );
+    });
+
+    it('rechaza el ticket si la sesión no tiene empresa (superadmin)', async () => {
+      const prisma = buildPrisma();
+      const { service, jwt } = buildService(prisma);
+
+      await expect(
+        service.issueWsTicket({ ...payload, empresaId: null }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(jwt.signAsync).not.toHaveBeenCalled();
+    });
+  });
 });
