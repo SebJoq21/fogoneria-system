@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-28 — Sprint 3: AYCDS-20 (órdenes POS e inmutabilidad) cerrada
+
+- Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.
+- Hecho (PR-2, `feat/aycds-20-ordenes-pos-david`):
+  - `apps/api/src/modules/orders/orders.service.ts` reescrito: precio del servidor (`PricingService.resolvePrice` para platos, `combos.precio_fijo` para combos), `mesero_id` del JWT, `numero_orden` vía `SequencesService`, totales con 2 decimales y validación de descuento.
+  - `dto/create-order.dto.ts`: fuera `precioUnitario` (el `forbidNonWhitelisted` global lo rechaza con 400) y dentro `sucursalId` para `ADMIN_GLOBAL`.
+  - `TRANSITIONS` cerradas: `ANULADA` solo desde `POR_CONFIRMAR`; `EN_COCINA`/`LISTO` devuelven 400 y los estados terminales 409. La misma regla queda en la base con la migración `20261028120000_ordenes_anulacion_estricta` (`DB_ORDEN_ANULACION_TARDIA`).
+  - Mesa: `OCUPADA` al crear y liberación transaccional en estado terminal, respetando reserva activa y `MANTENIMIENTO`. Auditoría en alta y en cada cambio de estado.
+  - Tests: `orders.service.spec.ts` (19 unit), `test/orders.e2e-spec.ts` (precio inyectado 400) y `test/db/orders-pos.db-spec.ts` (6 DB: camino KDS, anulación temprana/tardía, numeración única y cross-empresa).
+- Verificado: 107 unit, 33 e2e, 40 DB, `lint`, `check-types` y `build` en verde; smoke real contra PostgreSQL 16 (`localhost:5433`) con precio inyectado 400, dos órdenes concurrentes con folios distintos (`ORD-000002`/`ORD-000003`), anulación tardía 400, orden pagada 409, mesa liberada y cross-tenant 404.
+- Pendiente: PR-3 (AYCDS-14, WebSockets).
+- Próximo paso: mergear el PR de la rama y crear `feat/aycds-14-websockets-david` desde `development`.
+
 ## 2026-10-28 — Sprint 3: AYCDS-16 (mesas y reservas) cerrada
 
 - Objetivo: ejecutar las tareas de David del Sprint 3 en orden `16 → 20 → 14`, un PR por tarea desde `development`.

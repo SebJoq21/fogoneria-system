@@ -23,6 +23,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 - Toda ruta privada usa `@Roles(...)` si no es para cualquier autenticado; `@Public()` solo para login, health e info.
 - Las queries de negocio usan `prisma.scoped` (filtro automático de tenant); auth y consola SaaS usan `prisma.raw`. `findUnique/update/delete/upsert` no se auto-filtran: validar pertenencia con `findFirst`/`updateMany`.
 - DB = PostgreSQL + Prisma 7 (decisión vigente, ver `docs/decisiones.md`). No introducir otro ORM.
+- Órdenes (AYCDS-20): el precio **nunca** viene del cliente. El DTO no acepta `precioUnitario` (el `forbidNonWhitelisted` lo rechaza) y `OrdersService` lo resuelve con `PricingService.resolvePrice` (platos) o `combos.precio_fijo` (combos). `mesero_id` sale del JWT y `numero_orden` de `SequencesService`. `ANULADA` solo desde `POR_CONFIRMAR`: una comanda en cocina se entrega y se compensa, y el trigger `trg_ordenes_inmutable` aplica la misma regla.
 - `strictPropertyInitialization: false` en `tsconfig.json` — no confiarse, inicializar igual.
 
 ## Comandos

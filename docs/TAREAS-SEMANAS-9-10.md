@@ -18,10 +18,10 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
-| Cerradas (Listo) | **1** |
+| Cerradas (Listo) | **2** |
 | En curso | **0** |
-| Por hacer | **6** |
-| Avance global (promedio simple) | **36%** |
+| Por hacer | **5** |
+| Avance global (promedio simple) | **44%** |
 | Avance funcional end-to-end | **≈28%** |
 
 **Diagnóstico:** la base de autenticación, RLS, catálogo, precios y órdenes ya existe. Sin embargo, el flujo Semanas 9–10 no está conectado: la UI de mesero, KDS, mesas y reservas trabaja con estado local/mocks, no hay API de mesas/reservas, no hay WebSockets y la API de órdenes todavía confía en el precio enviado por el cliente. El objetivo es cerrar el flujo **mesero → cocina → mesero → mesa**, con estados en tiempo real y pruebas end-to-end.
@@ -43,15 +43,15 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 42% |
+| S9 | 14, 16, 20, 22, 25, 26 | 51% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **36%** |
+| **Global** | **7 tareas** | **44%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
-| David Piñarreta | 14, 16, 20 | 48% |
+| David Piñarreta | 14, 16, 20 | 67% |
 | Sonny De La Cruz | 22 | 25% |
 | Joshua Chávez | 25 | 40% |
 | Diego Arévalo | 26 | 40% |
@@ -65,7 +65,7 @@
 |---|---|---|---|---|---|---|---|
 | AYCDS-14 | [29.0] Gateway WebSockets Mesero-Cocina | 9 | David Piñarreta | Por hacer | 0% | `OrdersService.updateStatus` con transiciones; KDS `OrdersView` con estado local | Gateway Socket.io, autenticación WS, rooms por tenant/sucursal, eventos de comanda, cliente web y pruebas |
 | AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Listo | 100% | Módulos API `tables` y `reservations` (CRUD, estados manuales vs derivados, aforo ±90 min, hora de Lima, folios por secuencia); RLS por empresa con `secuencias`; tests unit/e2e/db; UI `BookingsModule` y `SalonTablesView` | — (conectar la UI a la API queda en AYCDS-26) |
-| AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Por hacer | 45% | `orders.controller.ts` con list/create/status; transiciones; DTO de ítems ya valida PLATO/COMBO y límites (PR #8); triggers de inmutabilidad en DB | Precio resuelto en servidor, `mesero_id` desde JWT, número de orden seguro, estado de mesa, bloqueo de anulación en preparación, auditoría y tests |
+| AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Listo | 100% | Precio resuelto en servidor, `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`→liberada en estado terminal, `ANULADA` solo desde `POR_CONFIRMAR` (API 400 + trigger `DB_ORDEN_ANULACION_TARDIA`), auditoría; 19 unit + e2e + 6 DB | — |
 | AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Por hacer | 25% | Índices `idx_ordenes_tenant_sucursal_estado`, `idx_ordenes_tenant_fecha`, `idx_detalles_orden`; baseline en `docs/explain-rls.md` | Script de carga, línea base de comandas, `EXPLAIN`, optimización y documentación de p95/errores |
 | AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | Por hacer | 40% | `MozoView`, `AccountPanel`, `AddItemModal`; UI de cuentas y estados | Conectar a API real, crear pedido, avanzar estados, marcar entregado, anular pendiente, layout tablet y tests |
 | AYCDS-26 | [34.0] Mapa mesas croquis + agenda reservas | 9-10 | Diego Arévalo | Por hacer | 40% | Mapa/agenda en `BookingsModule`, `SalonTablesView` y `/app/mesas`; CRUD local | API real, estados en vivo, reservas por fecha, bloqueo/liberación y permisos |
@@ -109,21 +109,21 @@
   - Tests: 88 unit (9 nuevos de mesas, 12 de reservas, 5 de secuencias), 32 e2e (16 nuevos) y 34 DB (7 nuevos) verdes.
   - Prueba real contra PostgreSQL 16 (`localhost:5433`): CRUD de mesas en dos sucursales, duplicado 409, aforo 409, solapamiento 409, bloqueo con reserva 409, liberación de mesa al cancelar la última reserva, `RSV-20261031-0001` por secuencia y aislamiento cross-tenant (404).
 
-### AYCDS-20 — [31.0] API órdenes POS e inmutabilidad
+### AYCDS-20 - [31.0] API órdenes POS e inmutabilidad
 
-- **Semana:** 9-10 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 45%
-- **Descripción Jira:** “Captura comanda, envío cocina, bloquea anular en preparación RF-06 RF-07 CT-FG-02.”
-- **Qué debe hacerse:**
-  1. Resolver el precio unitario en el servidor con `resolvePrice`; ignorar el precio enviado por el cliente.
-  2. Tomar `mesero_id` desde el JWT, no desde el body.
-  3. Reemplazar `numero_orden: ORD-${Date.now()}` por una secuencia segura por empresa.
-  4. Al crear la orden, marcar la mesa como `OCUPADA`; al cerrar/cobrar, liberarla.
-  5. Bloquear `ANULADA` cuando la orden está `EN_COCINA` o `LISTO`.
-  6. Impedir modificaciones después de `ENTREGADO`/`PAGADA` y registrar auditoría.
-  7. Agregar pruebas de transiciones, precios, mesa y concurrencia.
-- **Archivos/rutas:** `apps/api/src/modules/orders/**`, `apps/api/src/modules/pricing/**`, `apps/api/src/modules/tables/**`, migraciones si se requiere secuencia
-- **Criterio de aceptación:** total calculado por el servidor; no se puede anular en preparación; orden pagada inmutable; mesa cambia de estado correctamente; tests verdes.
-- **Evidencia:** tests unit/DB, `EXPLAIN` de creación de orden y prueba real con dos órdenes simultáneas.
+- **Semana:** 9-10 | **Responsable:** David Piñarreta | **Estado Jira:** Listo | **Avance:** 100%
+- **Descripción Jira:** "Captura comanda, envío cocina, bloquea anular en preparación RF-06 RF-07 CT-FG-02."
+- **Qué se hizo:**
+  1. Precio resuelto en el servidor: `CreateOrderDto` ya no acepta `precioUnitario` (400 con `forbidNonWhitelisted`); `OrdersService` usa `PricingService.resolvePrice` para platos y `combos.precio_fijo` para combos, validando existencia y estado activo.
+  2. `mesero_id` sale del JWT (`TenantContextService`), nunca del body.
+  3. `numero_orden` sale de `SequencesService` (`ORD-000123`) sobre la tabla `secuencias` con RLS por empresa.
+  4. La mesa pasa a `OCUPADA` al crear la orden y se libera (a `LIBRE`, o `RESERVADA` si queda reserva activa) al llegar a un estado terminal, sin pisar `MANTENIMIENTO`.
+  5. `ANULADA` solo desde `POR_CONFIRMAR`: `EN_COCINA` y `LISTO` responden 400 y el trigger `trg_ordenes_inmutable` lanza `DB_ORDEN_ANULACION_TARDIA` (migración `20261028120000_ordenes_anulacion_estricta`).
+  6. `PAGADA`/`CERRADA`/`ANULADA` son terminales (409) y toda alta y cambio de estado se registra en `auditoria`.
+  7. Tests: 19 unit de `OrdersService`, e2e del contrato (precio inyectado 400) y spec DB con transiciones, anulación tardía y numeración única.
+- **Archivos/rutas:** `apps/api/src/modules/orders/**`, `apps/api/src/modules/pricing/**`, `apps/api/src/common/sequences/**`, migración `20261028120000_ordenes_anulacion_estricta`, `apps/api/test/db/orders-pos.db-spec.ts`
+- **Criterio de aceptación:** total calculado por el servidor; no se puede anular en preparación; orden pagada inmutable; mesa cambia de estado correctamente; tests verdes. **Cumplido.**
+- **Evidencia:** 107 unit, 33 e2e, 40 DB y `lint`/`check-types`/`build` en verde; smoke real contra PostgreSQL 16 con dos órdenes concurrentes (`ORD-000002`/`ORD-000003`), precio inyectado rechazado con 400, anulación tardía 400, orden pagada 409, mesa liberada y cross-tenant 404.
 
 ### AYCDS-22 — [32.0] Optimizar Comanda alta concurrencia
 
@@ -309,3 +309,4 @@ pnpm --filter api test:db
 | 2026-10-26 | — | Sebastián Chicata | Revisión post-pull: `development` en `372ee0a`, PR #7–#9 mergeados, 0 PRs abiertos; se define el orden obligatorio de PRs sin stacked y ramas con el nombre del responsable | `git log`, `gh pr list`, sección 5.1 |
 | 2026-10-26 | 14/16/20/22/25/26 | Sebastián Chicata | Revisión de código: no existen módulos API `tables`, `reservations` ni `realtime`; `MozoView` y `BookingsModule` siguen con estado local; `orders.service.ts` mantiene precio del cliente, `Date.now()` y anulación en preparación | `apps/api/src/app.module.ts`, `orders.service.ts`, `ModulesProvider.tsx` |
 | 2026-10-28 | 16 | David Piñarreta | Cierra AYCDS-16: módulos `tables` y `reservations`, tabla `secuencias` con folios atómicos, estados de mesa derivados, aforo y solapamiento ±90 min en hora de Lima; 88 unit + 32 e2e + 34 DB verdes y prueba real con dos sucursales | PR-1 `feat/aycds-16-mesas-reservas-david`, `docs/decisiones.md` |
+| 2026-10-28 | 20 | David Piñarreta | Cierra AYCDS-20: precio resuelto en servidor (`precioUnitario` fuera del DTO), `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`/liberada, `ANULADA` solo desde `POR_CONFIRMAR` + trigger `DB_ORDEN_ANULACION_TARDIA`, auditoría y tests. Global 44% | PR [#12](https://github.com/SebJoq21/fogoneria-system/pull/12); 107 unit, 33 e2e, 40 DB; smoke con 2 órdenes concurrentes |

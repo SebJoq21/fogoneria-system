@@ -142,6 +142,15 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - Transiciones: `POR_CONFIRMAR → CONFIRMADA|CANCELADA`, `CONFIRMADA → EJECUTADA|CANCELADA|NO_SHOW`. Los estados terminales no se reabren.
 - La mesa pasa a `RESERVADA` al reservar, a `OCUPADA` al ejecutar y vuelve a `LIBRE` al cancelar/no-show solo si no quedan reservas activas ni órdenes abiertas.
 
+## Órdenes POS (AYCDS-20)
+
+- `POST /orders` **no acepta precios**: el `ValidationPipe` (`forbidNonWhitelisted`) devuelve 400 si el body trae `precioUnitario`. El servidor resuelve el plato con `PricingService.resolvePrice` sobre `listaPrecioId` (o la lista activa) y el combo con `combos.precio_fijo`, y calcula `subtotal`/`total` con 2 decimales.
+- `mesero_id` sale del JWT y `numero_orden` de la tabla `secuencias` (`ORD-000123`), nunca de `Date.now()`.
+- Al crear, la mesa pasa a `OCUPADA`; al llegar a `PAGADA`/`CERRADA`/`ANULADA` se libera en la misma transacción (vuelve a `RESERVADA` si queda una reserva activa y nunca pisa `MANTENIMIENTO`).
+- Transiciones: `POR_CONFIRMAR → EN_COCINA|ANULADA`, `EN_COCINA → LISTO`, `LISTO → ENTREGADO`, `ENTREGADO → PAGADA|CERRADA`. **`ANULADA` solo desde `POR_CONFIRMAR`**: una comanda en preparación se entrega y se compensa (400 en la API, `DB_ORDEN_ANULACION_TARDIA` en la base).
+- Los estados terminales devuelven 409 ante cualquier cambio. Cada alta y cada transición se registran en `auditoria`.
+- `ADMIN_GLOBAL` (sin sucursal en el token) deduce la sucursal de la mesa o la recibe en `sucursalId`; sin mesa ni sucursal, 400.
+
 ## Folios por empresa
 
 `secuencias` (`empresa_id`, `tipo`, `valor`) se incrementa con una sola sentencia atómica (`INSERT ... ON CONFLICT ... RETURNING`) dentro de la transacción del request. Evita `Date.now()` y `COUNT(*)`, que se repiten bajo concurrencia. Hoy se usa para `numero_orden` (`ORD-000123`) y `codigo` de reserva.
