@@ -82,11 +82,12 @@ src/
     sequences/    SequencesService: folios por empresa (ORD, RSV)
   prisma/         PrismaService (adapter pg) + PrismaModule global
   modules/
-    auth/         POST /auth/login, GET /auth/me
+    auth/         POST /auth/login, GET /auth/me, POST /auth/ws-ticket
     tenant/       contexto, empresa actual, sucursales
     tables/       mesas por sucursal + bloqueo/liberación
     reservations/ reservas con aforo, solapamiento y estados
     orders/       órdenes con transiciones de estado
+    realtime/     gateway Socket.io /orders (eventos de comanda y mesa)
     catalog/      categorías, platos, grupos/opciones de modificadores
     pricing/      listas de precios y precios por plato
     saas/         alta/listado/suspensión/reactivación + métricas MRR
@@ -110,6 +111,7 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 |---|---|---|
 | POST | `/auth/login` | público |
 | GET | `/auth/me` | autenticado |
+| POST | `/auth/ws-ticket` | autenticado (ticket de 60 s para Socket.io) |
 | GET | `/health` | público |
 | GET | `/tenant`, `/tenant/context`, `/tenant/branches` | autenticado |
 | GET | `/tables`, `/tables/:id` | autenticado |
@@ -150,6 +152,13 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - Transiciones: `POR_CONFIRMAR → EN_COCINA|ANULADA`, `EN_COCINA → LISTO`, `LISTO → ENTREGADO`, `ENTREGADO → PAGADA|CERRADA`. **`ANULADA` solo desde `POR_CONFIRMAR`**: una comanda en preparación se entrega y se compensa (400 en la API, `DB_ORDEN_ANULACION_TARDIA` en la base).
 - Los estados terminales devuelven 409 ante cualquier cambio. Cada alta y cada transición se registran en `auditoria`.
 - `ADMIN_GLOBAL` (sin sucursal en el token) deduce la sucursal de la mesa o la recibe en `sucursalId`; sin mesa ni sucursal, 400.
+
+## Tiempo real (AYCDS-14)
+
+- `POST /auth/ws-ticket` (autenticado) firma un JWT de **60 s** con `scope: 'ws'`, `empresaId`, `sucursalId` y `rol`. `JwtStrategy` rechaza cualquier token con `scope`, así que el ticket **no** abre la API HTTP.
+- `OrdersGateway` (namespace `/orders`) verifica el ticket en el handshake y une al socket al room `empresa:<id>` (roles sin sucursal) o `empresa:<id>:sucursal:<id>` (operativos). `order:subscribe` añade `order:<id>` validando el tenant.
+- Eventos con sobre `{ eventId, at, data }`: `order.created`, `order.updated` y `table.status`. Se emiten al crear la comanda, en cada transición del KDS y al ocupar/liberar la mesa.
+- Contrato completo, rooms y límites (sin Redis adapter: los rooms viven en el proceso): `docs/websockets.md`.
 
 ## Folios por empresa
 

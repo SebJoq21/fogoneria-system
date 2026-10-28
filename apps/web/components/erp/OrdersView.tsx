@@ -13,6 +13,8 @@ import { ordenesSummary } from "@/components/erp/summaries/summary-selectors";
 import { canConfirmRecepcion, canMarkListo, type OrdersMode } from "@/lib/permissions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useNow } from "@/components/useNow";
+import { useOrdersRealtime } from "@/components/erp/useOrdersRealtime";
+import type { RealtimeStatus } from "@/lib/realtime";
 
 const columns: { id: OrderStatus; label: string }[] = [
   { id: "pendiente", label: "Por confirmar" },
@@ -20,6 +22,15 @@ const columns: { id: OrderStatus; label: string }[] = [
   { id: "listo", label: "Listo" },
   { id: "entregado", label: "Entregado" },
 ];
+
+/** Estado del canal en vivo (AYCDS-14). */
+function liveState(status: RealtimeStatus): { label: string; tone: "success" | "warning" | "neutral" } {
+  if (status === "connected") return { label: "En vivo", tone: "success" };
+  if (status === "connecting" || status === "reconnecting") {
+    return { label: "Reconectando…", tone: "warning" };
+  }
+  return { label: "Sin canal en vivo", tone: "neutral" };
+}
 
 /** Urgencia de la comanda: >10 min alerta, >20 min crítica. */
 function timerTone(createdAt: string): "neutral" | "warning" | "danger" {
@@ -34,6 +45,11 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
   const canListo = canMarkListo(currentUser?.role, mode);
   const [pendingConfirm, setPendingConfirm] = useState<Order | null>(null);
   const [pendingListo, setPendingListo] = useState<Order | null>(null);
+  // El canal en vivo solo aplica a la cocina/ordenes con sesión real.
+  const { status: liveStatus, lastEvent } = useOrdersRealtime(
+    Boolean(currentUser?.empresaId),
+  );
+  const live = liveState(liveStatus);
 
 
   const summary = useMemo(() => (mode === "ordenes" ? ordenesSummary(orders) : null), [orders, mode]);
@@ -72,6 +88,16 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
           ) : (
             <p className="text-sm text-ink-400 mt-1">
               Comandas de <strong className="text-ink-900">{activeBranch.name}</strong>.
+            </p>
+          )}
+        </div>
+        <div className="flex flex-col items-start sm:items-end gap-1.5">
+          <Badge tone={live.tone} dot>
+            {live.label}
+          </Badge>
+          {lastEvent && (
+            <p className="text-xs text-ink-400">
+              {lastEvent.title} · {lastEvent.detail}
             </p>
           )}
         </div>

@@ -9,6 +9,7 @@ import { TenantContextService } from '../../common/context/tenant-context.servic
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PricingService } from '../pricing/pricing.service.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   ACTIVE_RESERVATION_STATES,
@@ -51,6 +52,7 @@ export class OrdersService {
     private readonly sequences: SequencesService,
     private readonly pricing: PricingService,
     private readonly audit: AuditService,
+    private readonly realtime: RealtimeService,
   ) {}
 
   async list(query: ListOrdersQueryDto) {
@@ -169,6 +171,30 @@ export class OrdersService {
       },
     });
 
+    // Aviso a cocina y mesero (AYCDS-14). Se emite después de escribir: si el
+    // evento se perdiera, el cliente lo recupera al reconectar (refresco HTTP).
+    if (sucursalId) {
+      this.realtime.orderCreated(empresaId, {
+        ordenId: orden.id,
+        numeroOrden,
+        estado: 'POR_CONFIRMAR',
+        origen,
+        sucursalId,
+        mesaId: mesa?.id ?? null,
+        total: Number(orden.total),
+        creadaAt: (orden.created_at ?? new Date()).toISOString(),
+      });
+      if (mesa) {
+        this.realtime.tableStatus(empresaId, {
+          mesaId: mesa.id,
+          numero: mesa.numero ?? null,
+          de: mesa.estado,
+          a: 'OCUPADA',
+          sucursalId,
+        });
+      }
+    }
+
     return orden;
   }
 
@@ -181,6 +207,7 @@ export class OrdersService {
         estado: true,
         mesa_id: true,
         sucursal_id: true,
+        mesas: { select: { numero: true } },
       },
     });
     if (!orden) throw new NotFoundException('Orden no encontrada');
@@ -213,9 +240,8 @@ export class OrdersService {
       data: { estado, ...timestamps },
     });
 
-    if (TERMINAL.includes(estado)) {
-      await this.releaseTable(orden.mesa_id);
-    }
+    const liberada =
+      TERMINAL.includes(estado) ? await this.releaseTable(orden.mesa_id) : null;
 
     await this.audit.record({
       empresaId: this.tenant().empresaId,
@@ -230,6 +256,26 @@ export class OrdersService {
         a: estado,
       },
     });
+
+    // Aviso en vivo al KDS/mesero (AYCDS-14).
+    const empresaId = this.tenant().empresaId;
+    this.realtime.orderUpdated(empresaId, {
+      ordenId: orden.id,
+      numeroOrden: orden.numero_orden,
+      de: orden.estado,
+      a: estado,
+      sucursalId: orden.sucursal_id,
+      mesaId: orden.mesa_id,
+    });
+    if (liberada && orden.mesa_id) {
+      this.realtime.tableStatus(empresaId, {
+        mesaId: orden.mesa_id,
+        numero: orden.mesas?.numero ?? null,
+        de: 'OCUPADA',
+        a: liberada,
+        sucursalId: orden.sucursal_id,
+      });
+    }
 
     return this.findOne(id);
   }
@@ -299,9 +345,14 @@ export class OrdersService {
   /**
    * Libera la mesa al cerrar la última orden abierta. Si queda una reserva
    * activa vuelve a `RESERVADA`; nunca pisa `MANTENIMIENTO`.
+   *
+   * Devuelve el estado nuevo (o `null` si la mesa sigue con órdenes abiertas)
+   * para que el llamador pueda emitir `table.status`.
    */
-  private async releaseTable(mesaId: string | null): Promise<void> {
-    if (!mesaId) return;
+  private async releaseTable(
+    mesaId: string | null,
+  ): Promise<'LIBRE' | 'RESERVADA' | null> {
+    if (!mesaId) return null;
 
     const [abiertas, reservas] = await Promise.all([
       this.prisma.scoped.ordenes.count({
@@ -318,18 +369,21 @@ export class OrdersService {
       }),
     ]);
 
-    if (abiertas > 0) return;
+    if (abiertas > 0) return null;
 
-    await this.prisma.scoped.mesas.updateMany({
+    const destino: 'LIBRE' | 'RESERVADA' = reservas > 0 ? 'RESERVADA' : 'LIBRE';
+    const result = await this.prisma.scoped.mesas.updateMany({
       where: { id: mesaId, estado: 'OCUPADA' },
-      data: { estado: reservas > 0 ? 'RESERVADA' : 'LIBRE' },
+      data: { estado: destino },
     });
+
+    return (result?.count ?? 0) > 0 ? destino : null;
   }
 
   private async requireMesa(id: string) {
     const mesa = await this.prisma.scoped.mesas.findFirst({
       where: { id, deleted_at: null },
-      select: { id: true, sucursal_id: true, estado: true },
+      select: { id: true, numero: true, sucursal_id: true, estado: true },
     });
     if (!mesa) throw new NotFoundException('Mesa no encontrada');
     return mesa;

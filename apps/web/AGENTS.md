@@ -16,7 +16,7 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 
 - `app/` — rutas: `/` login, `/app/*` ERP bajo `DashboardShell`, `/saas` consola superadmin, `/onboarding`, `/demo/[id]`, `/terminos`.
 - `components/ui/` — único DS válido (`Button`, `Card`, `fields`, `data-table`, `Modal`, `Drawer`, `Tabs`, `KpiCard`, `cn`). No crear estilos crudos fuera.
-- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`, `tenant-api.ts`; sesión: `session.ts` (servidor, firma HS256) y `session-api.ts` (cliente del BFF).
+- `components/erp/` + `components/dashboard/` — vistas por dominio. `lib/` — estado/dominio: `auth.ts`, `tenancy.ts`, `permissions.ts`, `erp.ts`, `erp-catalog.ts`, `dashboard.ts`; clientes de API: `api.ts`, `auth-api.ts`, `onboarding-api.ts`, `catalog-api.ts`, `tenant-api.ts`, `realtime.ts` (Socket.io `/orders`); sesión: `session.ts` (servidor, firma HS256) y `session-api.ts` (cliente del BFF).
 - `proxy.ts` — RBAC server-side con la cookie HttpOnly `fogoneria.session` (firmada, 15 min con refresh); la emite `app/api/session/route.ts`. `scripts/check-styles.mjs` — gate de estilos en `pnpm lint`.
 
 ## Reglas web (evitan los errores repetidos)
@@ -24,6 +24,7 @@ Next.js 16.3.4 + React 19 + Tailwind v4 (CSS-first, sin `tailwind.config`). Sin 
 - Precio vive en `PriceList`, nunca en `Product`. Usar `priceOf(productId, lists)` / `categoryName(categoryId, categories)` de `lib/erp-catalog.ts` (ids de catálogo = UUID de la API).
 - Catálogo global, operación scoped por sucursal (`ModulesProvider.applyWrite`). Vista `todas` es agregada de lectura.
 - RBAC espejo: `lib/auth.ts:canViewPath` == `proxy.ts`, que verifica la cookie firmada `fogoneria.session` (no `localStorage`). Roles: `superadmin|admin|sucursal|cajero|cocina|mesero` (`ROLE_HOME` en `lib/auth.ts`). `cajero` = rol real de la API (`API_ROLE.CAJERO`), solo `/app`, `/app/caja` y `/app/comprobantes`. No volver a autorizar con cookies planas ni con el usuario de `localStorage`.
+- Tiempo real (AYCDS-14): el navegador **nunca** usa el access token. `lib/realtime.ts` pide un ticket de 60 s a `GET /api/session/ws-ticket` (BFF, 401 sin sesión) y lo pasa como `auth.ticket`; cada reconexión pide uno nuevo. La reconexión es propia (`reconnection: false`, backoff 1 s → 30 s + jitter) y los eventos se deduplican por `eventId`. Contrato en `docs/websockets.md`.
 - Tenant y sucursales se hidratan de la API (`lib/tenant-api.ts` → `/tenant`, `/tenant/branches`) en `ModulesProvider`; `DEMO_COMPANY` y `GENERAL_BRANCH` son el fallback sin sesión.
 - UI: `Button href` con `<a>` está permitido aquí; no usar `<img>` crudo salvo `app/demo/*` (exento del gate).
 - Solo pesos `400/500`, salvo etiquetas de hub (`Másteres e informes` 18px y títulos de columna 16px) que van en `semibold` (600) por decisión de diseño. Escala `12/13/14/16/18/24`, tokens `@theme` en `app/globals.css`.

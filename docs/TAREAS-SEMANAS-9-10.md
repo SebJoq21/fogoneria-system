@@ -18,11 +18,11 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
-| Cerradas (Listo) | **2** |
+| Cerradas (Listo) | **3** |
 | En curso | **0** |
-| Por hacer | **5** |
-| Avance global (promedio simple) | **44%** |
-| Avance funcional end-to-end | **≈28%** |
+| Por hacer | **4** |
+| Avance global (promedio simple) | **58%** |
+| Avance funcional end-to-end | **≈36%** |
 
 **Diagnóstico:** la base de autenticación, RLS, catálogo, precios y órdenes ya existe. Sin embargo, el flujo Semanas 9–10 no está conectado: la UI de mesero, KDS, mesas y reservas trabaja con estado local/mocks, no hay API de mesas/reservas, no hay WebSockets y la API de órdenes todavía confía en el precio enviado por el cliente. El objetivo es cerrar el flujo **mesero → cocina → mesero → mesa**, con estados en tiempo real y pruebas end-to-end.
 
@@ -43,15 +43,15 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 51% |
+| S9 | 14, 16, 20, 22, 25, 26 | 68% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **44%** |
+| **Global** | **7 tareas** | **58%** |
 
 ### Avance por responsable
 
 | Responsable | Tareas | Avance personal |
 |---|---|---|
-| David Piñarreta | 14, 16, 20 | 67% |
+| David Piñarreta | 14, 16, 20 | 100% |
 | Sonny De La Cruz | 22 | 25% |
 | Joshua Chávez | 25 | 40% |
 | Diego Arévalo | 26 | 40% |
@@ -63,7 +63,7 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-14 | [29.0] Gateway WebSockets Mesero-Cocina | 9 | David Piñarreta | Por hacer | 0% | `OrdersService.updateStatus` con transiciones; KDS `OrdersView` con estado local | Gateway Socket.io, autenticación WS, rooms por tenant/sucursal, eventos de comanda, cliente web y pruebas |
+| AYCDS-14 | [29.0] Gateway WebSockets Mesero-Cocina | 9 | David Piñarreta | Listo | 100% | Gateway Socket.io `/orders` con rooms por empresa/sucursal y `order:<id>`, ticket efímero de 60 s (`POST /auth/ws-ticket` + BFF `/api/session/ws-ticket`), eventos `order.created`/`order.updated`/`table.status` con sobre `{ eventId, at, data }`, cliente web con backoff y deduplicación, `docs/websockets.md`, 127 unit + 38 e2e | — (el pintado de la comanda en el KDS queda en AYCDS-25/26/28) |
 | AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Listo | 100% | Módulos API `tables` y `reservations` (CRUD, estados manuales vs derivados, aforo ±90 min, hora de Lima, folios por secuencia); RLS por empresa con `secuencias`; tests unit/e2e/db; UI `BookingsModule` y `SalonTablesView` | — (conectar la UI a la API queda en AYCDS-26) |
 | AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Listo | 100% | Precio resuelto en servidor, `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`→liberada en estado terminal, `ANULADA` solo desde `POR_CONFIRMAR` (API 400 + trigger `DB_ORDEN_ANULACION_TARDIA`), auditoría; 19 unit + e2e + 6 DB | — |
 | AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Por hacer | 25% | Índices `idx_ordenes_tenant_sucursal_estado`, `idx_ordenes_tenant_fecha`, `idx_detalles_orden`; baseline en `docs/explain-rls.md` | Script de carga, línea base de comandas, `EXPLAIN`, optimización y documentación de p95/errores |
@@ -77,18 +77,18 @@
 
 ### AYCDS-14 — [29.0] Gateway WebSockets Mesero-Cocina
 
-- **Semana:** 9 | **Responsable:** David Piñarreta | **Estado Jira:** Por hacer | **Avance:** 0%
+- **Semana:** 9 | **Responsable:** David Piñarreta | **Estado Jira:** Listo | **Avance:** 100%
 - **Descripción Jira:** “Socket.io sincronización comandas RNF-02 RDES-02 eventos docs.”
-- **Qué debe hacerse:**
-  1. Instalar `@nestjs/websockets`, `@nestjs/platform-socket.io` y `socket.io` en la API.
-  2. Crear `OrdersGateway` con namespace `/orders`, rooms `empresa:<id>:sucursal:<id>` y `order:<id>`.
-  3. Autenticar el handshake con JWT y validar tenant/sucursal.
-  4. Emitir eventos al crear orden, cambiar estado y marcar listo/entregado.
-  5. Definir contrato de eventos y documentarlo en `docs/websockets.md`.
-  6. Implementar cliente/reconexión en la web y pruebas de gateway.
-- **Archivos/rutas:** `apps/api/src/modules/orders/orders.gateway.ts`, `apps/api/src/modules/orders/orders.module.ts`, `apps/api/src/app.module.ts`, `apps/web/lib/realtime.ts`, `apps/web/components/erp/OrdersView.tsx`, `docs/websockets.md`
-- **Criterio de aceptación:** el KDS recibe la comanda sin refrescar; reconexión sin duplicados; solo recibe eventos de su tenant/sucursal; contrato documentado.
-- **Evidencia:** prueba de gateway + captura de dos navegadores (mesero y cocina), logs de eventos y documento de contrato.
+- **Qué se hizo:**
+  1. Dependencias `@nestjs/websockets@12.2.0`, `@nestjs/platform-socket.io@12.2.0` y `socket.io@4.8.4` en la API; `socket.io-client@4.8.4` en la web (y como devDependency de la API para el e2e).
+  2. `realtime/orders.gateway.ts` con namespace `/orders` y rooms `empresa:<id>`, `empresa:<id>:sucursal:<id>` y `order:<id>` (`order:subscribe` valida el tenant).
+  3. Handshake con **ticket efímero de 60 s** (`POST /auth/ws-ticket`, `scope: ws`); el gateway exige `scope` y empresa, y `JwtStrategy` rechaza cualquier token con `scope`, así que el ticket no abre la API HTTP.
+  4. Eventos `order.created`, `order.updated` y `table.status` con sobre `{ eventId, at, data }`, emitidos al crear, en cada transición del KDS y al ocupar/liberar la mesa.
+  5. `docs/websockets.md` con el contrato completo, el flujo del ticket, los rooms y los límites (sin Redis adapter).
+  6. Cliente `apps/web/lib/realtime.ts` con reconexión propia (backoff 1 s → 30 s + jitter, ticket nuevo en cada intento) y deduplicación por `eventId`; BFF `GET /api/session/ws-ticket` y hook `useOrdersRealtime` con el badge de estado en el KDS.
+- **Archivos/rutas:** `apps/api/src/modules/realtime/**`, `apps/api/src/modules/auth/{auth.controller,auth.service}.ts`, `apps/api/src/modules/orders/orders.service.ts`, `apps/api/src/app.module.ts`, `apps/web/lib/realtime.ts`, `apps/web/app/api/session/ws-ticket/route.ts`, `apps/web/components/erp/{OrdersView,useOrdersRealtime}.tsx`, `docs/websockets.md`
+- **Criterio de aceptación:** el KDS recibe la comanda sin refrescar; reconexión sin duplicados; solo recibe eventos de su tenant/sucursal; contrato documentado. **Cumplido** (el pintado de la comanda en la columna sigue en AYCDS-25/26/28 porque el KDS aún lee del estado local).
+- **Evidencia:** 127 unit (gateway, ticket y eventos), 38 e2e (handshake real con Socket.io y aislamiento A/B), 55 web y smoke real contra PostgreSQL 16: el KDS recibe `order.created` con el folio, `order.updated` en la transición y `table.status` al ocupar/liberar; el ticket da 401 en la API HTTP; la empresa B no recibe nada.
 
 ### AYCDS-16 — [30.0] API mesas reservas Libre-Ocupada-Reservada
 
@@ -310,3 +310,4 @@ pnpm --filter api test:db
 | 2026-10-26 | 14/16/20/22/25/26 | Sebastián Chicata | Revisión de código: no existen módulos API `tables`, `reservations` ni `realtime`; `MozoView` y `BookingsModule` siguen con estado local; `orders.service.ts` mantiene precio del cliente, `Date.now()` y anulación en preparación | `apps/api/src/app.module.ts`, `orders.service.ts`, `ModulesProvider.tsx` |
 | 2026-10-28 | 16 | David Piñarreta | Cierra AYCDS-16: módulos `tables` y `reservations`, tabla `secuencias` con folios atómicos, estados de mesa derivados, aforo y solapamiento ±90 min en hora de Lima; 88 unit + 32 e2e + 34 DB verdes y prueba real con dos sucursales | PR-1 `feat/aycds-16-mesas-reservas-david`, `docs/decisiones.md` |
 | 2026-10-28 | 20 | David Piñarreta | Cierra AYCDS-20: precio resuelto en servidor (`precioUnitario` fuera del DTO), `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`/liberada, `ANULADA` solo desde `POR_CONFIRMAR` + trigger `DB_ORDEN_ANULACION_TARDIA`, auditoría y tests. Global 44% | PR [#12](https://github.com/SebJoq21/fogoneria-system/pull/12); 107 unit, 33 e2e, 40 DB; smoke con 2 órdenes concurrentes |
+| 2026-10-28 | 14 | David Piñarreta | Cierra AYCDS-14: gateway `/orders` con rooms por tenant/sucursal, ticket WS de 60 s (`scope: ws`, no abre la API HTTP), eventos `order.created`/`order.updated`/`table.status`, cliente web con backoff + dedupe y contrato en `docs/websockets.md`. Global 58% | 127 unit, 38 e2e (Socket.io real, aislamiento A/B), 55 web; smoke real 16/16 contra PostgreSQL 16 |

@@ -9,11 +9,12 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 - `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`.
 - `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
 - `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.
-- `src/modules/` — `auth`, `tenant`, `tables` (mesas por sucursal), `reservations` (reservas con aforo y solapamiento), `orders`, `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto.
+- `src/modules/` — `auth`, `tenant`, `tables` (mesas por sucursal), `reservations` (reservas con aforo y solapamiento), `orders`, `realtime` (gateway Socket.io), `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto.
+- `src/modules/realtime/` — `@Global` con `OrdersGateway` (namespace `/orders`), `RealtimeService` (fachada que usan los servicios) y el contrato en `realtime.types.ts`. Rooms `empresa:<id>` (roles sin sucursal) y `empresa:<id>:sucursal:<id>` (operativos); `order:<id>` vía `order:subscribe`. Sobre `{ eventId, at, data }`. Contrato completo en `docs/websockets.md`.
 - `src/common/sequences` — folios por empresa (`ORD`, `RSV`) sobre la tabla `secuencias`; el SQL crudo se califica con `DATABASE_SCHEMA` porque no pasa por Prisma.
 - `src/main.ts` — body parser acotado (`bodyParser: false` + `json/urlencoded`): 4 MB solo en `/api/v1/onboarding` (logo en data URL) y 100 KB en el resto. No subir el límite global.
 - `src/common/guards/rate-limit.guard.ts` — límite por IP en memoria para endpoints públicos (`ONBOARDING_RATE_LIMIT`, `ONBOARDING_RATE_WINDOW_MS`). Sin dependencias inyectadas: config por `process.env` + `configure()` para tests.
-- `test/{app,auth,onboarding,orders,tables,reservations}.e2e-spec.ts` — e2e con Prisma mockeado. Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `vitest.config.db.ts` (PostgreSQL real), `oxlint.json`, `nest-cli.json`.
+- `test/{app,auth,onboarding,orders,tables,reservations,realtime}.e2e-spec.ts` — e2e con Prisma mockeado (`realtime` levanta Socket.io real en un puerto efímero). Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `vitest.config.db.ts` (PostgreSQL real), `oxlint.json`, `nest-cli.json`.
 
 ## Reglas api
 
@@ -24,6 +25,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 - Las queries de negocio usan `prisma.scoped` (filtro automático de tenant); auth y consola SaaS usan `prisma.raw`. `findUnique/update/delete/upsert` no se auto-filtran: validar pertenencia con `findFirst`/`updateMany`.
 - DB = PostgreSQL + Prisma 7 (decisión vigente, ver `docs/decisiones.md`). No introducir otro ORM.
 - Órdenes (AYCDS-20): el precio **nunca** viene del cliente. El DTO no acepta `precioUnitario` (el `forbidNonWhitelisted` lo rechaza) y `OrdersService` lo resuelve con `PricingService.resolvePrice` (platos) o `combos.precio_fijo` (combos). `mesero_id` sale del JWT y `numero_orden` de `SequencesService`. `ANULADA` solo desde `POR_CONFIRMAR`: una comanda en cocina se entrega y se compensa, y el trigger `trg_ordenes_inmutable` aplica la misma regla.
+- Tiempo real (AYCDS-14): el handshake **no** usa el access token. `POST /auth/ws-ticket` firma un JWT de 60 s con `scope: 'ws'` y `JwtStrategy` rechaza cualquier token con `scope` (el ticket no abre la API HTTP). Los servicios emiten por `RealtimeService`, nunca por el gateway directo; el gateway solo se usa dentro del módulo `realtime`. Un rol con sucursal no entra al room de empresa (evita eventos duplicados).
 - `strictPropertyInitialization: false` en `tsconfig.json` — no confiarse, inicializar igual.
 
 ## Comandos

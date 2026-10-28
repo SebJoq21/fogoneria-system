@@ -22,6 +22,7 @@ import { BillingModule } from './modules/billing/billing.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { TablesModule } from './modules/tables/tables.module.js';
 import { ReservationsModule } from './modules/reservations/reservations.module.js';
+import { RealtimeModule } from './modules/realtime/realtime.module.js';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module.j
     OnboardingModule,
     TablesModule,
     ReservationsModule,
+    RealtimeModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
