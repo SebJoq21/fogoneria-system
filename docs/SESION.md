@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-10-28 — Sprint 3: AYCDS-25 (app del mesero) implementada, PR #17 en revisión
+
+- Objetivo: conectar el panel del mesero (`/app/mozo`) y el KDS a la API real, sin mocks en el flujo de comandas.
+- Hecho (rama `feat/aycds-25-app-mesero-joshua`, desde `development` en `3353036`):
+  - `apps/web/lib/orders-api.ts` (list/get/create/status sobre el BFF; el payload nunca manda precio) y `lib/tables-api.ts` (`GET /tables` para elegir mesa UUID).
+  - `apps/web/lib/order-mapping.ts`: única traducción API↔UI (7 estados, folio `ORD-000123` como `id`, `apiId` para los PATCH, `mesero_id` → `waiterId`, modificadores → `notas`).
+  - `ModulesProvider`: con sesión real `orders` sale de `GET /orders` (`ordersLoading`/`ordersError`/`refreshOrders`); `createOrderFromAccount` (`POST`) y `advanceOrder` (`PATCH`); el modo demo queda intacto sin sesión.
+  - `MozoView`/`AccountPanel`: mesa real, envío asíncrono con resultado visible, "Mis comandas" por `mesero_id`, entregar/anular según el servidor, badge de canal en vivo y recarga por eventos.
+  - `OrdersView` (KDS): confirmar y marcar listo con `PATCH`, sin mutar estado local.
+  - Tests: 72 web (17 nuevos en `order-mapping.test.ts` y `orders-api.test.ts`).
+- Pendiente: revisión del PR #17, CI en verde y smoke real con API + PostgreSQL; recién entonces Jira a "Listo".
+- Próximo paso: AYCDS-26 (Diego) sobre `development` con este PR mergeado; `ModulesProvider` gana `orders`/`refreshOrders` y hay que rebasar.
+
 ## 2026-10-28 — Sprint 3: AYCDS-22 (comanda en alta concurrencia) cerrada
 
 - Objetivo: llevar el alta de comandas a p95 ≤ 500 ms con 50 concurrentes y 0 errores 5xx, con script de carga reproducible, línea base y `EXPLAIN`.

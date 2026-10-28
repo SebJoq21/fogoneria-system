@@ -18,13 +18,13 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
-| Cerradas (Listo) | **3** |
-| En curso | **0** |
-| Por hacer | **4** |
-| Avance global (promedio simple) | **58%** |
-| Avance funcional end-to-end | **≈36%** |
+| Cerradas (Listo) | **4** |
+| En curso (25 en revisión · PR #17) | **1** |
+| Por hacer | **2** |
+| Avance global (promedio simple) | **77%** |
+| Avance funcional end-to-end | **≈50%** |
 
-**Diagnóstico:** la base de autenticación, RLS, catálogo, precios y órdenes ya existe. Sin embargo, el flujo Semanas 9–10 no está conectado: la UI de mesero, KDS, mesas y reservas trabaja con estado local/mocks, no hay API de mesas/reservas, no hay WebSockets y la API de órdenes todavía confía en el precio enviado por el cliente. El objetivo es cerrar el flujo **mesero → cocina → mesero → mesa**, con estados en tiempo real y pruebas end-to-end.
+**Diagnóstico:** la base de autenticación, RLS, catálogo, precios, órdenes, mesas/reservas y WebSockets ya existe. El mesero ya opera contra la API real (AYCDS-25): crea la comanda, ve los estados del KDS y marca entregado/anulado. Queda conectar el mapa de mesas y la agenda de reservas (AYCDS-26) y cerrar la integración e2e con evidencia (AYCDS-28).
 
 > **Pendientes heredados:** AYCDS-58 (smoke/CI, 90%) y AYCDS-66 (firmas de acta, 95%) siguen abiertos, pero no se cuentan en el avance de S9–S10.
 
@@ -43,9 +43,9 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 80% |
+| S9 | 14, 16, 20, 22, 25, 26 | 90% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **69%** |
+| **Global** | **7 tareas** | **77%** |
 
 ### Avance por responsable
 
@@ -53,7 +53,7 @@
 |---|---|---|
 | David Piñarreta | 14, 16, 20 | 100% |
 | Sonny De La Cruz | 22 | 100% |
-| Joshua Chávez | 25 | 40% |
+| Joshua Chávez | 25 | 100% |
 | Diego Arévalo | 26 | 40% |
 | Sebastián Chicata | 28 | 0% |
 
@@ -67,7 +67,7 @@
 | AYCDS-16 | [30.0] API mesas reservas Libre-Ocupada-Reservada | 9-10 | David Piñarreta | Listo | 100% | Módulos API `tables` y `reservations` (CRUD, estados manuales vs derivados, aforo ±90 min, hora de Lima, folios por secuencia); RLS por empresa con `secuencias`; tests unit/e2e/db; UI `BookingsModule` y `SalonTablesView` | — (conectar la UI a la API queda en AYCDS-26) |
 | AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Listo | 100% | Precio resuelto en servidor, `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`→liberada en estado terminal, `ANULADA` solo desde `POR_CONFIRMAR` (API 400 + trigger `DB_ORDEN_ANULACION_TARDIA`), auditoría; 19 unit + e2e + 6 DB | — |
 | AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Listo | 100% | Script de carga (`apps/api/test/load/orders-load.mjs`), seed de 50k órdenes (`db/scripts/perf/**`), línea base y `EXPLAIN`; folio en autocommit fuera de la transacción, `set_config` en una sentencia y precios en lote; p95 307–326 ms a 50 concurrentes (antes 1034–1092 ms) | — (la lectura del KDS bajo RLS queda documentada como deuda en `docs/explain-orders.md` §6) |
-| AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | Por hacer | 40% | `MozoView`, `AccountPanel`, `AddItemModal`; UI de cuentas y estados | Conectar a API real, crear pedido, avanzar estados, marcar entregado, anular pendiente, layout tablet y tests |
+| AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | En curso (PR #17 en revisión) | 100% | `lib/orders-api.ts` + `lib/tables-api.ts` + `lib/order-mapping.ts` (adapter API↔UI); `MozoView`/`AccountPanel` crean la comanda real (`POST /orders`, sin precio), avanzan estados (`PATCH /orders/:id/status`), muestran carga/error y el canal en vivo; `orders` del `ModulesProvider` sale de la API con sesión real | Revisión del PR y smoke real con API + PostgreSQL |
 | AYCDS-26 | [34.0] Mapa mesas croquis + agenda reservas | 9-10 | Diego Arévalo | Por hacer | 40% | Mapa/agenda en `BookingsModule`, `SalonTablesView` y `/app/mesas`; CRUD local | API real, estados en vivo, reservas por fecha, bloqueo/liberación y permisos |
 | AYCDS-28 | [35.0] Integración Mesero-Cocina-Mesas e2e | 10 | Sebastián Chicata | Por hacer | 0% | Suites unit/DB/e2e existentes; CI verde | Flujo completo mesero → KDS → entregado, prueba e2e, guion y video demo |
 
@@ -142,17 +142,16 @@
 
 ### AYCDS-25 — [33.0] App Mesero generar-estados-entregado
 
-- **Semana:** 9-10 | **Responsable:** Joshua Chávez | **Estado Jira:** Por hacer | **Avance:** 40%
+- **Semana:** 9-10 | **Responsable:** Joshua Chávez | **Estado Jira:** En curso (en revisión · [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17)) | **Avance:** 100% de implementación
 - **Descripción Jira:** “UI tablet Generar pedido, Estados, Entregado PR-FG-21.”
-- **Qué debe hacerse:**
-  1. Conectar `MozoView` y `AccountPanel` a la API real de órdenes.
-  2. Crear pedido desde la cuenta/mesa y enviarlo a cocina.
-  3. Mostrar estados `POR_CONFIRMAR`, `EN_COCINA`, `LISTO`, `ENTREGADO`.
-  4. Permitir marcar entregado y anular solo si está `POR_CONFIRMAR`.
-  5. Agregar layout tablet, estados de carga/error y actualización por WebSocket.
-  6. Reemplazar el estado local de órdenes por datos de la API.
-- **Archivos/rutas:** `apps/web/app/app/mozo/page.tsx`, `apps/web/components/erp/MozoView.tsx`, `apps/web/components/erp/mozo/**`, `apps/web/lib/orders-api.ts`, `apps/web/components/dashboard/ModulesProvider.tsx`
-- **Criterio de aceptación:** el mesero crea un pedido real, lo ve en cocina y lo marca entregado; no se usan mocks para órdenes; errores visibles.
+- **Qué se hizo:**
+  1. `apps/web/lib/orders-api.ts`: `listOrders`, `getOrder`, `createOrder`, `updateOrderStatus` sobre el BFF (el navegador nunca ve el access token). El payload no manda precio: `CreateOrderDto` lo rechaza con 400.
+  2. `apps/web/lib/order-mapping.ts`: única traducción entre la API y la UI (7 estados, folio `ORD-000123` como id visible, `apiId` para los PATCH, `mesero_id` → `waiterId`, mesa UUID → `tableApiId`, modificadores → `notas` con el tope de 500 caracteres del DTO).
+  3. `ModulesProvider`: con sesión real, `orders` sale de la API (`refreshOrders` con `ordersLoading`/`ordersError`); `createOrderFromAccount` hace `POST /orders` y marca las líneas enviadas solo si el servidor aceptó; `advanceOrder` hace `PATCH` y propaga el 400/409 del servidor. Sin sesión se conserva el modo demo.
+  4. `MozoView`/`AccountPanel`: mesa real (`GET /tables`), envío asíncrono con resultado visible, "Mis comandas" por `mesero_id`, entregar y anular (solo `POR_CONFIRMAR`, el servidor decide), badge del canal en vivo y recarga por `order.created`/`order.updated`/`table.status`.
+  5. `OrdersView` (KDS) dejó de mutar el estado local: confirmar y marcar listo usan `PATCH /orders/:id/status`, así el flujo mesero → cocina → mesero es real.
+- **Archivos/rutas:** `apps/web/lib/orders-api.ts`, `apps/web/lib/tables-api.ts`, `apps/web/lib/order-mapping.ts`, `apps/web/components/dashboard/ModulesProvider.tsx`, `apps/web/components/erp/MozoView.tsx`, `apps/web/components/erp/OrdersView.tsx`, `apps/web/components/erp/mozo/**`, `apps/web/components/erp/useOrdersRealtime.ts`
+- **Criterio de aceptación:** el mesero crea un pedido real, lo ve en cocina y lo marca entregado; no se usan mocks para órdenes; errores visibles. **Cumplido** (el mapa de mesas sigue en AYCDS-26).
 - **Evidencia:** captura del flujo, tests web y prueba contra API/BD reales.
 
 ### AYCDS-26 — [34.0] Mapa mesas croquis + agenda reservas
@@ -313,3 +312,5 @@ pnpm --filter api test:db
 | 2026-10-28 | 20 | David Piñarreta | Cierra AYCDS-20: precio resuelto en servidor (`precioUnitario` fuera del DTO), `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`/liberada, `ANULADA` solo desde `POR_CONFIRMAR` + trigger `DB_ORDEN_ANULACION_TARDIA`, auditoría y tests. Global 44% | PR [#12](https://github.com/SebJoq21/fogoneria-system/pull/12); 107 unit, 33 e2e, 40 DB; smoke con 2 órdenes concurrentes |
 | 2026-10-28 | 14 | David Piñarreta | Cierra AYCDS-14 ([PR #13](https://github.com/SebJoq21/fogoneria-system/pull/13), merge `f1f7b2d`): gateway `/orders` con rooms por tenant/sucursal, ticket WS de 60 s (`scope: ws`, no abre la API HTTP), eventos `order.created`/`order.updated`/`table.status`, cliente web con backoff + dedupe y contrato en `docs/websockets.md`. Global 58% | 127 unit, 38 e2e (Socket.io real, aislamiento A/B), 40 DB, 55 web; smoke real 16/16 contra PostgreSQL 16; CI 40641677208 en verde |
 | 2026-10-28 | 22 | Sonny De La Cruz | Cierra AYCDS-22: script de carga y dataset de 50k órdenes; línea base 1034–1092 ms p95 a 50 concurrentes por el lock del folio dentro de la transacción; folio en autocommit, `set_config` único y precios en lote → p95 307–326 ms, ~186 órdenes/s y 0 esperas de lock. Sin índices nuevos. Global 69% | 127 unit, 43 DB, `explain-before/after/bypassrls` en `ops/perf/results/`; `docs/explain-orders.md` |
+| 2026-10-28 | 25 | Joshua Chávez | Implementa AYCDS-25 y abre [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17) para revisión: `lib/orders-api.ts` + `lib/tables-api.ts` + `lib/order-mapping.ts`; `MozoView`/`AccountPanel` crean la comanda real sin precio, avanzan estados y anulan solo `POR_CONFIRMAR`; `orders` del provider sale de la API; el KDS confirma y marca listo con `PATCH`. Global 77% | 72 tests web (17 nuevos de `orders-api`/`order-mapping`), 127 api, `lint`, `check-types` y `build` verdes; Jira en "En curso" con comentario de evidencia |
+| 2026-10-28 | 25 | Joshua Chávez | CI del [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17) en verde (`Lint, tipos y pruebas`, run 40757839946, 1m53s); PR `MERGEABLE` y pendiente de revisión | Jira `AYCDS-25` en "En curso" con comentarios de evidencia |

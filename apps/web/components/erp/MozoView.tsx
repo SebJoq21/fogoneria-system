@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -9,8 +9,11 @@ import { Field, Select, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { AccountPanel } from "./mozo/AccountPanel";
+import { useOrdersRealtime } from "./useOrdersRealtime";
+import type { RealtimeStatus } from "@/lib/realtime";
 import { accountTotals, elapsedLabel, fmtMoney } from "@/lib/domain";
 import type { Order } from "@/lib/erp";
+import { listTables, type ApiTable } from "@/lib/tables-api";
 import {
   canAnularPendiente,
   canMarkEntregado,
@@ -24,7 +27,10 @@ export function MozoView() {
     accounts,
     openAccount,
     orders,
-    setOrders,
+    ordersLoading,
+    ordersError,
+    refreshOrders,
+    advanceOrder,
     tables,
     products,
     priceOf,
@@ -34,33 +40,77 @@ export function MozoView() {
   const role = currentUser?.role;
   const canDeliver = canMarkEntregado(role);
   const canOpen = canOpenAccount(role);
+  /** Con sesión real la mesa se elige de la API; en demo, del estado local. */
+  const hasSession = Boolean(currentUser?.empresaId);
 
   const [tab, setTab] = useState<"cuentas" | "estados">("cuentas");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [mesaId, setMesaId] = useState("");
+  const [mesaApiId, setMesaApiId] = useState("");
+  const [apiTables, setApiTables] = useState<ApiTable[] | null>(null);
+  const [tablesError, setTablesError] = useState<string | null>(null);
   const [customer, setCustomer] = useState("");
   const [pendingAnular, setPendingAnular] = useState<Order | null>(null);
   const [pendingDeliver, setPendingDeliver] = useState<Order | null>(null);
 
   const selected = accounts.find((a) => a.id === selectedId) ?? null;
   const openAccounts = accounts.filter((a) => a.status === "abierta");
-  const mine = orders.filter((o) => o.waiter === me && o.status !== "anulado");
+  /** `mesero_id` del JWT en órdenes reales; el nombre en el modo demo. */
+  const mine = orders.filter(
+    (o) =>
+      o.status !== "anulado" &&
+      (o.waiterId ? o.waiterId === currentUser?.id : o.waiter === me),
+  );
+
+  /* Cocina o caja cambian el estado: el panel relee la API al recibir el evento. */
+  const { status: liveStatus } = useOrdersRealtime(hasSession, () => {
+    void refreshOrders();
+  });
+
+  /* Mesas reales al abrir el diálogo de cuenta nueva (mesa con UUID de la API). */
+  useEffect(() => {
+    if (!hasSession || !newOpen) return;
+    const controller = new AbortController();
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- carga de mesas al abrir el diálogo */
+    setTablesError(null);
+    void listTables({ signal: controller.signal })
+      .then((list) => {
+        if (controller.signal.aborted) return;
+        setApiTables(list.filter((table) => table.estado !== "MANTENIMIENTO"));
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setApiTables([]);
+        setTablesError(
+          error instanceof Error ? error.message : "No se pudieron cargar las mesas.",
+        );
+      });
+    return () => controller.abort();
+  }, [hasSession, newOpen]);
 
   const createAccount = () => {
+    const apiTable = apiTables?.find((t) => t.id === mesaApiId) ?? null;
     const table = tables.find((t) => String(t.id) === mesaId) ?? null;
+    const label = hasSession
+      ? apiTable
+        ? `Mesa ${apiTable.numero}`
+        : "Para llevar"
+      : (table?.label ?? "Para llevar");
     const id = openAccount({
-      tableId: table?.id ?? null,
-      label: table?.label ?? "Para llevar",
+      tableId: hasSession ? null : (table?.id ?? null),
+      tableApiId: hasSession ? (apiTable?.id ?? null) : null,
+      label,
       customer: customer.trim(),
       waiter: me,
     });
     if (id) {
-      notify("Cuenta abierta", `${table?.label ?? "Para llevar"} · ${me}`);
+      notify("Cuenta abierta", `${label} · ${me}`);
       setSelectedId(id);
     }
     setNewOpen(false);
     setMesaId("");
+    setMesaApiId("");
     setCustomer("");
   };
 
@@ -73,16 +123,24 @@ export function MozoView() {
 
   const anular = (order: Order) => {
     if (!canAnularPendiente(role, order, me)) return;
-    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: "anulado" as const, motivoAnulacion: "Anulado por el mesero" } : o)));
     setPendingAnular(null);
-    notify("Comanda anulada", `${order.id} · ${order.customer}`);
+    void advanceOrder(order, "anulado").then((ok) => {
+      if (ok) notify("Comanda anulada", `${order.id} · ${order.customer}`);
+      else
+        notify(
+          "No se pudo anular",
+          "Una comanda que ya entró a cocina se entrega y se compensa.",
+        );
+    });
   };
 
   const markDelivered = (order: Order) => {
     if (!canDeliver || order.status !== "listo") return;
-    setOrders(orders.map((o) => (o.id === order.id ? { ...o, status: "entregado" as const } : o)));
-    notify("Comanda entregada", `${order.id} · el cobro se realiza en Caja`);
     setPendingDeliver(null);
+    void advanceOrder(order, "entregado").then((ok) => {
+      if (ok) notify("Comanda entregada", `${order.id} · el cobro se realiza en Caja`);
+      else notify("No se pudo marcar entregado", "Revisa el estado de la comanda.");
+    });
   };
 
   if (selected) {
@@ -110,12 +168,35 @@ export function MozoView() {
             </button>
           ))}
         </div>
-        {tab === "cuentas" && canOpen && (
-          <Button onClick={() => setNewOpen(true)} className="min-h-12">
-            + Nueva cuenta
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {hasSession && (
+            <Badge tone={liveTone(liveStatus)} dot>
+              {liveLabel(liveStatus)}
+            </Badge>
+          )}
+          {tab === "cuentas" && canOpen && (
+            <Button onClick={() => setNewOpen(true)} className="min-h-12">
+              + Nueva cuenta
+            </Button>
+          )}
+        </div>
       </div>
+
+      {tab === "estados" && (ordersLoading || ordersError) && (
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          {ordersLoading && <p className="text-sm text-ink-400">Cargando comandas…</p>}
+          {ordersError && (
+            <>
+              <p className="text-sm text-persimmon-600" role="alert">
+                {ordersError}
+              </p>
+              <Button variant="secondary" onClick={() => void refreshOrders()}>
+                Reintentar
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {tab === "cuentas" ? (
         openAccounts.length === 0 ? (
@@ -231,21 +312,48 @@ export function MozoView() {
               <Button variant="ghost" onClick={() => setNewOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={createAccount}>Abrir cuenta</Button>
+              <Button onClick={createAccount} disabled={hasSession && apiTables === null}>
+                Abrir cuenta
+              </Button>
             </>
           }
         >
           <div className="grid grid-cols-1 gap-4">
-            <Field label="Mesa" hint="Sin mesa seleccionada = pedido para llevar.">
-              <Select value={mesaId} onChange={(e) => setMesaId(e.target.value)}>
-                <option value="">Para llevar</option>
-                {tables.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label} · {t.zone} · {t.status}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            {hasSession ? (
+              <Field
+                label="Mesa"
+                hint="Mesas de la sucursal en la API. Sin mesa = pedido para llevar."
+              >
+                {apiTables === null ? (
+                  <p className="text-sm text-ink-400">Cargando mesas…</p>
+                ) : (
+                  <Select value={mesaApiId} onChange={(e) => setMesaApiId(e.target.value)}>
+                    <option value="">Para llevar</option>
+                    {apiTables.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        Mesa {t.numero} · {t.zona ?? "Salón"} · {t.estado.toLowerCase()}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+                {tablesError && (
+                  <p className="text-xs text-persimmon-600 mt-1" role="alert">
+                    {tablesError}
+                  </p>
+                )}
+              </Field>
+            ) : (
+              <Field label="Mesa" hint="Sin mesa seleccionada = pedido para llevar.">
+                <Select value={mesaId} onChange={(e) => setMesaId(e.target.value)}>
+                  <option value="">Para llevar</option>
+                  {tables.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label} · {t.zone} · {t.status}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
             <Field label="Cliente (opcional)">
               <TextInput
                 type="text"
@@ -285,4 +393,16 @@ export function MozoView() {
       />
     </div>
   );
+}
+
+function liveLabel(status: RealtimeStatus): string {
+  if (status === "connected") return "En vivo";
+  if (status === "connecting" || status === "reconnecting") return "Reconectando…";
+  return "Sin canal en vivo";
+}
+
+function liveTone(status: RealtimeStatus): "success" | "warning" | "neutral" {
+  if (status === "connected") return "success";
+  if (status === "connecting" || status === "reconnecting") return "warning";
+  return "neutral";
 }

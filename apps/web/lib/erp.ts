@@ -72,10 +72,14 @@ export type OrderItem = {
   name: string;
   qty: number;
   modifiers?: string[];
+  /** Nota libre de la línea (la API la devuelve en `detalles_orden.notas`). */
+  notes?: string;
 };
 
 export type Order = {
   id: string;
+  /** UUID de la orden en la API; `id` es el folio que ve el salón. */
+  apiId?: string;
   /** Cuenta de mesa a la que pertenece la comanda. */
   accountId?: string;
   tableId?: number | null;
@@ -90,6 +94,8 @@ export type Order = {
   channel: "Web" | "Mesa" | "Llevar";
   /** Mesero que tomó la orden (para "mis órdenes") */
   waiter?: string;
+  /** UUID del mesero en la API: `mesero_id` del JWT, nunca del body. */
+  waiterId?: string;
   motivoAnulacion?: string;
 };
 
@@ -129,7 +135,7 @@ export const initialCoupons: Coupon[] = [
 export type TableStatus = "libre" | "ocupada" | "reservada";
 export type TableShape = "round" | "rect";
 
-export type Table = { id: number; label: string; seats: number; shape: TableShape; status: TableStatus; zone: string };
+export type Table = { id: number; label: string; seats: number; shape: TableShape; status: TableStatus; zone: string; /** UUID de la mesa en la API (AYCDS-25). */ apiId?: string };
 
 export const initialTables: Table[] = [
   { id: 1, label: "Mesa 1", seats: 2, shape: "round", status: "libre", zone: "Terraza" },

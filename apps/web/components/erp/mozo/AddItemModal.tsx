@@ -186,6 +186,13 @@ export function AddItemModal({
             </div>
           </div>
         ))}
+
+        {picked.some((m) => m.extra > 0) && (
+          <p className="sm:col-span-2 text-xs text-ink-400">
+            El recargo del modificador viaja como nota de cocina; el importe de la cuenta se
+            cobra en Caja.
+          </p>
+        )}
       </div>
     </Modal>
   );
