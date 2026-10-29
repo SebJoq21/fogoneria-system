@@ -39,6 +39,7 @@ export function SalonTablesView() {
     isGeneral,
     branches,
     branchOf,
+    activeBranchId,
     hasSession,
     refreshTables,
   } = useModules();
@@ -46,7 +47,22 @@ export function SalonTablesView() {
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ label: "", zone: "", newZone: "", seats: "4", shape: "rect" as TableShape });
+  const [form, setForm] = useState({
+    label: "",
+    zone: "",
+    newZone: "",
+    seats: "4",
+    shape: "rect" as TableShape,
+    branchId: "",
+  });
+
+  /** Sucursales reales (sin la vista agregada "todas"). */
+  const realBranches = useMemo(
+    () => branches.filter((branch) => branch.id !== "todas"),
+    [branches],
+  );
+  const defaultBranchId =
+    activeBranchId !== "todas" ? activeBranchId : (realBranches[0]?.id ?? "");
 
   const zones = useMemo(
     () => [...new Set(tables.map((t) => t.zone))],
@@ -80,6 +96,7 @@ export function SalonTablesView() {
       newZone: "",
       seats: "4",
       shape: "rect",
+      branchId: defaultBranchId,
     });
     setModalOpen(true);
   };
@@ -88,7 +105,14 @@ export function SalonTablesView() {
     const t = tables.find((x) => x.id === id);
     if (!t) return;
     setEditingId(id);
-    setForm({ label: t.label, zone: zones.includes(t.zone) ? t.zone : OTHER_ZONE, newZone: zones.includes(t.zone) ? "" : t.zone, seats: String(t.seats), shape: t.shape });
+    setForm({
+      label: t.label,
+      zone: zones.includes(t.zone) ? t.zone : OTHER_ZONE,
+      newZone: zones.includes(t.zone) ? "" : t.zone,
+      seats: String(t.seats),
+      shape: t.shape,
+      branchId: t.branchId ?? defaultBranchId,
+    });
     setModalOpen(true);
   };
 
@@ -104,6 +128,10 @@ export function SalonTablesView() {
         notify("No se pudo guardar la mesa", "La mesa no tiene identificador de la API.");
         return;
       }
+      if (!editingId && isGeneral && !form.branchId) {
+        notify("Elige una sucursal", "El admin global debe indicar dónde se crea la mesa.");
+        return;
+      }
       setSaving(true);
       void (async () => {
         try {
@@ -114,7 +142,12 @@ export function SalonTablesView() {
             forma: shapeToApi(form.shape),
           };
           if (editing?.apiId) await apiUpdateTable(editing.apiId, payload);
-          else await apiCreateTable(payload);
+          else
+            await apiCreateTable({
+              ...payload,
+              /* Solo el admin global (vista agregada) indica la sucursal. */
+              ...(isGeneral && form.branchId ? { sucursalId: form.branchId } : {}),
+            });
           await refreshTables();
           notify(
             editingId ? "Mesa actualizada" : "Mesa creada",
@@ -272,7 +305,12 @@ export function SalonTablesView() {
                 Cancelar
               </Button>
               <Button
-                disabled={!form.label.trim() || (form.zone === OTHER_ZONE && !form.newZone.trim()) || saving}
+                disabled={
+                  !form.label.trim() ||
+                  (form.zone === OTHER_ZONE && !form.newZone.trim()) ||
+                  (hasSession && isGeneral && !editingId && !form.branchId) ||
+                  saving
+                }
                 onClick={save}
               >
                 {saving ? "Guardando…" : "Guardar"}
@@ -281,6 +319,22 @@ export function SalonTablesView() {
           }
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {hasSession && isGeneral && !editingId && (
+              <div>
+                <Field label="Sucursal" hint="El admin global crea la mesa en una sucursal concreta.">
+                  <Select
+                    value={form.branchId}
+                    onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                  >
+                    {realBranches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            )}
             <div>
               <Field label="Nombre" hint={hasSession ? "La API guarda el número (máx. 10)." : undefined}>
                 <TextInput type="text" value={form.label} onChange={(e) => setForm({ ...form, label: e.target.value })} />
