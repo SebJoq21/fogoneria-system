@@ -21,8 +21,8 @@ export function stableTableId(apiId: string): number {
     hash ^= apiId.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  // Entero positivo seguro para `Table.id`.
-  return hash & 0x7fffffff;
+  // Entero positivo seguro para `Table.id` (nunca 0: la UI lo trata como "sin mesa").
+  return (hash & 0x7fffffff) || 1;
 }
 
 export function tableStatusFromApi(estado: ApiTable["estado"]): TableStatus {
