@@ -85,6 +85,9 @@ import { ApiError } from "@/lib/api";
 import { createSession, logoutUrl } from "@/lib/session-api";
 import * as catalogApi from "@/lib/catalog-api";
 import * as ordersApi from "@/lib/orders-api";
+import { listReservations } from "@/lib/reservations-api";
+import { limaTodayKey, reservationsFromApi, tablesFromApi } from "@/lib/table-mapping";
+import { listTables } from "@/lib/tables-api";
 import { UI_TO_API_STATUS, orderFromApi, orderItemsFromAccount } from "@/lib/order-mapping";
 import {
   cpeFromReceipt,
@@ -178,11 +181,21 @@ type ModulesContext = {
   advanceOrder: (order: Order, next: OrderStatus) => Promise<boolean>;
   tables: Table[];
   setTables: React.Dispatch<React.SetStateAction<Table[]>>;
+  /** Mesas reales de la API (AYCDS-26): `true` con sesión. */
+  tablesLoading: boolean;
+  tablesError: string | null;
+  refreshTables: () => Promise<void>;
   roles: Role[];
   setRoles: (r: Role[]) => void;
   /* Reservas e inventario (persisten al navegar) */
   reservations: Reservation[];
   setReservations: (r: Reservation[]) => void;
+  /** Agenda real de la API (AYCDS-26): filtra por día en hora de Lima. */
+  reservationsLoading: boolean;
+  reservationsError: string | null;
+  refreshReservations: (fecha?: string) => Promise<void>;
+  /** Hay empresa en el token: las vistas operan contra la API, no contra mocks. */
+  hasSession: boolean;
   ingredients: Ingredient[];
   setIngredients: (i: Ingredient[]) => void;
   movements: StockMovement[];
@@ -605,6 +618,97 @@ export function ModulesProvider({
     void refreshOrders(controller.signal);
     return () => controller.abort();
   }, [currentUser, refreshOrders]);
+
+  /* ---------- Mesas y reservas reales de la API (AYCDS-26) ---------- */
+
+  const hasSession = Boolean(currentUser?.empresaId);
+
+  const [liveTables, setLiveTables] = useState<Table[] | null>(null);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [tablesError, setTablesError] = useState<string | null>(null);
+  const tablesRequest = useRef(0);
+  /** Espejo sincrónico para mapear reservas sin esperar al siguiente render. */
+  const tablesRef = useRef<Table[]>([]);
+
+  const refreshTables = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!currentUser?.empresaId) {
+        tablesRef.current = [];
+        setLiveTables(null);
+        setTablesError(null);
+        setTablesLoading(false);
+        return;
+      }
+      const requestId = ++tablesRequest.current;
+      setTablesLoading(true);
+      setTablesError(null);
+      try {
+        const list = await listTables({
+          // `todas` es la vista agregada: sin filtro la API devuelve la empresa.
+          sucursalId: activeBranchId !== GENERAL_BRANCH.id ? activeBranchId : undefined,
+          signal,
+        });
+        if (requestId !== tablesRequest.current) return;
+        const mapped = tablesFromApi(list);
+        tablesRef.current = mapped;
+        setLiveTables(mapped);
+      } catch (error) {
+        if (requestId !== tablesRequest.current || signal?.aborted) return;
+        setTablesError(
+          error instanceof ApiError ? error.message : "No se pudieron cargar las mesas.",
+        );
+      } finally {
+        if (requestId === tablesRequest.current) setTablesLoading(false);
+      }
+    },
+    [activeBranchId, currentUser],
+  );
+
+  const [liveReservations, setLiveReservations] = useState<Reservation[] | null>(null);
+  const [reservationsLoading, setReservationsLoading] = useState(false);
+  const [reservationsError, setReservationsError] = useState<string | null>(null);
+  const reservationsRequest = useRef(0);
+  const reservationsDay = useRef(limaTodayKey());
+
+  const refreshReservations = useCallback(
+    async (fecha?: string, signal?: AbortSignal) => {
+      if (!currentUser?.empresaId) {
+        setLiveReservations(null);
+        setReservationsError(null);
+        setReservationsLoading(false);
+        return;
+      }
+      const day = fecha ?? reservationsDay.current;
+      reservationsDay.current = day;
+      const requestId = ++reservationsRequest.current;
+      setReservationsLoading(true);
+      setReservationsError(null);
+      try {
+        const list = await listReservations({ fecha: day, limit: 100, signal });
+        if (requestId !== reservationsRequest.current) return;
+        setLiveReservations(reservationsFromApi(list.items, tablesRef.current));
+      } catch (error) {
+        if (requestId !== reservationsRequest.current || signal?.aborted) return;
+        setReservationsError(
+          error instanceof ApiError ? error.message : "No se pudieron cargar las reservas.",
+        );
+      } finally {
+        if (requestId === reservationsRequest.current) setReservationsLoading(false);
+      }
+    },
+    [currentUser],
+  );
+
+  /* Cargar mesas y la agenda de hoy al iniciar sesión o cambiar de sucursal. */
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      await refreshTables(controller.signal);
+      await refreshReservations(undefined, controller.signal);
+    })();
+    return () => controller.abort();
+  }, [currentUser, refreshTables, refreshReservations]);
+
 
   /* Empresa y sucursales reales del token (tarea 57). */
   useEffect(() => {
@@ -1502,12 +1606,19 @@ export function ModulesProvider({
       refreshOrders,
       createOrderFromAccount,
       advanceOrder,
-      tables: activeScope.tables,
+      tables: liveTables ?? activeScope.tables,
       setTables,
+      tablesLoading,
+      tablesError,
+      refreshTables,
+      hasSession,
       roles: state.roles,
       setRoles,
-      reservations: state.reservations,
+      reservations: liveReservations ?? state.reservations,
       setReservations,
+      reservationsLoading,
+      reservationsError,
+      refreshReservations,
       ingredients: state.ingredients,
       setIngredients,
       movements: state.movements,
@@ -1580,13 +1691,22 @@ export function ModulesProvider({
       branchOf,
       activeScope,
       liveOrders,
+      liveTables,
+      liveReservations,
       ordersLoading,
       ordersError,
       refreshOrders,
       setOrders,
       setTables,
+      tablesLoading,
+      tablesError,
+      refreshTables,
+      hasSession,
       setRoles,
       setReservations,
+      reservationsLoading,
+      reservationsError,
+      refreshReservations,
       setIngredients,
       setMovements,
       setCustomers,
