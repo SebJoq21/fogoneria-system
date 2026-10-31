@@ -1,5 +1,23 @@
 # SESION — estado entre sesiones
 
+## 2026-10-29 — Sprint 3: AYCDS-26 (mapa de mesas + agenda de reservas) implementada
+
+- Objetivo: ejecutar la tarea de Diego (AYCDS-26) sobre `development` (`d969cb2`), sin tocar lo de Sebastián (AYCDS-28). Además, dejar el checklist del sprint con el estado real y aclarar la autoría de AYCDS-22.
+- Docs previos (misma sesión):
+  - `docs/TAREAS-SEMANAS-9-10.md`: checklist por responsable al día (14/16/20/22/25 cerradas; 26 en curso; 28 pendiente) y nota de que los commits firmados como **Gabriel** en AYCDS-22 son de **Sonny De La Cruz**.
+  - `docs/TAREAS-SEMANAS-5-8.md`: se marcaron 53, 55, 57, 62, 63 y 65 como cerradas y se quitaron notas de "falta verificación" ya resueltas.
+- Hecho (rama `feat/aycds-26-mapa-agenda-diego`):
+  - `apps/web/lib/tables-api.ts` completo (`list`, `create`, `update`, `status`, `delete`) y `apps/web/lib/reservations-api.ts` nuevo (`list` por día, `create`, `update`, `status`).
+  - `apps/web/lib/table-mapping.ts`: UUID→`Table.id` estable (FNV-1a), estados (`MANTENIMIENTO` → bloqueada + `reservada`), forma/etiqueta/número, folio, `POR_CONFIRMAR`, día y hora de Lima con offset `-05:00`.
+  - `ModulesProvider`: `hasSession`, `liveTables`/`liveReservations` con `tablesLoading`/`tablesError` y `reservationsLoading`/`reservationsError`; `refreshTables()` y `refreshReservations(fecha?)`; hidratación al iniciar sesión o cambiar de sucursal.
+  - `BookingsModule`: mapa con colores reales y bloqueo visible, agenda por fecha con crear/editar/confirmar/cancelar/no-show/llegó (abre cuenta sobre la mesa real), bloqueo/liberación y refresco por `order.created`/`order.updated`/`table.status`.
+  - `SalonTablesView`: CRUD real (número, capacidad, zona, forma) y columna de sucursal en la vista agregada.
+  - `deriveTableStatus` respeta `OCUPADA` del servidor; `Table` gana `apiId`/`branchId`/`blocked`; `Reservation` gana `code`/`tableApiId` y el estado `por_confirmar`.
+  - Tests nuevos: `table-mapping.test.ts`, `tables-api.test.ts`, `reservations-api.test.ts` (26 pruebas).
+- Verificado: `check-types` OK, `test` 98/98 (14 archivos), `lint` OK (`check-styles: OK`), `build` OK (48 rutas).
+- Pendiente: smoke real con `docker compose up --build` (este entorno **no** tiene Docker ni `psql`) y PR a `development`. El código no se mergea sin revisión.
+- Próximo paso: revisar el PR de AYCDS-26; después queda AYCDS-28 (Sebastián) y los heredados 58/66.
+
 ## 2026-10-28 — Sprint 3: AYCDS-25 (app del mesero) cerrada y mergeada
 
 - Objetivo: conectar el panel del mesero (`/app/mozo`) y el KDS a la API real, sin mocks en el flujo de comandas.

@@ -135,7 +135,20 @@ export const initialCoupons: Coupon[] = [
 export type TableStatus = "libre" | "ocupada" | "reservada";
 export type TableShape = "round" | "rect";
 
-export type Table = { id: number; label: string; seats: number; shape: TableShape; status: TableStatus; zone: string; /** UUID de la mesa en la API (AYCDS-25). */ apiId?: string };
+export type Table = {
+  id: number;
+  label: string;
+  seats: number;
+  shape: TableShape;
+  status: TableStatus;
+  zone: string;
+  /** UUID de la mesa en la API (AYCDS-25/26). */
+  apiId?: string;
+  /** Sucursal real de la API; en demo se resuelve con `branchOf`. */
+  branchId?: string;
+  /** Bloqueo manual (`MANTENIMIENTO`): no se puede sentar gente (AYCDS-26). */
+  blocked?: boolean;
+};
 
 export const initialTables: Table[] = [
   { id: 1, label: "Mesa 1", seats: 2, shape: "round", status: "libre", zone: "Terraza" },
@@ -148,10 +161,17 @@ export const initialTables: Table[] = [
   { id: 8, label: "Mesa 8", seats: 8, shape: "rect", status: "libre", zone: "Salón" },
 ];
 
-export type ReservationStatus = "confirmada" | "llego" | "no_show" | "cancelada";
+export type ReservationStatus =
+  | "por_confirmar"
+  | "confirmada"
+  | "llego"
+  | "no_show"
+  | "cancelada";
 
 export type Reservation = {
   id: string;
+  /** Folio de la API (`RSV-20261029-0001`); en demo no existe. */
+  code?: string;
   customer: string;
   guests: number;
   phone: string;
@@ -162,6 +182,8 @@ export type Reservation = {
   status: ReservationStatus;
   notes: string;
   tableId: number | null;
+  /** UUID de la mesa en la API; la agenda lo usa para crear/editar. */
+  tableApiId?: string | null;
 };
 
 export const initialReservations: Reservation[] = [

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   type Reservation,
   type ReservationStatus,
@@ -20,6 +20,7 @@ import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
 import { MiniDonut } from "@/components/erp/summaries/charts";
 import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
+import { useOrdersRealtime } from "@/components/erp/useOrdersRealtime";
 import { useNow } from "@/components/useNow";
 import {
   accountTotals,
@@ -32,6 +33,19 @@ import {
   canManageReservations,
   canOpenAccount,
 } from "@/lib/permissions";
+import { ApiError } from "@/lib/api";
+import {
+  createReservation as apiCreateReservation,
+  updateReservation as apiUpdateReservation,
+  updateReservationStatus as apiUpdateReservationStatus,
+} from "@/lib/reservations-api";
+import { updateTableStatus as apiUpdateTableStatus } from "@/lib/tables-api";
+import {
+  apiReservationStatusOf,
+  limaDateKey,
+  limaTodayKey,
+  reservationDateIso,
+} from "@/lib/table-mapping";
 
 const statusTone: Record<TableStatus, "success" | "danger" | "warning"> = {
   libre: "success",
@@ -45,7 +59,11 @@ const statusLabel: Record<TableStatus, string> = {
   reservada: "Reservada",
 };
 
-const resTone: Record<ReservationStatus, "success" | "warning" | "danger" | "neutral"> = {
+const resTone: Record<
+  ReservationStatus,
+  "success" | "warning" | "danger" | "neutral" | "dark"
+> = {
+  por_confirmar: "dark",
   confirmada: "success",
   llego: "warning",
   no_show: "danger",
@@ -53,6 +71,7 @@ const resTone: Record<ReservationStatus, "success" | "warning" | "danger" | "neu
 };
 
 const resLabel: Record<ReservationStatus, string> = {
+  por_confirmar: "Por confirmar",
   confirmada: "Confirmada",
   llego: "Llegó",
   no_show: "No-show",
@@ -60,8 +79,9 @@ const resLabel: Record<ReservationStatus, string> = {
 };
 
 function TableNode({ table, onSelect }: { table: Table; onSelect: () => void }) {
-  const color =
-    table.status === "libre"
+  const color = table.blocked
+    ? "bg-ink-900/[0.04] border-ink-900/20 text-ink-400"
+    : table.status === "libre"
       ? "bg-emerald-50 border-emerald-300 text-emerald-700"
       : table.status === "ocupada"
         ? "bg-red-50 border-red-300 text-red-700"
@@ -90,14 +110,12 @@ type ResForm = {
   notes: string;
 };
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
-
-function emptyForm(): ResForm {
+function emptyForm(day = limaTodayKey()): ResForm {
   return {
     id: null,
     customer: "",
     phone: "",
-    day: todayKey(),
+    day,
     hour: "20:00",
     guests: "2",
     tableId: "",
@@ -105,7 +123,11 @@ function emptyForm(): ResForm {
   };
 }
 
-/** Mapa del salón (estados reales) + agenda de reservas con CRUD. */
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof ApiError || error instanceof Error ? error.message : fallback;
+}
+
+/** Mapa del salón (estados reales) + agenda de reservas conectada a la API. */
 export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) {
   const {
     tables,
@@ -115,7 +137,14 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     accounts,
     openAccount,
     currentUser,
+    hasSession,
     notify,
+    refreshTables,
+    refreshReservations,
+    tablesLoading,
+    tablesError,
+    reservationsLoading,
+    reservationsError,
   } = useModules();
   useNow(30000);
   const role = currentUser?.role;
@@ -127,9 +156,21 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   const [confirmTable, setConfirmTable] = useState<Table | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<ResForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
   const [pendingCancel, setPendingCancel] = useState<Reservation | null>(null);
   const [pendingNoShow, setPendingNoShow] = useState<Reservation | null>(null);
-  const [dayFilter, setDayFilter] = useState(todayKey);
+  const [dayFilter, setDayFilter] = useState(limaTodayKey);
+
+  /* Mesas y mesas/reservas en vivo: cualquier cambio en el salón relee la API. */
+  const { status: liveStatus } = useOrdersRealtime(hasSession, (kind) => {
+    if (kind === "table" || kind === "order") void refreshTables();
+  });
+
+  /* La agenda pide a la API el día seleccionado (hora de Lima). */
+  useEffect(() => {
+    if (!hasSession) return;
+    void refreshReservations(dayFilter);
+  }, [hasSession, dayFilter, refreshReservations]);
 
   const derivedTables = useMemo(
     () => tables.map((t) => ({ ...t, status: deriveTableStatus(t, accounts, reservations) })),
@@ -137,22 +178,34 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   );
   const summary = useMemo(() => mesasSummary(derivedTables), [derivedTables]);
 
-  const dayRes = useMemo(
-    () =>
-      reservations
-        .filter((r) => r.date.slice(0, 10) === dayFilter)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [reservations, dayFilter],
-  );
+  /* En modo API el servidor ya filtró por día; en demo se filtra por ISO local. */
+  const dayRes = useMemo(() => {
+    const list = hasSession
+      ? reservations
+      : reservations.filter((r) => r.date.slice(0, 10) === dayFilter);
+    return [...list].sort((a, b) => a.date.localeCompare(b.date));
+  }, [reservations, dayFilter, hasSession]);
 
   const tableLabel = (id: number | null) =>
     id === null
       ? "Por asignar"
       : (tables.find((t) => t.id === id)?.label ?? `Mesa ${id}`);
 
+  const liveLabel =
+    !hasSession
+      ? "Modo demo"
+      : liveStatus === "connected"
+        ? "En vivo"
+        : liveStatus === "connecting"
+          ? "Conectando…"
+          : liveStatus === "reconnecting"
+            ? "Reconectando…"
+            : "Sin canal en vivo";
+
   const openAccountFor = (table: Table, customer: string) => {
     const id = openAccount({
       tableId: table.id,
+      tableApiId: table.apiId ?? null,
       label: table.label,
       customer,
       waiter: currentUser?.name ?? "Salón",
@@ -163,13 +216,28 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
 
   const markLlego = (r: Reservation) => {
     const table = tables.find((t) => t.id === r.tableId);
+    if (hasSession) {
+      void (async () => {
+        try {
+          await apiUpdateReservationStatus(r.id, "EJECUTADA");
+          if (table) openAccountFor(table, r.customer);
+          await Promise.all([refreshReservations(dayFilter), refreshTables()]);
+          notify("Reserva en curso", `${r.customer} · ${r.time}`);
+        } catch (error) {
+          notify("No se pudo registrar la llegada", errorMessage(error, "Inténtalo de nuevo."));
+        } finally {
+          setSelectedTable(null);
+        }
+      })();
+      return;
+    }
     if (table) openAccountFor(table, r.customer);
     setReservations(reservations.map((x) => (x.id === r.id ? { ...x, status: "llego" as const } : x)));
     setSelectedTable(null);
   };
 
   const openCreate = (tableId?: number) => {
-    setForm({ ...emptyForm(), tableId: tableId ? String(tableId) : "" });
+    setForm({ ...emptyForm(dayFilter), tableId: tableId ? String(tableId) : "" });
     setFormOpen(true);
   };
 
@@ -178,7 +246,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
       id: r.id,
       customer: r.customer,
       phone: r.phone,
-      day: r.date.slice(0, 10),
+      day: limaDateKey(r.date) || dayFilter,
       hour: r.time,
       guests: String(r.guests),
       tableId: r.tableId === null ? "" : String(r.tableId),
@@ -187,9 +255,43 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     setFormOpen(true);
   };
 
-  const saveRes = () => {
+  const saveRes = async () => {
     if (!form.customer.trim()) return;
-    const dateIso = new Date(`${form.day}T${form.hour}:00`).toISOString();
+    const guests = Number(form.guests) || 2;
+    const dateIso = reservationDateIso(form.day, form.hour);
+
+    if (hasSession) {
+      const table = derivedTables.find((t) => String(t.id) === form.tableId);
+      if (!table?.apiId) {
+        notify("Elige una mesa", "La reserva debe estar asociada a una mesa del salón.");
+        return;
+      }
+      setSaving(true);
+      try {
+        const payload = {
+          mesaId: table.apiId,
+          clienteNombre: form.customer.trim(),
+          telefono: form.phone.trim() || undefined,
+          nroComensales: guests,
+          fechaHora: dateIso,
+          notas: form.notes.trim() || undefined,
+        };
+        if (form.id) await apiUpdateReservation(form.id, payload);
+        else await apiCreateReservation(payload);
+        await Promise.all([refreshReservations(dayFilter), refreshTables()]);
+        notify(
+          form.id ? "Reserva actualizada" : "Reserva creada",
+          `${form.customer} · ${form.hour}`,
+        );
+        setFormOpen(false);
+      } catch (error) {
+        notify("No se pudo guardar la reserva", errorMessage(error, "Inténtalo de nuevo."));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     const tableId = form.tableId ? Number(form.tableId) : null;
     if (form.id) {
       setReservations(
@@ -201,7 +303,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                 phone: form.phone.trim(),
                 date: dateIso,
                 time: form.hour,
-                guests: Number(form.guests) || r.guests,
+                guests,
                 tableId,
                 notes: form.notes.trim(),
               }
@@ -213,7 +315,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
       const res: Reservation = {
         id: newId("RS"),
         customer: form.customer.trim(),
-        guests: Number(form.guests) || 2,
+        guests,
         phone: form.phone.trim(),
         date: dateIso,
         time: form.hour,
@@ -228,6 +330,22 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   };
 
   const setStatus = (r: Reservation, status: ReservationStatus, title: string) => {
+    if (hasSession) {
+      void (async () => {
+        try {
+          await apiUpdateReservationStatus(r.id, apiReservationStatusOf(status));
+          await Promise.all([refreshReservations(dayFilter), refreshTables()]);
+          notify(title, `${r.customer} · ${r.time}`);
+        } catch (error) {
+          notify("No se pudo actualizar la reserva", errorMessage(error, "Inténtalo de nuevo."));
+        } finally {
+          setPendingCancel(null);
+          setPendingNoShow(null);
+          setSelectedTable(null);
+        }
+      })();
+      return;
+    }
     setReservations(reservations.map((x) => (x.id === r.id ? { ...x, status } : x)));
     notify(title, `${r.customer} · ${r.time}`);
     setPendingCancel(null);
@@ -236,6 +354,22 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   };
 
   const toggleBloqueo = (table: Table) => {
+    if (hasSession) {
+      if (!table.apiId) return;
+      void (async () => {
+        try {
+          await apiUpdateTableStatus(table.apiId!, table.blocked ? "LIBRE" : "MANTENIMIENTO");
+          await refreshTables();
+          notify(table.blocked ? "Mesa desbloqueada" : "Mesa bloqueada", table.label);
+        } catch (error) {
+          notify("No se pudo cambiar la mesa", errorMessage(error, "Inténtalo de nuevo."));
+        } finally {
+          setConfirmTable(null);
+          setSelectedTable(null);
+        }
+      })();
+      return;
+    }
     const next: TableStatus = table.status === "reservada" ? "libre" : "reservada";
     setTables(tables.map((t) => (t.id === table.id ? { ...t, status: next } : t)));
     notify(next === "reservada" ? "Mesa bloqueada" : "Mesa desbloqueada", table.label);
@@ -243,16 +377,28 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     setSelectedTable(null);
   };
 
+  const alert = tablesError ?? reservationsError;
+
   return (
     <div>
       <ModuleSummary
         kpis={view === "mapa" ? summary.kpis : summary.kpis.slice(0, 3)}
         chartTitle={view === "mapa" ? "Ocupación del salón" : "Mesas por estado"}
-        chartSubtitle="Estados reales: cuenta abierta y reservas de hoy"
+        chartSubtitle={
+          hasSession
+            ? "Estados reales de la API: órdenes y reservas del día"
+            : "Estados reales: cuenta abierta y reservas de hoy"
+        }
         ariaLabel="Resumen de mesas"
       >
         <MiniDonut data={summary.donut} label="Distribución de mesas por estado" />
       </ModuleSummary>
+
+      {alert && (
+        <Card>
+          <p className="text-sm text-persimmon-600">{alert}</p>
+        </Card>
+      )}
 
       {view === "agenda" && (
         <>
@@ -267,19 +413,30 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                   className="w-40"
                   aria-label="Filtrar por fecha"
                 />
-                <span className="text-xs text-ink-400">{dayRes.length} reserva(s)</span>
+                <span className="text-xs text-ink-400">
+                  {reservationsLoading
+                    ? "Cargando…"
+                    : `${dayRes.length} reserva(s)`}
+                </span>
               </div>
             }
             right={
-              canBook ? (
-                <Button onClick={() => openCreate()}>+ Nueva reserva</Button>
-              ) : undefined
+              <div className="flex items-center gap-3">
+                <Badge tone={liveStatus === "connected" ? "success" : "neutral"} dot>
+                  {liveLabel}
+                </Badge>
+                {canBook ? (
+                  <Button onClick={() => openCreate()}>+ Nueva reserva</Button>
+                ) : undefined}
+              </div>
             }
           />
           {dayRes.length === 0 ? (
             <Card>
               <p className="text-sm text-ink-400">
-                Sin reservas para esta fecha. Crea una para bloquear la mesa en el mapa.
+                {reservationsLoading
+                  ? "Cargando la agenda de la API…"
+                  : "Sin reservas para esta fecha. Crea una para bloquear la mesa en el mapa."}
               </p>
             </Card>
           ) : (
@@ -303,6 +460,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                     </TD>
                     <TD tone="strong">
                       {r.customer}
+                      {r.code && <span className="block text-xs text-ink-400">{r.code}</span>}
                       {r.notes && <span className="block text-xs text-ink-400">{r.notes}</span>}
                     </TD>
                     <TD tone="muted" nowrap>
@@ -317,17 +475,15 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                     </TD>
                     <TD right nowrap>
                       <span className="flex items-center gap-3 justify-end">
-                        {r.status === "confirmada" && canOpen && (
-                          <button
-                            type="button"
-                            onClick={() => markLlego(r)}
-                            className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
-                          >
-                            Llegó
-                          </button>
-                        )}
-                        {(r.status === "confirmada" || r.status === "llego") && canBook && (
+                        {r.status === "por_confirmar" && canBook && (
                           <>
+                            <button
+                              type="button"
+                              onClick={() => setStatus(r, "confirmada", "Reserva confirmada")}
+                              className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
+                            >
+                              Confirmar
+                            </button>
                             <button
                               type="button"
                               onClick={() => openEdit(r)}
@@ -335,6 +491,26 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                             >
                               Editar
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingCancel(r)}
+                              className="text-ink-400 hover:text-persimmon-600 font-medium text-nav cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        )}
+                        {r.status === "confirmada" && canBook && (
+                          <>
+                            {canOpen && (
+                              <button
+                                type="button"
+                                onClick={() => markLlego(r)}
+                                className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
+                              >
+                                Llegó
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setPendingNoShow(r)}
@@ -351,9 +527,10 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                             </button>
                           </>
                         )}
-                        {(r.status === "cancelada" || r.status === "no_show") && (
-                          <span className="text-nav text-ink-400">—</span>
-                        )}
+                        {(r.status === "cancelada" ||
+                          r.status === "no_show" ||
+                          r.status === "llego" ||
+                          !canBook) && <span className="text-nav text-ink-400">—</span>}
                       </span>
                     </TD>
                   </TR>
@@ -366,6 +543,14 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
 
       {view === "mapa" && (
         <div>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <p className="text-sm text-ink-400">
+              {tablesLoading ? "Cargando mesas de la API…" : `${derivedTables.length} mesas`}
+            </p>
+            <Badge tone={liveStatus === "connected" ? "success" : "neutral"} dot>
+              {liveLabel}
+            </Badge>
+          </div>
           <Card>
             <div className="flex flex-wrap gap-4 justify-center">
               {derivedTables.map((t) => (
@@ -381,7 +566,10 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
               <span className="w-2 h-2 rounded-full bg-red-500" /> Ocupada con cuenta abierta
             </span>
             <span className="flex items-center gap-1.5 text-xs text-ink-600">
-              <span className="w-2 h-2 rounded-full bg-amber-500" /> Reservada (hoy) o bloqueada
+              <span className="w-2 h-2 rounded-full bg-amber-500" /> Reservada (hoy)
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-ink-600">
+              <span className="w-2 h-2 rounded-full bg-ink-400" /> Bloqueada
             </span>
           </div>
         </div>
@@ -400,13 +588,15 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
               (a) => a.tableId === table.id && a.status === "abierta",
             );
             const res = reservations.find(
-              (r) => r.tableId === table.id && r.status === "confirmada",
+              (r) =>
+                r.tableId === table.id &&
+                (r.status === "confirmada" || r.status === "por_confirmar"),
             );
             const totals = account ? accountTotals(account) : null;
             return (
               <div className="flex flex-col gap-4">
-                <Badge tone={statusTone[table.status]} dot>
-                  {statusLabel[table.status]}
+                <Badge tone={table.blocked ? "neutral" : statusTone[table.status]} dot>
+                  {table.blocked ? "Bloqueada" : statusLabel[table.status]}
                 </Badge>
 
                 {account && totals && (
@@ -445,12 +635,12 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                 )}
 
                 <div className="flex flex-col gap-2">
-                  {table.status === "libre" && canOpen && (
+                  {table.status === "libre" && !table.blocked && canOpen && (
                     <Button onClick={() => openAccountFor(table, "")}>
                       Abrir cuenta
                     </Button>
                   )}
-                  {res && canOpen && (
+                  {res && res.status === "confirmada" && canOpen && (
                     <Button variant="secondary" onClick={() => markLlego(res)}>
                       Registrar llegada y abrir cuenta
                     </Button>
@@ -460,9 +650,9 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                       Gestionar reservas
                     </Button>
                   )}
-                  {canOperate && table.status !== "ocupada" && (
+                  {canOperate && table.status !== "ocupada" && (table.blocked || !res) && (
                     <Button variant="secondary" onClick={() => setConfirmTable(table)}>
-                      {table.status === "reservada" ? "Desbloquear mesa" : "Bloquear mesa"}
+                      {table.blocked ? "Desbloquear mesa" : "Bloquear mesa"}
                     </Button>
                   )}
                   {!canOpen && !canBook && !canOperate && (
@@ -476,16 +666,16 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
 
       <ConfirmDialog
         open={confirmTable !== null}
-        title={confirmTable?.status === "reservada" ? "Desbloquear mesa" : "Bloquear mesa"}
+        title={confirmTable?.blocked ? "Desbloquear mesa" : "Bloquear mesa"}
         message={
           confirmTable
-            ? confirmTable.status === "reservada"
+            ? confirmTable.blocked
               ? `¿Desbloquear "${confirmTable.label}"? Volverá a estar disponible.`
               : `¿Bloquear "${confirmTable.label}"? No aceptará comensales hasta desbloquearla.`
             : ""
         }
-        confirmLabel={confirmTable?.status === "reservada" ? "Desbloquear" : "Bloquear"}
-        danger={confirmTable?.status !== "reservada"}
+        confirmLabel={confirmTable?.blocked ? "Desbloquear" : "Bloquear"}
+        danger={!confirmTable?.blocked}
         onConfirm={() => confirmTable && toggleBloqueo(confirmTable)}
         onCancel={() => setConfirmTable(null)}
       />
@@ -531,8 +721,11 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
               <Button variant="ghost" onClick={() => setFormOpen(false)}>
                 Cancelar
               </Button>
-              <Button disabled={!form.customer.trim()} onClick={saveRes}>
-                {form.id ? "Guardar cambios" : "Crear reserva"}
+              <Button
+                disabled={!form.customer.trim() || (hasSession && !form.tableId) || saving}
+                onClick={() => void saveRes()}
+              >
+                {saving ? "Guardando…" : form.id ? "Guardar cambios" : "Crear reserva"}
               </Button>
             </>
           }
@@ -589,7 +782,10 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
               </Field>
             </div>
             <div>
-              <Field label="Mesa" hint="Se bloquea automáticamente en el mapa.">
+              <Field
+                label="Mesa"
+                hint={hasSession ? "Obligatoria: la API valida aforo y solapamiento." : "Se bloquea automáticamente en el mapa."}
+              >
                 <Select
                   value={form.tableId}
                   onChange={(e) => setForm({ ...form, tableId: e.target.value })}
@@ -597,7 +793,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
                   <option value="">Por asignar</option>
                   {derivedTables.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.label} · {t.seats} pers. · {statusLabel[t.status]}
+                      {t.label} · {t.seats} pers. · {t.blocked ? "Bloqueada" : statusLabel[t.status]}
                     </option>
                   ))}
                 </Select>

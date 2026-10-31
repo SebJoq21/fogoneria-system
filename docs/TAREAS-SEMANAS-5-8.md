@@ -393,22 +393,22 @@ Sebastián (66 QA) ───────── al final, cuando 48/53 (David) y 
 ### David Piñarreta — Backend / APIs
 - [x] **44** Crear módulos `auth`, `tenant`, `orders`, `PrismaModule`, `ConfigModule`, prefijo `/api/v1`
 - [x] **48** Login con JWT + Passport, guards, `@Roles`, validación Trial/Activa/Suspendida, Postman
-- [ ] **53** Contexto de tenant + inyección automática de `empresa_id`/`sucursal_id`, tests de aislamiento
+- [x] **53** Contexto de tenant + inyección automática de `empresa_id`/`sucursal_id`, tests de aislamiento
 - [x] **60** CRUD catálogo + `PriceList` por canal + Swagger + tests
 - [x] **61** Endpoints `/saas`, ciclo de suscripción, suspensión/reactivación, cron de morosidad
 
 ### Sonny De La Cruz — Base de datos
 - [x] **32** `schema.prisma` con 41 tablas y 27 enums + ER documentado
 - [x] **42** Migración inicial + seed demo idempotente + `.env.example`
-- [x] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable — *implementado en migraciones y `schema.prisma`; falta correr `EXPLAIN` y `test:db` contra PostgreSQL y activar FORCE*
+- [x] **62** Índices + políticas RLS + soft-delete + inmutabilidad contable
 
 ### Joshua Chávez — Frontend / RBAC y SaaS
-- [ ] **55** Protección server-side de rutas, cookie segura/JWT, redirects por rol — *código completo y testeado; falta la verificación en vivo contra API + PostgreSQL*
-- [ ] **65** Conectar `/saas` a la API: MRR, grilla de empresas, suspender/reactivar
+- [x] **55** Protección server-side de rutas, cookie segura/JWT, redirects por rol
+- [x] **65** Conectar `/saas` a la API: MRR, grilla de empresas, suspender/reactivar
 
 ### Diego Arévalo — Frontend / Auth y catálogo
-- [ ] **57** Login real + onboarding con razón social, RUC y logo — *código completo y testeado; falta la verificación en vivo contra PostgreSQL para marcarla Listo*
-- [ ] **63** Conectar `/app/productos` a la API y eliminar mocks de catálogo — *código completo y testeado; falta la verificación en vivo contra PostgreSQL para marcarla Listo*
+- [x] **57** Login real + onboarding con razón social, RUC y logo
+- [x] **63** Conectar `/app/productos` a la API y eliminar mocks de catálogo
 
 ### Sebastián Chicata — DevOps / QA
 - [ ] **58** Docker Compose (Postgres local listo) + Dockerfiles + CI + backlog documentado
