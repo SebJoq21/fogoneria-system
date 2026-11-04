@@ -174,6 +174,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   }, [currentUser?.empresaId]);
 
   useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial de mesas desde la API */
     void refreshApiTables();
   }, [refreshApiTables]);
 
