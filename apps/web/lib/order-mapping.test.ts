@@ -6,6 +6,7 @@ import {
   notesOfItem,
   orderFromApi,
   orderItemsFromAccount,
+  reconcileAccounts,
 } from "./order-mapping";
 import type { ApiOrder } from "./orders-api";
 import type { AccountItem, TableAccount } from "./domain";
@@ -207,5 +208,36 @@ describe("canSendAccount", () => {
     expect(canSendAccount(accountWith([item({ sent: true })]))).toBe(false);
     expect(canSendAccount(accountWith([item()]))).toBe(true);
     expect(canSendAccount({ ...accountWith([item()]), status: "anulada" })).toBe(false);
+  });
+});
+
+describe("reconcileAccounts", () => {
+  it("crea una cuenta abierta si la API tiene una comanda abierta sin cuenta local", () => {
+    const result = reconcileAccounts([], [orden]);
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe("abierta");
+    expect(result[0].tableId).toBe(4);
+    expect(result[0].label).toBe("Mesa 4");
+    expect(result[0].items).toHaveLength(2);
+    expect(result[0].items[0].sent).toBe(true);
+  });
+
+  it("mantiene abierta la cuenta local existente y vincula la orden creada", () => {
+    const local = accountWith([item({ sent: false })]);
+    local.tableApiId = orden.mesa_id;
+    local.tableId = 4;
+    const result = reconcileAccounts([local], [orden]);
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe("abierta");
+    expect(result[0].orderApiIds).toContain(orden.id);
+    expect(result[0].items[0].sent).toBe(true);
+  });
+
+  it("marca cobrada una cuenta abierta si su orden pasó a PAGADA", () => {
+    const pagada: ApiOrder = { ...orden, estado: "PAGADA" };
+    const local = { ...accountWith([item({ sent: true })]), orderApiIds: [pagada.id] };
+    const result = reconcileAccounts([local], [pagada]);
+    expect(result).toHaveLength(1);
+    expect(result[0].status).toBe("cobrada");
   });
 });

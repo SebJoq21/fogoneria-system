@@ -44,6 +44,7 @@ import {
   DEMO_COMPANY,
   DEMO_EMPRESA_ID,
   GENERAL_BRANCH,
+  SEED_BRANCH_SLUGS,
   SEED_SLUG_BRANCH_IDS,
   demoScopeFor,
   initialAccounts,
@@ -85,7 +86,13 @@ import { ApiError } from "@/lib/api";
 import { createSession, logoutUrl } from "@/lib/session-api";
 import * as catalogApi from "@/lib/catalog-api";
 import * as ordersApi from "@/lib/orders-api";
-import { UI_TO_API_STATUS, orderFromApi, orderItemsFromAccount } from "@/lib/order-mapping";
+import {
+  UI_TO_API_STATUS,
+  orderFromApi,
+  orderItemsFromAccount,
+  reconcileAccounts,
+} from "@/lib/order-mapping";
+import { connectOrdersRealtime } from "@/lib/realtime";
 import {
   cpeFromReceipt,
   getFacturacionPort,
@@ -99,6 +106,12 @@ import {
   broadcastErpState,
   type ErpState,
 } from "@/lib/persistence";
+
+const TERMINAL_API_STATES: readonly ordersApi.ApiOrderStatus[] = [
+  "PAGADA",
+  "CERRADA",
+  "ANULADA",
+];
 
 export type CheckoutInput = {
   accountId: string;
@@ -387,6 +400,14 @@ function branchStorageKey(tenantKey: string): string {
   return `fogoneria:branch:${tenantKey}`;
 }
 
+function matchesBranch(branchA?: string | null, branchB?: string | null): boolean {
+  if (!branchA || !branchB) return false;
+  if (branchA === branchB) return true;
+  const slugA = SEED_BRANCH_SLUGS[branchA] ?? branchA;
+  const slugB = SEED_BRANCH_SLUGS[branchB] ?? branchB;
+  return slugA === slugB;
+}
+
 export function ModulesProvider({
   children,
   initialPayments,
@@ -581,6 +602,10 @@ export function ModulesProvider({
         });
         if (requestId !== ordersRequest.current) return;
         setLiveOrders(list.items.map((order) => orderFromApi(order, { nameOf: platoNameOf })));
+        setState((s) => ({
+          ...s,
+          accounts: reconcileAccounts(s.accounts, list.items, platoNameOf),
+        }));
       } catch (error) {
         if (requestId !== ordersRequest.current || signal?.aborted) return;
         setOrdersError(
@@ -605,6 +630,25 @@ export function ModulesProvider({
     void refreshOrders(controller.signal);
     return () => controller.abort();
   }, [currentUser, refreshOrders]);
+
+  /* Sincronización en tiempo real de órdenes y mesas para todo el sistema */
+  useEffect(() => {
+    if (!currentUser?.empresaId) return;
+
+    const stop = connectOrdersRealtime({
+      onOrderCreated: () => {
+        void refreshOrders();
+      },
+      onOrderUpdated: () => {
+        void refreshOrders();
+      },
+      onTableStatus: () => {
+        void refreshOrders();
+      },
+    });
+
+    return stop;
+  }, [currentUser?.empresaId, refreshOrders]);
 
   /* Empresa y sucursales reales del token (tarea 57). */
   useEffect(() => {
@@ -790,11 +834,10 @@ export function ModulesProvider({
   }, []);
 
   const logout = useCallback(() => {
-    // Limpia el estado del tenant actual y luego navega al logout del servidor,
-    // que borra las cookies HttpOnly y redirige. Si la navegación falla, no se
-    // simula un logout exitoso.
+    // Limpia la sesión del usuario actual y navega al logout del servidor,
+    // que borra las cookies HttpOnly y redirige. El estado operativo del restaurante
+    // (cuentas y caja) se conserva.
     try {
-      resetErpState(tenantKey);
       localStorage.removeItem("fogoneria:user");
       localStorage.removeItem(branchStorageKey(tenantKey));
       document.cookie = "fogoneria.role=; path=/; max-age=0";
@@ -818,7 +861,7 @@ export function ModulesProvider({
   }, [state.scopes, activeBranchId, isGeneral, branchIds]);
 
   const accounts = useMemo(
-    () => (isGeneral ? state.accounts : state.accounts.filter((a) => a.branchId === activeBranchId)),
+    () => (isGeneral ? state.accounts : state.accounts.filter((a) => matchesBranch(a.branchId, activeBranchId))),
     [state.accounts, activeBranchId, isGeneral],
   );
 
@@ -1070,7 +1113,11 @@ export function ModulesProvider({
         ...s,
         accounts: s.accounts.map((a) =>
           a.id === accountId
-            ? { ...a, items: a.items.map((i) => (i.sent ? i : { ...i, sent: true })) }
+            ? {
+                ...a,
+                orderApiIds: [...(a.orderApiIds ?? []), created.id],
+                items: a.items.map((i) => (i.sent ? i : { ...i, sent: true })),
+              }
             : a,
         ),
       }));
@@ -1123,11 +1170,94 @@ export function ModulesProvider({
     [currentUser, refreshOrders, setOrders],
   );
 
+  const transitionOrderToTerminal = useCallback(
+    async (orderId: string, target: "PAGADA" | "CERRADA" | "ANULADA") => {
+      try {
+        const order = await ordersApi.getOrder(orderId);
+        let currentStatus = order.estado;
+
+        if (TERMINAL_API_STATES.includes(currentStatus)) {
+          return;
+        }
+
+        if (target === "ANULADA") {
+          if (currentStatus === "POR_CONFIRMAR") {
+            await ordersApi.updateOrderStatus(orderId, "ANULADA");
+            return;
+          }
+          target = "CERRADA";
+        }
+
+        if (currentStatus === "POR_CONFIRMAR") {
+          await ordersApi.updateOrderStatus(orderId, "EN_COCINA");
+          currentStatus = "EN_COCINA";
+        }
+        if (currentStatus === "EN_COCINA") {
+          await ordersApi.updateOrderStatus(orderId, "LISTO");
+          currentStatus = "LISTO";
+        }
+        if (currentStatus === "LISTO") {
+          await ordersApi.updateOrderStatus(orderId, "ENTREGADO");
+          currentStatus = "ENTREGADO";
+        }
+        if (currentStatus === "ENTREGADO") {
+          await ordersApi.updateOrderStatus(orderId, target);
+        }
+      } catch (err) {
+        console.error(`Error al pasar orden ${orderId} a ${target}:`, err);
+      }
+    },
+    [],
+  );
+
+  const closeAccountOrders = useCallback(
+    async (account: TableAccount, target: "PAGADA" | "CERRADA" | "ANULADA") => {
+      if (!currentUser?.empresaId) return;
+
+      const orderIdsToClose = new Set<string>(account.orderApiIds ?? []);
+
+      if (liveOrders) {
+        for (const ord of liveOrders) {
+          if (ord.apiId) {
+            const matchesAccount = account.orderApiIds?.includes(ord.apiId) || ord.accountId === account.id;
+            const matchesTable =
+              (account.tableApiId && ord.mesaApiId === account.tableApiId) ||
+              (account.tableId != null && ord.tableId === account.tableId);
+            if (matchesAccount || matchesTable) {
+              orderIdsToClose.add(ord.apiId);
+            }
+          }
+        }
+      }
+
+      if (account.tableApiId) {
+        try {
+          const list = await ordersApi.listOrders({ mesaId: account.tableApiId });
+          for (const it of list.items) {
+            if (!TERMINAL_API_STATES.includes(it.estado)) {
+              orderIdsToClose.add(it.id);
+            }
+          }
+        } catch (err) {
+          console.error("Error al consultar órdenes de mesa:", err);
+        }
+      }
+
+      for (const orderId of orderIdsToClose) {
+        await transitionOrderToTerminal(orderId, target);
+      }
+
+      await refreshOrders();
+    },
+    [currentUser?.empresaId, liveOrders, refreshOrders, transitionOrderToTerminal],
+  );
+
   const annulAccount = useCallback(
     (accountId: string, motivo: string) => {
+      const account = state.accounts.find((a) => a.id === accountId);
+      if (!account) return;
+
       setState((s) => {
-        const account = s.accounts.find((a) => a.id === accountId);
-        if (!account) return s;
         const scopes = account.tableId
           ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
           : s.scopes;
@@ -1141,8 +1271,10 @@ export function ModulesProvider({
           scopes,
         };
       });
+
+      void closeAccountOrders(account, "ANULADA");
     },
-    [],
+    [closeAccountOrders, state.accounts],
   );
 
   /* ---------- Facturación electrónica SUNAT ---------- */
@@ -1314,9 +1446,17 @@ export function ModulesProvider({
         };
       });
       enviarSunat(receipt);
+      void closeAccountOrders(account, "PAGADA");
       return receipt;
     },
-    [state.accounts, state.coupons, state.receipts, openCashShift, enviarSunat],
+    [
+      state.accounts,
+      state.coupons,
+      state.receipts,
+      openCashShift,
+      enviarSunat,
+      closeAccountOrders,
+    ],
   );
 
   /** Anulación tributaria: NC si es factura, baja en resumen si es boleta. */
@@ -1637,15 +1777,24 @@ function patchTableStatus(
   tableId: number,
   status: Table["status"],
 ): Record<string, BranchScope> {
-  return {
-    ...scopes,
-    [branchId]: {
-      ...scopes[branchId],
-      tables: (scopes[branchId]?.tables ?? []).map((t) =>
-        t.id === tableId ? { ...t, status } : t,
-      ),
-    },
-  };
+  const slug = SEED_BRANCH_SLUGS[branchId];
+  const uuid = SEED_SLUG_BRANCH_IDS[branchId];
+  const targets = Array.from(new Set([branchId, slug, uuid].filter((x): x is string => Boolean(x))));
+  let nextScopes = { ...scopes };
+  for (const tid of targets) {
+    if (nextScopes[tid]) {
+      nextScopes = {
+        ...nextScopes,
+        [tid]: {
+          ...nextScopes[tid],
+          tables: (nextScopes[tid]?.tables ?? []).map((t) =>
+            t.id === tableId ? { ...t, status } : t,
+          ),
+        },
+      };
+    }
+  }
+  return nextScopes;
 }
 
 export function useModules() {
