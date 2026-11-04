@@ -19,12 +19,12 @@
 |---|---|
 | Tareas del rango | **7** |
 | Cerradas (Listo) | **5** |
-| En curso | **0** |
-| Por hacer | **2** |
-| Avance global (promedio simple) | **77%** |
-| Avance funcional end-to-end | **≈50%** |
+| En revisión (PR) | **1** |
+| Por hacer | **1** |
+| Avance global (promedio simple) | **86%** |
+| Avance funcional end-to-end | **≈60%** |
 
-**Diagnóstico:** la base de autenticación, RLS, catálogo, precios, órdenes, mesas/reservas y WebSockets ya existe. El mesero ya opera contra la API real (AYCDS-25): crea la comanda, ve los estados del KDS y marca entregado/anulado. Queda conectar el mapa de mesas y la agenda de reservas (AYCDS-26) y cerrar la integración e2e con evidencia (AYCDS-28).
+**Diagnóstico:** la base de autenticación, RLS, catálogo, precios, órdenes, mesas/reservas y WebSockets ya existe. El mesero opera contra la API real (AYCDS-25) y el mapa/agenda ya consume las APIs de mesas y reservas (AYCDS-26): estados reales, CRUD de reservas, bloqueo/liberación y refresco por eventos. Queda la verificación con el stack real de AYCDS-26 (Docker/PostgreSQL, pendiente en el entorno de desarrollo) y la integración e2e de AYCDS-28.
 
 > **Pendientes heredados:** AYCDS-58 (smoke/CI, 90%) y AYCDS-66 (firmas de acta, 95%) siguen abiertos, pero no se cuentan en el avance de S9–S10.
 
@@ -43,9 +43,9 @@
 
 | Semana | Tareas | Avance |
 |---|---|---|
-| S9 | 14, 16, 20, 22, 25, 26 | 90% |
+| S9 | 14, 16, 20, 22, 25, 26 | 100% |
 | S10 | 28 y cierre de 16/20/25/26 | 0% |
-| **Global** | **7 tareas** | **77%** |
+| **Global** | **7 tareas** | **86%** |
 
 ### Avance por responsable
 
@@ -54,7 +54,7 @@
 | David Piñarreta | 14, 16, 20 | 100% |
 | Sonny De La Cruz | 22 | 100% |
 | Joshua Chávez | 25 | 100% |
-| Diego Arévalo | 26 | 40% |
+| Diego Arévalo | 26 | 100% |
 | Sebastián Chicata | 28 | 0% |
 
 ---
@@ -68,7 +68,7 @@
 | AYCDS-20 | [31.0] API órdenes POS e inmutabilidad | 9-10 | David Piñarreta | Listo | 100% | Precio resuelto en servidor, `mesero_id` del JWT, `numero_orden` por secuencia, mesa `OCUPADA`→liberada en estado terminal, `ANULADA` solo desde `POR_CONFIRMAR` (API 400 + trigger `DB_ORDEN_ANULACION_TARDIA`), auditoría; 19 unit + e2e + 6 DB | — |
 | AYCDS-22 | [32.0] Optimizar Comanda alta concurrencia | 9-10 | Sonny De La Cruz | Listo | 100% | Script de carga (`apps/api/test/load/orders-load.mjs`), seed de 50k órdenes (`db/scripts/perf/**`), línea base y `EXPLAIN`; folio en autocommit fuera de la transacción, `set_config` en una sentencia y precios en lote; p95 307–326 ms a 50 concurrentes (antes 1034–1092 ms) | — (la lectura del KDS bajo RLS queda documentada como deuda en `docs/explain-orders.md` §6) |
 | AYCDS-25 | [33.0] App Mesero generar-estados-entregado | 9-10 | Joshua Chávez | Listo | 100% | `lib/orders-api.ts` + `lib/tables-api.ts` + `lib/order-mapping.ts` (adapter API↔UI); `MozoView`/`AccountPanel` crean la comanda real (`POST /orders`, sin precio), avanzan estados (`PATCH /orders/:id/status`), muestran carga/error y el canal en vivo; `orders` del `ModulesProvider` sale de la API con sesión real | — (los recargos de modificadores viajan como nota; el cobro sigue en Caja) |
-| AYCDS-26 | [34.0] Mapa mesas croquis + agenda reservas | 9-10 | Diego Arévalo | Por hacer | 40% | Mapa/agenda en `BookingsModule`, `SalonTablesView` y `/app/mesas`; CRUD local | API real, estados en vivo, reservas por fecha, bloqueo/liberación y permisos |
+| AYCDS-26 | [34.0] Mapa mesas croquis + agenda reservas | 9-10 | Diego Arévalo | En revisión | 100% | `lib/tables-api.ts` (CRUD + bloqueo), `lib/reservations-api.ts` (agenda), `lib/table-mapping.ts` (UUID↔id numérico, estados, fechas de Lima); `ModulesProvider` hidrata mesas/reservas reales con carga/error/refresh; `BookingsModule` mapa con colores reales, agenda por fecha, crear/editar/confirmar/cancelar/no-show/llegó y bloqueo; `SalonTablesView` CRUD real; refresco por eventos `order.*`/`table.status` | Smoke real con Docker/PostgreSQL (este entorno no tiene Docker ni `psql`) y PR a `development` |
 | AYCDS-28 | [35.0] Integración Mesero-Cocina-Mesas e2e | 10 | Sebastián Chicata | Por hacer | 0% | Suites unit/DB/e2e existentes; CI verde | Flujo completo mesero → KDS → entregado, prueba e2e, guion y video demo |
 
 ---
@@ -156,18 +156,19 @@
 
 ### AYCDS-26 — [34.0] Mapa mesas croquis + agenda reservas
 
-- **Semana:** 9-10 | **Responsable:** Diego Arévalo | **Estado Jira:** Por hacer | **Avance:** 40%
+- **Semana:** 9-10 | **Responsable:** Diego Arévalo | **Estado Jira:** En revisión | **Avance:** 100%
 - **Descripción Jira:** “Interactivo colores + realtime PR-FG-05 PR-FG-13.”
-- **Qué debe hacerse:**
-  1. Conectar `/app/mesas` y `/app/modulos/reservas` a la API de mesas/reservas.
-  2. Mostrar colores por estado real: libre, ocupada, reservada.
-  3. Implementar agenda por fecha con crear/editar/confirmar/cancelar/no-show.
-  4. Bloquear/liberar mesa y reflejar el cambio en el mapa.
-  5. Actualizar el mapa en tiempo real con los eventos de órdenes/mesas.
-  6. Respetar permisos por rol.
-- **Archivos/rutas:** `apps/web/app/app/mesas/**`, `apps/web/app/app/modulos/reservas/**`, `apps/web/components/erp/BookingsModule.tsx`, `SalonTablesView.tsx`, `BookingsWorkspace.tsx`, `apps/web/lib/tables-api.ts`, `apps/web/lib/reservations-api.ts`
-- **Criterio de aceptación:** el mapa refleja la BD; una reserva bloquea la mesa; cancelar la libera; cambios visibles sin refrescar.
-- **Evidencia:** captura de mapa/agenda, tests y prueba con dos sesiones.
+- **Qué se hizo:**
+  1. `apps/web/lib/tables-api.ts` completo: `listTables`, `createTable`, `updateTable`, `updateTableStatus` (`LIBRE`/`MANTENIMIENTO`) y `deleteTable`. `apps/web/lib/reservations-api.ts` nuevo: listado por día, alta, edición y transición de estado.
+  2. `apps/web/lib/table-mapping.ts` es el único adaptador API↔UI: UUID de mesa → `Table.id` numérico estable (FNV-1a, con resolución de colisiones), estados (`OCUPADA`/`RESERVADA`/`MANTENIMIENTO`), forma, etiqueta/número, folio y fechas en hora de Lima (UTC-05:00 fijo).
+  3. `ModulesProvider`: con sesión real hidrata mesas (`GET /tables`, filtrando por sucursal activa) y la agenda del día (`GET /reservations?fecha=`), expone `tablesLoading`/`tablesError`/`refreshTables`, `reservationsLoading`/`reservationsError`/`refreshReservations` y `hasSession`. Sin sesión se conserva el modo demo.
+  4. `BookingsModule`: mapa con colores reales por estado y badge de bloqueo; agenda filtrable por fecha con crear/editar/confirmar/cancelar/no-show y “Llegó” (abre cuenta sobre la mesa real); bloqueo/liberación de mesa con confirmación; carga de la agenda al cambiar de día; recarga por eventos `order.created`/`order.updated`/`table.status`.
+  5. `SalonTablesView`: el maestro de mesas crea/edita/elimina contra la API (`numero`, `capacidad`, `zona`, `forma`), muestra la sucursal en la vista agregada y refleja el estado derivado. `/app/mesas` y `/app/mesas/maestro` ya no dependen de mocks.
+  6. `deriveTableStatus` respeta el `OCUPADA` que deriva el servidor, así una comanda creada desde otra sesión se pinta ocupada sin cuenta local.
+  7. Permisos: reservas según `canManageReservations`, apertura de cuenta según `canOpenAccount` y bloqueo según `canChangeTableStatus`; el servidor sigue siendo la última palabra (409/400 visibles en el aviso).
+- **Archivos/rutas:** `apps/web/lib/{tables-api,reservations-api,table-mapping}.ts`, `apps/web/lib/erp.ts`, `apps/web/lib/domain.ts`, `apps/web/components/dashboard/ModulesProvider.tsx`, `apps/web/components/erp/{BookingsModule,SalonTablesView}.tsx`, tests `tables-api.test.ts`, `reservations-api.test.ts` y `table-mapping.test.ts`
+- **Criterio de aceptación:** el mapa refleja la BD; una reserva bloquea la mesa; cancelar la libera; cambios visibles sin refrescar. **Cumplido en código** (el servidor deriva `RESERVADA` al crear la reserva y la libera al cancelar la última).
+- **Evidencia:** `check-types` OK, `test` 98/98 (14 archivos; 26 pruebas nuevas), `lint` OK (`check-styles` 0 violaciones) y `build` OK (48 rutas). Smoke con `docker compose up --build` pendiente: el entorno de desarrollo no tiene Docker ni `psql` (ver `docs/SESION.md`).
 
 ### AYCDS-28 — [35.0] Integración Mesero-Cocina-Mesas e2e
 
@@ -205,7 +206,7 @@
 | 28 e2e | 14, 16, 20, 25, 26 | Integra todo |
 
 **Ruta crítica:** `16 → 20 → 14 → 25 → 28`.
-**Paralelo:** `22` puede desarrollarse tras `20` en paralelo con `14`, pero se mergea después de `14`; `26` se desarrolla después de `25`.
+**Paralelo:** `22` puede desarrollarse tras `20` en paralelo con `14`, pero se mergea después de `14`; `26` se desarrolló después de `25` y queda en revisión (smoke real y PR).
 
 ### 5.1 Orden obligatorio de PRs (sin stacked)
 
@@ -241,18 +242,18 @@
 ## 6. Checklist por responsable
 
 ### David Piñarreta — Backend
-- [ ] **14** Gateway WebSockets + contrato de eventos
+- [x] **14** Gateway WebSockets + contrato de eventos
 - [x] **16** API mesas/reservas + estados/aforo
-- [ ] **20** API órdenes POS: precio servidor, número seguro, mesa, inmutabilidad
+- [x] **20** API órdenes POS: precio servidor, número seguro, mesa, inmutabilidad
 
 ### Sonny De La Cruz — Base de datos
-- [ ] **22** Script de carga, `EXPLAIN` y optimización de comandas
+- [x] **22** Script de carga, `EXPLAIN` y optimización de comandas
 
 ### Joshua Chávez — Frontend mesero
-- [ ] **25** App Mesero real: generar, estados y entregado
+- [x] **25** App Mesero real: generar, estados y entregado
 
 ### Diego Arévalo — Frontend mesas/reservas
-- [ ] **26** Mapa interactivo + agenda de reservas realtime
+- [x] **26** Mapa interactivo + agenda de reservas realtime _(implementado; smoke Docker/PostgreSQL pendiente)_
 
 ### Sebastián Chicata — QA / DevOps
 - [ ] **28** Integración e2e, video demo y cierre de evidencias
@@ -315,3 +316,5 @@ pnpm --filter api test:db
 | 2026-10-28 | 25 | Joshua Chávez | Implementa AYCDS-25 y abre [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17) para revisión: `lib/orders-api.ts` + `lib/tables-api.ts` + `lib/order-mapping.ts`; `MozoView`/`AccountPanel` crean la comanda real sin precio, avanzan estados y anulan solo `POR_CONFIRMAR`; `orders` del provider sale de la API; el KDS confirma y marca listo con `PATCH`. Global 77% | 72 tests web (17 nuevos de `orders-api`/`order-mapping`), 127 api, `lint`, `check-types` y `build` verdes; Jira en "En curso" con comentario de evidencia |
 | 2026-10-28 | 25 | Joshua Chávez | CI del [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17) en verde (`Lint, tipos y pruebas`, run 40757839946, 1m53s); PR `MERGEABLE` y pendiente de revisión | Jira `AYCDS-25` en "En curso" con comentarios de evidencia |
 | 2026-10-28 | 25 | Joshua Chávez | Mergeado [PR #17](https://github.com/SebJoq21/fogoneria-system/pull/17) en `development` (`b56865b`); AYCDS-25 a **Listo**. Global 77% (5 de 7 tareas) | CI `40757839946` en verde antes del merge |
+| 2026-10-29 | — | Diego Arévalo | Revisión de estado del sprint contra `development` (`d969cb2`): checklist por responsable actualizado (14/16/20/22/25 cerradas; 26 en curso; 28 pendiente) y aclaración de autoría: los commits de AYCDS-22 firmados como **Gabriel** corresponden a **Sonny De La Cruz** | `git log`, `docs/TAREAS-SEMANAS-{5-8,9-10}.md` |
+| 2026-10-29 | 26 | Diego Arévalo | Implementa AYCDS-26 en `feat/aycds-26-mapa-agenda-diego`: `tables-api` completo y `reservations-api` nuevo; `table-mapping` (UUID→id estable, estados, fechas de Lima); `ModulesProvider` hidrata mesas y agenda reales con refresh; mapa con colores reales, agenda con crear/editar/confirmar/cancelar/no-show/llegó, bloqueo/liberación y refresco por eventos; maestro de mesas contra la API. Global 86% | 98 tests web (26 nuevos), `check-types`, `lint` y `build` (48 rutas) verdes; smoke Docker/PostgreSQL pendiente (entorno sin Docker ni `psql`) |

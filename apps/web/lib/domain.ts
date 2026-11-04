@@ -214,6 +214,9 @@ export function deriveTableStatus(
   ) {
     return "ocupada";
   }
+  /* La API ya deriva OCUPADA/RESERVADA de órdenes y reservas (AYCDS-26):
+     el estado del servidor manda aunque no haya cuenta local. */
+  if (table.status === "ocupada") return "ocupada";
   const today = new Date().toISOString().slice(0, 10);
   const hasReserva = reservations.some(
     (r) =>
