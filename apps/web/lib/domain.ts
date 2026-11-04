@@ -52,6 +52,8 @@ export type TableAccount = {
   tableId: number | null;
   /** UUID de la mesa en la API: es lo que viaja en `POST /orders` (AYCDS-25). */
   tableApiId?: string | null;
+  /** UUIDs de las órdenes creadas en la API para esta cuenta. */
+  orderApiIds?: string[];
   /** "Mesa 4" o "Para llevar" */
   label: string;
   customer: string;
@@ -197,7 +199,21 @@ export function deriveTableStatus(
   accounts: TableAccount[],
   reservations: Reservation[],
 ): TableStatus {
-  if (accounts.some((a) => a.tableId === table.id && a.status === "abierta")) return "ocupada";
+  if (
+    accounts.some((a) => {
+      if (a.status !== "abierta") return false;
+      if (a.tableId != null && a.tableId === table.id) return true;
+      if (a.tableApiId && table.apiId && a.tableApiId === table.apiId) return true;
+      const cleanAcc = a.label.replace(/\s+/g, " ").trim().toLowerCase();
+      const cleanTab = table.label.replace(/\s+/g, " ").trim().toLowerCase();
+      if (cleanAcc === cleanTab) return true;
+      if (cleanAcc === `mesa ${table.id}`) return true;
+      if (cleanAcc.endsWith(` ${table.id}`)) return true;
+      return false;
+    })
+  ) {
+    return "ocupada";
+  }
   /* La API ya deriva OCUPADA/RESERVADA de órdenes y reservas (AYCDS-26):
      el estado del servidor manda aunque no haya cuenta local. */
   if (table.status === "ocupada") return "ocupada";

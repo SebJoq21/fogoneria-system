@@ -83,6 +83,8 @@ export type Order = {
   /** Cuenta de mesa a la que pertenece la comanda. */
   accountId?: string;
   tableId?: number | null;
+  /** UUID de la mesa en la API (fogoneria.mesas.id). */
+  mesaApiId?: string;
   customer: string;
   items: OrderItem[];
   amount: number;

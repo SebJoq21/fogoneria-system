@@ -15,7 +15,7 @@ import {
   itemLineTotal,
   type TableAccount,
 } from "@/lib/domain";
-import { canAnnulAccount, canCreateOrder, canOpenAccount } from "@/lib/permissions";
+import { canAnnulAccount, canCheckout, canCreateOrder, canOpenAccount } from "@/lib/permissions";
 
 /** Panel de una cuenta abierta: líneas, envío a cocina y totales. */
 export function AccountPanel({ account, onBack }: { account: TableAccount; onBack: () => void }) {
@@ -26,6 +26,7 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
     addAccountItems,
     sendToKitchen,
     annulAccount,
+    checkoutAccount,
     notify,
   } = useModules();
   useNow(30000);
@@ -85,6 +86,27 @@ export function AccountPanel({ account, onBack }: { account: TableAccount; onBac
               {canAnnulAccount(role) && (
                 <Button variant="secondary" onClick={() => setPendingAnnul(true)}>
                   Anular cuenta
+                </Button>
+              )}
+              {canCheckout(role) && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    checkoutAccount({
+                      accountId: account.id,
+                      payments: [{ method: "Efectivo", amount: totals.total }],
+                      tip: 0,
+                      couponCode: null,
+                      customerId: null,
+                      receiptType: "03",
+                      docType: "",
+                      docNumber: "",
+                    });
+                    notify("Cuenta cobrada", `${account.label} · mesa liberada`);
+                    onBack();
+                  }}
+                >
+                  Cobrar y liberar mesa
                 </Button>
               )}
               <Button onClick={() => setAdding(true)}>+ Agregar plato</Button>

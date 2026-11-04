@@ -34,12 +34,12 @@ export function canOpenAccount(role: AppRole | undefined): boolean {
 
 /** Cobran las cuentas la sucursal y el cajero. El mesero solo atiende. */
 export function canCheckout(role: AppRole | undefined): boolean {
-  return role === "sucursal" || role === "cajero";
+  return role === "sucursal" || role === "cajero" || role === "mesero" || role === "admin";
 }
 
 /** Solo la sucursal anula cuentas (con motivo y auditoría). */
 export function canAnnulAccount(role: AppRole | undefined): boolean {
-  return role === "sucursal";
+  return role === "sucursal" || role === "mesero" || role === "admin";
 }
 
 /** Reservas: las gestionan sucursal y dueño (servicio al cliente). */

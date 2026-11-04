@@ -95,8 +95,23 @@ export function realtimeBaseUrl(apiUrl?: string): string {
     process.env.NEXT_PUBLIC_REALTIME_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     "http://localhost:3001/api/v1";
-  const withoutPrefix = raw.replace(/\/api\/v\d+\/?$/, "");
-  return withoutPrefix.replace(/\/$/, "");
+  const withoutPrefix = raw.replace(/\/api\/v\d+\/?$/, "").replace(/\/$/, "");
+
+  // Si estamos en el navegador y la URL apunta a 'api' (host interno de la red Docker),
+  // se mapea al hostname real accesible por el cliente (ej. localhost o IP local).
+  if (typeof window !== "undefined") {
+    try {
+      const url = new URL(withoutPrefix);
+      if (url.hostname === "api") {
+        url.hostname = window.location.hostname;
+      }
+      return url.origin;
+    } catch {
+      return withoutPrefix;
+    }
+  }
+
+  return withoutPrefix;
 }
 
 /** Sin sesión válida no se reintenta: el usuario debe volver a entrar. */

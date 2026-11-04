@@ -102,10 +102,15 @@ export function orderFromApi(
     ...(detail.notas ? { notes: detail.notas } : {}),
   }));
 
+  const tableNum = order.mesas?.numero
+    ? parseInt(order.mesas.numero.replace(/\D/g, ""), 10) || null
+    : null;
+
   return {
     id: order.numero_orden,
     apiId: order.id,
-    tableId: null,
+    tableId: tableNum,
+    mesaApiId: order.mesa_id ?? undefined,
     customer: customerOf(order),
     items,
     amount: Number(order.total),
@@ -153,4 +158,165 @@ export function orderItemsFromAccount(account: TableAccount): CreateOrderItemInp
 /** La cuenta está lista para una comanda real. */
 export function canSendAccount(account: TableAccount): boolean {
   return account.status === "abierta" && orderItemsFromAccount(account).length > 0;
+}
+
+/**
+ * Reconcilia las cuentas locales con las comandas de la API (AYCDS-25).
+ * Asegura que cualquier orden abierta en la API tenga una cuenta abierta
+ * visible para meseros y cajeros, y que las órdenes cerradas marquen la cuenta
+ * correspondiente como cerrada o anulada.
+ */
+export function reconcileAccounts(
+  currentAccounts: TableAccount[],
+  apiOrders: ApiOrder[],
+  nameOf: (platoId: string | null, tipo: string) => string = (id, tipo) =>
+    tipo === "COMBO" ? "Combo" : "Plato",
+): TableAccount[] {
+  const OPEN_API_STATES = ["POR_CONFIRMAR", "EN_COCINA", "LISTO", "ENTREGADO"];
+  const TERMINAL_API_STATES = ["PAGADA", "CERRADA", "ANULADA"];
+
+  const openOrders = apiOrders.filter((o) => OPEN_API_STATES.includes(o.estado));
+  const terminalOrderIds = new Set(
+    apiOrders.filter((o) => TERMINAL_API_STATES.includes(o.estado)).map((o) => o.id),
+  );
+
+  const matchedOrderIds = new Set<string>();
+
+  // 1. Actualizar cuentas existentes
+  const updatedAccounts = currentAccounts.map((acc) => {
+    // Si la cuenta estaba abierta pero todas sus órdenes en la API ya terminaron
+    if (
+      acc.status === "abierta" &&
+      acc.orderApiIds &&
+      acc.orderApiIds.length > 0 &&
+      acc.orderApiIds.every((id) => terminalOrderIds.has(id))
+    ) {
+      const allAnuladas = acc.orderApiIds.every((id) => {
+        const ord = apiOrders.find((o) => o.id === id);
+        return ord?.estado === "ANULADA";
+      });
+      return {
+        ...acc,
+        status: allAnuladas ? ("anulada" as const) : ("cobrada" as const),
+        closedAt: acc.closedAt ?? new Date().toISOString(),
+      };
+    }
+
+    if (acc.status !== "abierta") {
+      return acc;
+    }
+
+    // Buscar si alguna orden abierta de la API corresponde a esta cuenta
+    const matchingOrder = openOrders.find((o) => {
+      if (acc.orderApiIds?.includes(o.id)) return true;
+      if (o.mesa_id && acc.tableApiId && o.mesa_id === acc.tableApiId) return true;
+      if (o.mesas?.numero && acc.tableId != null) {
+        const num = parseInt(o.mesas.numero.replace(/\D/g, ""), 10);
+        return num === acc.tableId;
+      }
+      return false;
+    });
+
+    if (matchingOrder) {
+      matchedOrderIds.add(matchingOrder.id);
+      const nextOrderIds = Array.from(
+        new Set([...(acc.orderApiIds ?? []), matchingOrder.id]),
+      );
+
+      let nextItems = acc.items;
+      if (nextItems.length === 0 && (matchingOrder.detalles_orden ?? []).length > 0) {
+        nextItems = matchingOrder.detalles_orden.map((detail) => ({
+          id: detail.id,
+          productId: detail.plato_id ?? detail.combo_id ?? "",
+          name: nameOf(detail.plato_id, detail.tipo),
+          qty: detail.cantidad,
+          unitPrice: Number(detail.precio_unitario),
+          modifiers: (detail.detalles_orden_modificadores ?? []).map((m) => ({
+            optionId: m.opcion_id,
+            name: m.opcion_id,
+            extra: Number(m.precio_extra ?? 0),
+          })),
+          notes: detail.notas ?? "",
+          sent: true,
+        }));
+      } else {
+        nextItems = nextItems.map((item) => ({ ...item, sent: true }));
+      }
+
+      return {
+        ...acc,
+        orderApiIds: nextOrderIds,
+        tableApiId: acc.tableApiId ?? matchingOrder.mesa_id ?? null,
+        items: nextItems,
+        waiter: acc.waiter || matchingOrder.usuarios?.nombre || "Mesero",
+      };
+    }
+
+    return acc;
+  });
+
+  // 2. Para órdenes abiertas en la API que aún no tienen cuenta en este cliente
+  const newAccounts: TableAccount[] = [];
+  for (const openOrder of openOrders) {
+    if (matchedOrderIds.has(openOrder.id)) continue;
+
+    const alreadyCovered = updatedAccounts.some((a) => {
+      if (a.status !== "abierta") return false;
+      if (a.orderApiIds?.includes(openOrder.id)) return true;
+      if (openOrder.mesa_id && a.tableApiId === openOrder.mesa_id) return true;
+      if (openOrder.mesas?.numero && a.tableId != null) {
+        const num = parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10);
+        return num === a.tableId;
+      }
+      return false;
+    });
+
+    if (!alreadyCovered) {
+      const tableNum = openOrder.mesas?.numero
+        ? parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10) || null
+        : null;
+      const label = openOrder.mesas?.numero
+        ? (openOrder.mesas.numero.startsWith("Mesa") ? openOrder.mesas.numero : `Mesa ${openOrder.mesas.numero}`)
+        : "Para llevar";
+
+      const accItems: AccountItem[] = (openOrder.detalles_orden ?? []).map((detail) => ({
+        id: detail.id,
+        productId: detail.plato_id ?? detail.combo_id ?? "",
+        name: nameOf(detail.plato_id, detail.tipo),
+        qty: detail.cantidad,
+        unitPrice: Number(detail.precio_unitario),
+        modifiers: (detail.detalles_orden_modificadores ?? []).map((m) => ({
+          optionId: m.opcion_id,
+          name: m.opcion_id,
+          extra: Number(m.precio_extra ?? 0),
+        })),
+        notes: detail.notas ?? "",
+        sent: true,
+      }));
+
+      newAccounts.push({
+        id: openOrder.mesa_id ? `CT-mesa-${openOrder.mesa_id}` : `CT-order-${openOrder.id}`,
+        branchId: openOrder.sucursal_id,
+        tableId: tableNum,
+        tableApiId: openOrder.mesa_id ?? null,
+        orderApiIds: [openOrder.id],
+        label,
+        customer: "Consumidor final",
+        waiter: openOrder.usuarios?.nombre || "Mesero",
+        openedAt: openOrder.created_at,
+        closedAt: null,
+        status: "abierta",
+        items: accItems,
+        payments: [],
+        tip: 0,
+        discount: Number(openOrder.descuento_cupon ?? 0),
+        discountConcept: "",
+        couponCode: null,
+        customerId: null,
+        motivoAnulacion: null,
+      });
+    }
+  }
+
+  return [...newAccounts, ...updatedAccounts];
 }
