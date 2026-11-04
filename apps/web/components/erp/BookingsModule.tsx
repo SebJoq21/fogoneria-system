@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listTables, type ApiTable } from "@/lib/tables-api";
-import { useOrdersRealtime } from "./useOrdersRealtime";
 import {
   type Reservation,
   type ReservationStatus,
