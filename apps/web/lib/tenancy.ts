@@ -130,28 +130,5 @@ export const initialCashShifts: CashShift[] = [
   { id: "CH-san-isidro-hoy", branchId: "san-isidro", status: "abierto", openedBy: "Turno San Isidro", openedAt: isoToday("09:00"), openingFund: 100, closedBy: null, closedAt: null, countedCash: null, expectedCash: null, difference: null, observations: "" },
 ];
 
-/** Cuenta abierta de demo: el mapa de mesas refleja la operación real. */
-export const initialAccounts: TableAccount[] = [
-  {
-    id: "CT-demo-1",
-    branchId: "miraflores",
-    tableId: 2,
-    label: "Mesa 2",
-    customer: "Valeria Ríos",
-    waiter: "Ana Beltrán",
-    openedAt: isoToday("13:35"),
-    closedAt: null,
-    status: "abierta",
-    items: [
-      { id: "AI-demo-1", productId: "88888888-8888-8888-8888-888888888883", name: "Lomo Saltado", qty: 2, unitPrice: 22, modifiers: [{ optionId: "tam-grande", name: "Grande", extra: 4 }], notes: "", sent: true },
-      { id: "AI-demo-2", productId: "88888888-8888-8888-8888-888888888886", name: "Chicha Morada", qty: 1, unitPrice: 4, modifiers: [], notes: "Sin azúcar", sent: false },
-    ],
-    payments: [],
-    tip: 0,
-    discount: 0,
-    discountConcept: "",
-    couponCode: null,
-    customerId: null,
-    motivoAnulacion: null,
-  },
-];
+/** Cuentas iniciales: arrancan vacías para operar solo con cuentas reales. */
+export const initialAccounts: TableAccount[] = [];
