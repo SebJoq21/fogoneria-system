@@ -192,10 +192,6 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     void refreshReservations(dayFilter);
   }, [hasSession, dayFilter, refreshReservations]);
 
-  useOrdersRealtime(Boolean(currentUser?.empresaId), () => {
-    void refreshApiTables();
-  });
-
   const derivedTables = useMemo(() => {
     return tables.map((t) => {
       const apiTable = apiTables.find((at) => {
