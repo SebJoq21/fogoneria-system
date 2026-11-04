@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { listTables, type ApiTable } from "@/lib/tables-api";
+import { useOrdersRealtime } from "./useOrdersRealtime";
 import {
   type Reservation,
   type ReservationStatus,
@@ -130,11 +132,60 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   const [pendingCancel, setPendingCancel] = useState<Reservation | null>(null);
   const [pendingNoShow, setPendingNoShow] = useState<Reservation | null>(null);
   const [dayFilter, setDayFilter] = useState(todayKey);
+  const [apiTables, setApiTables] = useState<ApiTable[]>([]);
 
-  const derivedTables = useMemo(
-    () => tables.map((t) => ({ ...t, status: deriveTableStatus(t, accounts, reservations) })),
-    [tables, accounts, reservations],
-  );
+  const refreshApiTables = useCallback(async () => {
+    if (!currentUser?.empresaId) return;
+    try {
+      const list = await listTables();
+      setApiTables(list);
+    } catch {
+      /* fallback a tablas locales */
+    }
+  }, [currentUser?.empresaId]);
+
+  useEffect(() => {
+    void refreshApiTables();
+  }, [refreshApiTables]);
+
+  useOrdersRealtime(Boolean(currentUser?.empresaId), () => {
+    void refreshApiTables();
+  });
+
+  const derivedTables = useMemo(() => {
+    return tables.map((t) => {
+      const apiTable = apiTables.find((at) => {
+        const num = parseInt(at.numero.replace(/\D/g, ""), 10);
+        return num === t.id || at.numero.toLowerCase() === t.label.toLowerCase();
+      });
+
+      const hasOpenAccount = accounts.some((a) => {
+        if (a.status !== "abierta") return false;
+        if (a.tableId != null && a.tableId === t.id) return true;
+        if (apiTable && a.tableApiId === apiTable.id) return true;
+        const cleanAcc = a.label.replace(/\s+/g, " ").trim().toLowerCase();
+        const cleanTab = t.label.replace(/\s+/g, " ").trim().toLowerCase();
+        if (cleanAcc === cleanTab) return true;
+        if (cleanAcc === `mesa ${t.id}`) return true;
+        if (cleanAcc.endsWith(` ${t.id}`)) return true;
+        return false;
+      });
+
+      if (hasOpenAccount || apiTable?.estado === "OCUPADA") {
+        return { ...t, status: "ocupada" as const, apiId: apiTable?.id };
+      }
+
+      if (apiTable?.estado === "RESERVADA") {
+        return { ...t, status: "reservada" as const, apiId: apiTable?.id };
+      }
+
+      return {
+        ...t,
+        status: deriveTableStatus(t, accounts, reservations),
+        apiId: apiTable?.id,
+      };
+    });
+  }, [tables, accounts, reservations, apiTables]);
   const summary = useMemo(() => mesasSummary(derivedTables), [derivedTables]);
 
   const dayRes = useMemo(
@@ -396,9 +447,14 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
           (() => {
             const table =
               derivedTables.find((t) => t.id === selectedTable.id) ?? selectedTable;
-            const account = accounts.find(
-              (a) => a.tableId === table.id && a.status === "abierta",
-            );
+            const account = accounts.find((a) => {
+              if (a.status !== "abierta") return false;
+              if (a.tableId != null && a.tableId === table.id) return true;
+              if (table.apiId && a.tableApiId === table.apiId) return true;
+              const cleanAcc = a.label.replace(/\s+/g, " ").trim().toLowerCase();
+              const cleanTab = table.label.replace(/\s+/g, " ").trim().toLowerCase();
+              return cleanAcc === cleanTab || cleanAcc.endsWith(` ${table.id}`);
+            });
             const res = reservations.find(
               (r) => r.tableId === table.id && r.status === "confirmada",
             );

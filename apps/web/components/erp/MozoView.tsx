@@ -92,13 +92,15 @@ export function MozoView() {
   const createAccount = () => {
     const apiTable = apiTables?.find((t) => t.id === mesaApiId) ?? null;
     const table = tables.find((t) => String(t.id) === mesaId) ?? null;
+    const num = apiTable ? parseInt(apiTable.numero.replace(/\D/g, ""), 10) : null;
+    const tableId = hasSession ? (num && !isNaN(num) ? num : (table?.id ?? null)) : (table?.id ?? null);
     const label = hasSession
       ? apiTable
-        ? `Mesa ${apiTable.numero}`
+        ? (apiTable.numero.startsWith("Mesa") ? apiTable.numero : `Mesa ${apiTable.numero}`)
         : "Para llevar"
       : (table?.label ?? "Para llevar");
     const id = openAccount({
-      tableId: hasSession ? null : (table?.id ?? null),
+      tableId,
       tableApiId: hasSession ? (apiTable?.id ?? null) : null,
       label,
       customer: customer.trim(),
