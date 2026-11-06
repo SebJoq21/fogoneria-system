@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — AYCDS-33 (RRHH y propinas) lista para revisión
+
+- Objetivo: cerrar la última tarea backend de David que no dependía de nada abierto.
+- Hecho (PR-F1, `feat/aycds-33-rrhh-propinas`): módulo `staff` con personal (lista con rol), plan de turnos (listar/asignar/quitar, único por empleado+día+bloque), asistencia (upsert por empleado y día con `PRESENTE/TARDANZA/FALTA/DESCANSO`) y propinas: `POST /staff/tips/calculate` suma `ordenes.propina` del día y reparte entre los presentes con reparto exacto al céntimo; `POST /staff/tips/:id/confirm` lo marca `REPARTIDO` (idempotente).
+- Verificado: 198 unit (+18), 73 e2e (+10), 73 DB (+7), `check-types` y smoke real **17/17** (dos empleados, propina 105, reparto 105 exacto entre 2, 409 al recalcular, confirm idempotente y 403 del mesero).
+- Hallazgo: el smoke falló al principio porque `ADMIN_GLOBAL` no lleva sucursal; `calculate` exige `sucursalId` en el body (igual que mesas, gastos y puntos).
+- Pendiente: revisión de #28 (11), #29 (19), #30 (46 p1), #31 (17), #32 (31) y este.
+- Próximo paso: AYCDS-35 (BI) cuando entre la 17, o la parte 2 de la 46.
+
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
