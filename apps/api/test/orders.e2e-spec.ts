@@ -18,11 +18,34 @@ describe('Orders (e2e)', () => {
   let app: INestApplication;
   let jwt: JwtService;
   let token: string;
-  let orders: { create: ReturnType<typeof vi.fn>; list: ReturnType<typeof vi.fn> };
+  let orders: {
+    create: ReturnType<typeof vi.fn>;
+    board: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
 
   beforeAll(async () => {
     orders = {
       create: vi.fn().mockResolvedValue({ id: 'o-1' }),
+      board: vi.fn().mockResolvedValue({
+        generadoAt: '2026-11-06T12:00:00.000Z',
+        slaMinutos: 20,
+        ventanaDias: 7,
+        limite: 200,
+        truncado: false,
+        columnas: [
+          { estado: 'POR_CONFIRMAR', total: 0, ordenes: [] },
+          { estado: 'EN_COCINA', total: 0, ordenes: [] },
+          { estado: 'LISTO', total: 0, ordenes: [] },
+          { estado: 'ENTREGADO', total: 0, ordenes: [] },
+        ],
+        metricas: {
+          abiertas: 0,
+          fueraDeSla: 0,
+          promedioEsperaMin: null,
+          promedioPreparacionMin: null,
+        },
+      }),
       list: vi.fn().mockResolvedValue({ items: [], total: 0, page: 1, limit: 20 }),
     };
 
@@ -56,6 +79,7 @@ describe('Orders (e2e)', () => {
 
   beforeEach(() => {
     orders.create.mockClear();
+    orders.board.mockClear();
     orders.list.mockClear();
   });
 
@@ -121,5 +145,54 @@ describe('Orders (e2e)', () => {
       .get(`/api/v1/orders?sucursalId=${LEGACY}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
+  });
+
+  describe('tablero del KDS (AYCDS-30)', () => {
+    it('devuelve las cuatro columnas con SLA y métricas', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/api/v1/orders/board')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        slaMinutos: 20,
+        metricas: { abiertas: 0, fueraDeSla: 0 },
+      });
+      expect(response.body.columnas.map((columna: { estado: string }) => columna.estado))
+        .toEqual(['POR_CONFIRMAR', 'EN_COCINA', 'LISTO', 'ENTREGADO']);
+      expect(orders.board).toHaveBeenCalledTimes(1);
+    });
+
+    it('acepta la ventana y el límite como query', async () => {
+      await request(app.getHttpServer())
+        .get(`/api/v1/orders/board?dias=3&limite=50&sucursalId=${SUCURSAL}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(orders.board).toHaveBeenCalledWith({
+        dias: 3,
+        limite: 50,
+        sucursalId: SUCURSAL,
+      });
+    });
+
+    it('rechaza una ventana fuera de rango', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/orders/board?dias=99')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(400);
+      expect(orders.board).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un límite no numérico', async () => {
+      await request(app.getHttpServer())
+        .get('/api/v1/orders/board?limite=abc')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(400);
+    });
+
+    it('exige autenticación', async () => {
+      await request(app.getHttpServer()).get('/api/v1/orders/board').expect(401);
+    });
   });
 });

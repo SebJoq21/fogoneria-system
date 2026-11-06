@@ -120,7 +120,7 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | GET | `/reservations`, `/reservations/:id` | autenticado |
 | POST/PATCH | `/reservations`, `/reservations/:id` | admin, sucursal, mesero, cajero |
 | PATCH | `/reservations/:id/status` | admin, sucursal, mesero, cajero |
-| GET | `/orders`, `/orders/:id` | autenticado |
+| GET | `/orders`, `/orders/:id`, `/orders/board` | autenticado |
 | POST | `/orders` | admin, sucursal, mesero, cajero |
 | PATCH | `/orders/:id/status` | admin, sucursal, cocina, mesero, cajero |
 | GET | `/catalog/categories`, `/catalog/dishes`, `/catalog/modifier-groups` | autenticado |
@@ -153,11 +153,19 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - Los estados terminales devuelven 409 ante cualquier cambio. Cada alta y cada transición se registran en `auditoria`.
 - `ADMIN_GLOBAL` (sin sucursal en el token) deduce la sucursal de la mesa o la recibe en `sucursalId`; sin mesa ni sucursal, 400.
 
+## Tablero del KDS y SLA (AYCDS-30)
+
+- `GET /orders/board?sucursalId&dias&limite` devuelve las cuatro columnas (`POR_CONFIRMAR`, `EN_COCINA`, `LISTO`, `ENTREGADO`) con sus comandas, el `alertaSla` calculado y las métricas del turno (abiertas, fuera de SLA, espera media y preparación media). Una sola llamada: el KDS no pide una vez por columna.
+- `dias` (1-30, por defecto 7) y `limite` (1-500, por defecto 200) existen para que la consulta use `idx_ordenes_tenant_fecha`; sin la ventana, bajo RLS el planificador recorre la tabla completa (`docs/explain-orders.md` §7).
+- El SLA son **20 minutos** desde `confirmacion_at` (o desde `ingreso_at` si la cocina aún no confirmó), calculados en el servidor: el KDS no depende del reloj del navegador.
+- `OrdersSlaCron` corre cada minuto, marca `ordenes.alerta_sla` una sola vez y emite `order.sla` por el gateway. Usa el cliente de plataforma y el índice parcial `idx_ordenes_sla_pendiente`.
+- `ADMIN_GLOBAL` puede acotar por `sucursalId` o ver la empresa completa; un rol atado a sucursal que pida otra recibe 400.
+
 ## Tiempo real (AYCDS-14)
 
 - `POST /auth/ws-ticket` (autenticado) firma un JWT de **60 s** con `scope: 'ws'`, `empresaId`, `sucursalId` y `rol`. `JwtStrategy` rechaza cualquier token con `scope`, así que el ticket **no** abre la API HTTP.
 - `OrdersGateway` (namespace `/orders`) verifica el ticket en el handshake y une al socket al room `empresa:<id>` (roles sin sucursal) o `empresa:<id>:sucursal:<id>` (operativos). `order:subscribe` añade `order:<id>` validando el tenant.
-- Eventos con sobre `{ eventId, at, data }`: `order.created`, `order.updated` y `table.status`. Se emiten al crear la comanda, en cada transición del KDS y al ocupar/liberar la mesa.
+- Eventos con sobre `{ eventId, at, data }`: `order.created`, `order.updated`, `order.sla` y `table.status`. Se emiten al crear la comanda, en cada transición del KDS, cuando se cruza el SLA y al ocupar/liberar la mesa.
 - Contrato completo, rooms y límites (sin Redis adapter: los rooms viven en el proceso): `docs/websockets.md`.
 
 ## Folios por empresa

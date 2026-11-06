@@ -189,7 +189,35 @@ Mientras tanto, el KDS de una sucursal real (decenas de órdenes abiertas) no
 llega a 50 000 filas históricas, pero el costo **crece con el histórico**: es
 una deuda a resolver antes de que la tabla acumule meses de operación.
 
-## 7. Límites y notas
+## 7. Tablero del KDS (AYCDS-30)
+
+La deuda de la sección 6 se atacó primero **acotando la consulta**, sin tocar RLS.
+El tablero pide sucursal + estados abiertos + 7 días + `LIMIT 200`, y el barrido
+de SLA tiene su propio índice parcial. Medido con el mismo dataset de 50 000
+órdenes (`perf:seed`), en `db/scripts/perf/explain-board.sql`:
+
+| Consulta | Rol | Plan | Tiempo |
+|---|---|---|---|
+| Tablero acotado (sucursal + 4 estados + 7 días + `LIMIT 200`) | `fogoneria_rls` | `Index Scan Backward idx_ordenes_tenant_fecha`, 32 buffers | **1,56 ms** |
+| Mismo listado **sin** ventana ni límite | `fogoneria_rls` | `Seq Scan`, 37 507 filas descartadas, 1 251 buffers | **81 ms** |
+| Métricas (comandas con `listo_at` en 7 días) | `fogoneria_rls` | `Bitmap Heap Scan idx_ordenes_tenant_fecha` | **0,84 ms** |
+| Barrido de SLA **antes** del índice | `fogoneria_rls` | `Seq Scan`, 50 008 filas descartadas | 83 ms |
+| Barrido de SLA **con** `idx_ordenes_sla_pendiente` | `fogoneria_saas` (el rol del cron) | `Index Scan`, 3 filas | **0,072 ms** |
+
+Conclusiones:
+
+- La ventana de 7 días y el límite son lo que devuelve el índice: la consulta
+  acotada ya no depende de la estimación de `estado`. **No se relajó RLS** ni se
+  dio `BYPASSRLS` al rol de negocio.
+- El barrido del cron sí necesitaba un índice propio. Es un índice **parcial**
+  (`WHERE alerta_sla = false AND estado IN (…abiertos…)`), así que solo guarda
+  decenas de filas y el plan deja de mirar el histórico
+  (migración `20261106120000_ordenes_sla_indice`).
+- El cron corre con el cliente de plataforma (`prisma.raw`), que ve estadísticas
+  y elige el índice; el listado del KDS corre con el rol de negocio y el
+  `EXPLAIN` queda como evidencia de la ruta real.
+
+## 8. Límites y notas
 
 - Las cifras son de una laptop de desarrollo. Sirven para comparar antes/después
   en el mismo equipo, no como capacidad de producción.

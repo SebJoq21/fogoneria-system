@@ -12,6 +12,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../common/decorators/roles.decorator.js';
 import { OrdersService } from './orders.service.js';
 import { CreateOrderDto } from './dto/create-order.dto.js';
+import { BoardOrdersQueryDto } from './dto/board-orders.dto.js';
 import { ListOrdersQueryDto } from './dto/list-orders.dto.js';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto.js';
 
@@ -25,6 +26,14 @@ export class OrdersController {
   @ApiOperation({ summary: 'Lista las órdenes del tenant y sucursal actual' })
   list(@Query() query: ListOrdersQueryDto) {
     return this.ordersService.list(query);
+  }
+
+  @Get('board')
+  @ApiOperation({
+    summary: 'Tablero del KDS: cuatro columnas, SLA de 20 min y métricas',
+  })
+  board(@Query() query: BoardOrdersQueryDto) {
+    return this.ordersService.board(query);
   }
 
   @Get(':id')

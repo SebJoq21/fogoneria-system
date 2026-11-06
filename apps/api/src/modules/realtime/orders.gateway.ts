@@ -25,6 +25,7 @@ import {
   envelope,
   orderRoom,
   type OrderCreatedPayload,
+  type OrderSlaPayload,
   type OrderUpdatedPayload,
   type TableStatusPayload,
 } from './realtime.types.js';
@@ -128,6 +129,12 @@ export class OrdersGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   emitTableStatus(empresaId: string, payload: TableStatusPayload): void {
     this.toBranch(empresaId, payload.sucursalId, REALTIME_EVENT.tableStatus, payload);
+  }
+
+  emitOrderSla(empresaId: string, payload: OrderSlaPayload): void {
+    this.toBranch(empresaId, payload.sucursalId, REALTIME_EVENT.orderSla, payload, [
+      orderRoom(payload.ordenId),
+    ]);
   }
 
   private toBranch<T>(

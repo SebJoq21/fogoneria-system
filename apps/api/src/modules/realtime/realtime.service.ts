@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { OrdersGateway } from './orders.gateway.js';
 import type {
   OrderCreatedPayload,
+  OrderSlaPayload,
   OrderUpdatedPayload,
   TableStatusPayload,
 } from './realtime.types.js';
@@ -26,5 +27,9 @@ export class RealtimeService {
 
   tableStatus(empresaId: string, payload: TableStatusPayload): void {
     this.gateway.emitTableStatus(empresaId, payload);
+  }
+
+  orderSla(empresaId: string, payload: OrderSlaPayload): void {
+    this.gateway.emitOrderSla(empresaId, payload);
   }
 }

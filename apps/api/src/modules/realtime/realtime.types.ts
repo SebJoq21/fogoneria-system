@@ -16,6 +16,7 @@ export const REALTIME_NAMESPACE = '/orders';
 export const REALTIME_EVENT = {
   orderCreated: 'order.created',
   orderUpdated: 'order.updated',
+  orderSla: 'order.sla',
   tableStatus: 'table.status',
   authError: 'auth.error',
 } as const;
@@ -49,6 +50,17 @@ export interface OrderUpdatedPayload {
   a: string;
   sucursalId: string;
   mesaId: string | null;
+}
+
+/** Alerta de SLA: la comanda lleva más de 20 min sin entregarse (AYCDS-30). */
+export interface OrderSlaPayload {
+  ordenId: string;
+  numeroOrden: string;
+  estado: string;
+  sucursalId: string;
+  mesaId: string | null;
+  minutos: number;
+  slaMinutos: number;
 }
 
 /** Estado de mesa derivado (ocupada, reservada, libre, mantenimiento). */

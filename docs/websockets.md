@@ -84,6 +84,21 @@ Se emite en cada transición del KDS (`PATCH /orders/:id/status`).
 }
 ```
 
+### `order.sla`
+
+La comanda cruzó los **20 minutos** de preparación (AYCDS-30). Lo emite el cron
+`OrdersSlaCron` una sola vez por comanda, al marcar `ordenes.alerta_sla`.
+
+```json
+{
+  "eventId": "…", "at": "…",
+  "data": {
+    "ordenId": "…", "numeroOrden": "ORD-000042", "estado": "EN_COCINA",
+    "sucursalId": "…", "mesaId": "…", "minutos": 23, "slaMinutos": 20
+  }
+}
+```
+
 ### `table.status`
 
 Estado de mesa derivado: al ocuparla (`create`) y al liberarla al llegar a un
