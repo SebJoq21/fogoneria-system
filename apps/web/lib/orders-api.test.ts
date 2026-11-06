@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createOrder, listOrders, updateOrderStatus } from "./orders-api";
+import { createOrder, getOrdersBoard, listOrders, updateOrderStatus } from "./orders-api";
 
 function mockFetch(body: unknown = {}) {
   const spy = vi.fn(async () => new Response(JSON.stringify(body), { status: 200 }));
@@ -90,5 +90,42 @@ describe("updateOrderStatus", () => {
     expect(url).toBe("/api/backend/orders/orden-1/status");
     expect(init.method).toBe("PATCH");
     expect(body).toEqual({ estado: "LISTO" });
+  });
+});
+
+describe("getOrdersBoard (AYCDS-41)", () => {
+  it("llama al tablero con la ventana y el límite", async () => {
+    const spy = mockFetch({
+      generadoAt: "2026-11-06T12:00:00.000Z",
+      slaMinutos: 20,
+      ventanaDias: 7,
+      limite: 200,
+      truncado: false,
+      columnas: [],
+      metricas: { abiertas: 0, fueraDeSla: 0, promedioEsperaMin: null, promedioPreparacionMin: null },
+    });
+
+    const board = await getOrdersBoard({ sucursalId: "suc-1", dias: 3, limite: 50 });
+
+    const { url, init } = callOf(spy);
+    expect(url).toBe("/api/backend/orders/board?sucursalId=suc-1&dias=3&limite=50");
+    expect(init.method).toBe("GET");
+    expect(board.slaMinutos).toBe(20);
+  });
+
+  it("sin filtros no agrega query", async () => {
+    const spy = mockFetch({
+      generadoAt: "2026-11-06T12:00:00.000Z",
+      slaMinutos: 20,
+      ventanaDias: 7,
+      limite: 200,
+      truncado: false,
+      columnas: [],
+      metricas: { abiertas: 0, fueraDeSla: 0, promedioEsperaMin: null, promedioPreparacionMin: null },
+    });
+
+    await getOrdersBoard();
+
+    expect(callOf(spy).url).toBe("/api/backend/orders/board");
   });
 });

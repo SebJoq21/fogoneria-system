@@ -136,3 +136,72 @@ export async function updateOrderStatus(
     body: { estado },
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/* Tablero del KDS (AYCDS-30/41)                                              */
+/* -------------------------------------------------------------------------- */
+
+export type ApiBoardOrder = {
+  id: string;
+  numeroOrden: string;
+  estado: ApiOrderStatus;
+  origen: ApiOrderOrigen | string;
+  sucursalId: string;
+  mesaId: string | null;
+  mesa: { id: string; numero: string } | null;
+  mesero: string | null;
+  total: number;
+  items: number;
+  ingresoAt: string;
+  confirmacionAt: string | null;
+  listoAt: string | null;
+  /** Minutos desde la confirmación (o el ingreso). `null` si ya se entregó. */
+  minutos: number | null;
+  alertaSla: boolean;
+  excedidoPor: number | null;
+};
+
+export type ApiOrdersBoard = {
+  generadoAt: string;
+  slaMinutos: number;
+  ventanaDias: number;
+  limite: number;
+  truncado: boolean;
+  columnas: {
+    estado: ApiOrderStatus;
+    total: number;
+    ordenes: ApiBoardOrder[];
+  }[];
+  metricas: {
+    abiertas: number;
+    fueraDeSla: number;
+    promedioEsperaMin: number | null;
+    promedioPreparacionMin: number | null;
+  };
+};
+
+export type BoardParams = {
+  sucursalId?: string;
+  dias?: number;
+  limite?: number;
+  signal?: AbortSignal;
+};
+
+/**
+ * Tablero del KDS en una sola llamada (AYCDS-30).
+ *
+ * La API acota por sucursal, estados abiertos, ventana de días y límite: sin
+ * esa ventana el planificador bajo RLS recorre la tabla completa
+ * (`docs/explain-orders.md` §7). No agregar parámetros sin pasar por el DTO.
+ */
+export async function getOrdersBoard(params: BoardParams = {}): Promise<ApiOrdersBoard> {
+  const search = new URLSearchParams();
+  if (params.sucursalId) search.set("sucursalId", params.sucursalId);
+  if (params.dias) search.set("dias", String(params.dias));
+  if (params.limite) search.set("limite", String(params.limite));
+  const query = search.toString();
+
+  return apiFetch<ApiOrdersBoard>(`/orders/board${query ? `?${query}` : ""}`, {
+    signal: params.signal,
+  });
+}

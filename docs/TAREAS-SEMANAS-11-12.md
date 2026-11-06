@@ -31,7 +31,7 @@
 | AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
 | AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | En revisión | 100% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
-| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Por hacer | 0% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
+| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | En revisión | 100% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
 | AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | Por hacer | 0% | `CajaView` (445 líneas, mock) y `ComprobantesView` (534 líneas, mock) | `lib/cash-api.ts` y `lib/receipts-api.ts`, conectar ambas vistas y confirmar acciones |
 | AYCDS-50 | [42.0] Auditoría CT-FG-03 acta mensual 2 | 12 | Sebastián Chicata | Por hacer | 0% | Acta anterior (`docs/acta-qa-aycds-66.md`) | Evidencia de caja/comprobantes y firma |
 
@@ -102,12 +102,14 @@
 
 ### AYCDS-41 — [40.0] UI KDS Kanban alertas SLA
 
-- **Semana:** 11 · **Responsable:** Joshua Chávez · **Estado Jira:** Por hacer · **Avance:** 0 %
-- **Qué debe hacerse:**
-  1. `lib/orders-api.ts`: `getBoard()` y `getBoardMetrics()` sobre el BFF.
-  2. `OrdersView` pasa a consumir el tablero: contador por columna, badge de SLA (ámbar a 10 min, rojo a 20) y orden por antigüedad.
-  3. Refresco por `order.created`/`order.updated`/`order.sla` sin recargar la página.
-- **Criterio de aceptación:** la cocina ve el tablero real con la alerta de 20 min y sin mutar estado local.
+- **Semana:** 11 · **Responsable:** Joshua Chávez · **Estado Jira:** En revisión · **Avance:** 100 %
+- **Qué se hizo:**
+  1. `lib/orders-api.ts`: `getOrdersBoard()` sobre el BFF (sucursal, días y límite opcionales) con los tipos del contrato.
+  2. `lib/order-mapping.ts`: `kdsBoardFromApi()` traduce columnas, folio, mesa, importe, nº de ítems y base del SLA (confirmación o ingreso); `minutosDeSla()` y `slaTone()` (ámbar >10, rojo >20) son la única regla de urgencia.
+  3. Hook `useOrdersBoard`: carga inicial diferida (sin render en cascada), descarte de respuestas viejas y `refresh` para los eventos.
+  4. `OrdersView` consume el tablero: contador por columna, badge de SLA en vivo (se recalcula cada 30 s con `useNow`), aviso de «fuera de SLA» y de tablero truncado. Las líneas siguen saliendo del estado local para no perder detalle en cocina.
+  5. Un solo socket: `order.created`, `order.updated` **y** `order.sla` refrescan tablero y comandas; sin sesión la vista cae al estado local del demo.
+- **Criterio de aceptación:** la cocina ve el tablero real con la alerta de 20 min y sin mutar estado local. **Cumplido**: las acciones van por `advanceOrder` (PATCH), no por `setOrders`.
 - **Depende de:** **AYCDS-30**.
 
 ### AYCDS-46 — [41.0] UI caja y comprobantes emisión-anulación
@@ -197,6 +199,7 @@ pnpm build
 | Fecha | Tarea | Responsable | Qué | Evidencia |
 |---|---|---|---|---|
 | 2026-11-06 | plan | David Piñarreta | Ficha de S11-S12 con las 7 tareas, dependencias y orden de PRs; `test:e2e` agregado al CI; decisiones de KDS bajo RLS, propina en `ordenes` y webhook por entorno | Este archivo, `docs/decisiones.md`, `.github/workflows/ci.yml` |
+| 2026-11-06 | 41 | Joshua Chávez | KDS contra `/orders/board`: contadores, badge de SLA en vivo (10/20 min), refresco por `order.created`/`order.updated`/`order.sla` y caída al estado local en demo | 108 web (+7), `check-types`, `lint` y `build` OK |
 | 2026-11-06 | 34 | David Piñarreta | Caja: turnos con arqueo, ingresos/egresos, cobro con propina y `PAGADA` solo por caja. Índice único de turno abierto por sucursal y `ordenes.propina` | Smoke real 21/21, 163 unit (+15), 54 e2e (+11), 60 DB (+5) |
 | 2026-11-06 | 39 | Sonny De La Cruz | Reversión financiera al anular: EGRESO compensatorio en el turno abierto, ENTRADA de stock con restauración, idempotencia y `DB_REVERSION_SIN_TURNO`. Puntos diferidos a AYCDS-31 | 6 pruebas DB (55 en total), `docs/errores-db.md`, `docs/decisiones.md` |
 | 2026-11-06 | 30 | David Piñarreta | Tablero del KDS con SLA: `/orders/board`, `order.sla` y cron de 20 min. Consulta acotada medida (1,56 ms vs 81 ms) e índice parcial para el barrido (0,072 ms) | PR (rama `feat/aycds-30-kds-sla`), `docs/explain-orders.md` §7, 146 unit + 43 e2e + 49 DB |

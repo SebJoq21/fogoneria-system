@@ -72,6 +72,15 @@ export function useOrdersRealtime(
         });
         onEventRef.current?.("table");
       },
+      onOrderSla: (event) => {
+        setLastEvent({
+          id: event.data.ordenId,
+          title: `${event.data.numeroOrden} fuera de SLA`,
+          detail: `${event.data.minutos} min (límite ${event.data.slaMinutos})`,
+          at: event.at,
+        });
+        onEventRef.current?.("order");
+      },
     });
 
     return stop;

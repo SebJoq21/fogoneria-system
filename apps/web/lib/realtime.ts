@@ -15,6 +15,7 @@ export const REALTIME_NAMESPACE = "/orders";
 export const REALTIME_EVENT = {
   orderCreated: "order.created",
   orderUpdated: "order.updated",
+  orderSla: "order.sla",
   tableStatus: "table.status",
   authError: "auth.error",
 } as const;
@@ -56,11 +57,23 @@ export interface TableStatusPayload {
   sucursalId: string;
 }
 
+/** Alerta de SLA (AYCDS-30): la comanda cruzó los 20 minutos. */
+export interface OrderSlaPayload {
+  ordenId: string;
+  numeroOrden: string;
+  estado: string;
+  sucursalId: string;
+  mesaId: string | null;
+  minutos: number;
+  slaMinutos: number;
+}
+
 export type RealtimeStatus = "connecting" | "connected" | "reconnecting" | "offline";
 
 export type OrdersRealtimeOptions = {
   onOrderCreated?: (event: RealtimeEnvelope<OrderCreatedPayload>) => void;
   onOrderUpdated?: (event: RealtimeEnvelope<OrderUpdatedPayload>) => void;
+  onOrderSla?: (event: RealtimeEnvelope<OrderSlaPayload>) => void;
   onTableStatus?: (event: RealtimeEnvelope<TableStatusPayload>) => void;
   onStatus?: (status: RealtimeStatus) => void;
   /** Base de la API; por defecto `NEXT_PUBLIC_API_URL` sin el prefijo `/api/v1`. */
@@ -201,6 +214,9 @@ export function connectOrdersRealtime(options: OrdersRealtimeOptions = {}): () =
     });
     socket.on(REALTIME_EVENT.orderUpdated, (event: RealtimeEnvelope<OrderUpdatedPayload>) => {
       if (isFresh(event?.eventId)) options.onOrderUpdated?.(event);
+    });
+    socket.on(REALTIME_EVENT.orderSla, (event: RealtimeEnvelope<OrderSlaPayload>) => {
+      if (isFresh(event?.eventId)) options.onOrderSla?.(event);
     });
     socket.on(REALTIME_EVENT.tableStatus, (event: RealtimeEnvelope<TableStatusPayload>) => {
       if (isFresh(event?.eventId)) options.onTableStatus?.(event);

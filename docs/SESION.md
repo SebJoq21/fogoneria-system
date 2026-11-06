@@ -12,13 +12,9 @@
   - Medición del tablero en `docs/explain-orders.md` §7: 1,56 ms acotado vs 81 ms sin ventana. **No se tocó RLS** (decisión: medir primero).
 - Verificado: `check-types`, `lint`, `build` OK; 146 unit (+12), 43 e2e (+5), 49 DB (+6) y `EXPLAIN` real con el dataset de 50k órdenes (`perf:seed`, luego `perf:reset`).
 - **Cambio de proceso:** los PR ya no se mergean solos. Se abren con reviewer (el dueño de la tarea) y los mergea otra persona; Jira pasa a Listo después del merge.
-- Hecho (PR-A3, `feat/aycds-34-caja`): módulo `cash` con turnos (`POST/GET /cash/shifts`, `POST /cash/shifts/:id/close`), movimientos manuales y `POST /cash/charges` (cobro con parciales y propina). Migración `20261106160000_caja_turnos_propina`: `ordenes.propina` + `CHECK`, columnas de arqueo e índice único parcial `uq_turnos_abierto_sucursal`. `PATCH /orders/:id/status` rechaza `PAGADA` (el cobro va por caja) y `OrdersService.markPaid()` es la vía interna. Smoke real 21/21.
-- Pendiente: revisión y merge de PR-A3 (34). Los PR #23 (39) y #25 (41) siguen abiertos; la 36 no depende del merge para programarse.
-- Próximo paso: AYCDS-36 (comprobantes) y, después, la 46 sobre esta base.
-- Hecho (PR-A2, `feat/aycds-39-reversion-financiera`): migración `20261106140000_reversion_financiera` con `revertir_caja_orden` (EGRESO compensatorio en el turno abierto), `revertir_kardex_orden` (ENTRADA + restauración de `stocks_sucursal`), triggers en `comprobantes`/`ordenes`, idempotencia y `DB_REVERSION_SIN_TURNO`. Puntos diferidos a AYCDS-31. 6 pruebas DB nuevas (55 en total).
-- **Cambio de proceso:** los PR ya no se mergean solos. Se abren con reviewer (el dueño de la tarea) y los mergea otra persona; Jira pasa a Listo después del merge.
-- Pendiente: revisión y merge de PR-A2 por Sonny (`SOoOnny`); luego PR-A3 (AYCDS-34, caja).
-- Próximo paso: AYCDS-34 (módulo `caja` + `ordenes.propina`) en `feat/aycds-34-caja`.
+- Hecho (PR-A4, `feat/aycds-41-ui-kds`): `getOrdersBoard()` en `lib/orders-api.ts`, `kdsBoardFromApi`/`minutosDeSla`/`slaTone` en `lib/order-mapping.ts`, hook `useOrdersBoard` y `OrdersView` contra el tablero (contadores, SLA en vivo, refresco por `order.created`/`order.updated`/`order.sla`). Sin sesión cae al estado local del demo.
+- Pendiente: revisión y merge de PR-A4 (41, Joshua). Los PR #23 (39) y #24 (34) siguen abiertos; la 36 no depende del merge para programarse, pero la 46 sí espera la 34.
+- Próximo paso: AYCDS-36 (comprobantes) y, después, la 46 cuando la 34 entre.
 
 ## 2026-10-29 — Sprint 3: AYCDS-26 (mapa de mesas + agenda de reservas) implementada
 
