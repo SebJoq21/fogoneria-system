@@ -71,6 +71,9 @@ jobs:
       - name: Pruebas unitarias API
         run: pnpm --filter api test
 
+      - name: Pruebas e2e API (HTTP + Socket.io)
+        run: pnpm --filter api test:e2e
+
       - name: Pruebas de base de datos (RLS, soft delete, email)
         run: pnpm --filter api test:db
 
