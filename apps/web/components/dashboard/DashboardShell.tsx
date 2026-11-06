@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { useModules } from "./ModulesProvider";
 import { AppSidebar } from "./AppSidebar";
 import { AppTopBar } from "./AppTopBar";
-import { Breadcrumb } from "@/components/ui/Breadcrumb";
-import { trailFor } from "@/lib/breadcrumbs";
+import { Toasts } from "@/components/ui/Toast";
 
 import { canSwitchBranch, type AppRole } from "@/lib/auth";
 
@@ -15,6 +14,7 @@ const mobileLinks: { href: string; label: string; roles: AppRole[] }[] = [
   { href: "/app/ordenes", label: "Órdenes", roles: ["admin", "sucursal"] },
   { href: "/app/mesas", label: "Mesas", roles: ["admin", "sucursal"] },
   { href: "/app/productos", label: "Platos", roles: ["admin", "sucursal"] },
+  { href: "/app/caja", label: "Caja", roles: ["cajero"] },
   { href: "/app/cocina", label: "Cocina", roles: ["cocina"] },
   { href: "/app/mozo", label: "Mis órdenes", roles: ["mesero"] },
 ];
@@ -83,10 +83,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </nav>
           )}
           <main className="flex-1 overflow-y-auto p-4 no-scrollbar">
-            {!isTabletView && <Breadcrumb items={trailFor(pathname)} />}
             {children}
           </main>
         </div>
+      <Toasts />
       </div>
   );
 }

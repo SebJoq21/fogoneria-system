@@ -6,28 +6,38 @@ import { useRouter } from "next/navigation";
 import { Flame } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
-import { ROLE_HOME, ROLE_LABEL, demoUsers } from "@/lib/auth";
+import { ROLE_HOME, ROLE_LABEL, DEMO_PASSWORD, demoUsers } from "@/lib/auth";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 
 export function LoginContent() {
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { login } = useModules();
 
-  const enterAs = (email: string) => {
-    const user = login(email);
-    if (!user) {
-      setLoginError("Ese correo no coincide con ninguna cuenta demo.");
-      return;
-    }
+  const enterAs = async (email: string, password: string) => {
+    setLoading(true);
     setLoginError(null);
-    router.push(ROLE_HOME[user.role]);
+    try {
+      const user = await login(email, password);
+      router.push(ROLE_HOME[user.role]);
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const email = String(new FormData(event.currentTarget).get("email") ?? "");
-    enterAs(email);
+    const data = new FormData(event.currentTarget);
+    const email = String(data.get("email") ?? "");
+    const password = String(data.get("password") ?? "");
+    if (!email.trim() || !password) {
+      setLoginError("Ingresa tu correo y contraseña.");
+      return;
+    }
+    void enterAs(email, password);
   };
 
   return (
@@ -73,8 +83,8 @@ export function LoginContent() {
             <p className="text-sm text-red-600 text-center mb-4">{loginError}</p>
           )}
 
-          <Button type="submit" className="w-full">
-            Entrar
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Entrando…" : "Entrar"}
           </Button>
         </form>
 
@@ -85,7 +95,7 @@ export function LoginContent() {
               <button
                 key={u.id}
                 type="button"
-                onClick={() => enterAs(u.email)}
+                onClick={() => void enterAs(u.email, DEMO_PASSWORD)}
                 className="px-3 h-10 rounded-full text-xs font-medium text-ink-600 border border-ink-900/15 hover:border-ink-900 hover:text-ink-900 transition-colors cursor-pointer"
               >
                 {ROLE_LABEL[u.role]}

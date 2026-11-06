@@ -4,15 +4,32 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 
 ## Dónde está qué
 
-- `src/main.ts` — bootstrap, puerto `3001`. `src/app.module.ts|app.controller.ts|app.service.ts` — scaffold `Hello World`.
-- `test/app.e2e-spec.ts` — e2e. Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `oxlint.json`, `nest-cli.json`.
+- `src/main.ts` + `src/bootstrap.ts` + `src/swagger.ts` — bootstrap, prefijo `/api/v1`, CORS, `ValidationPipe`, Swagger en `/api/docs`. Puerto `3001`.
+- `src/app.module.ts` — wiring de módulos, guards globales (`JwtAuthGuard`, `RolesGuard`) e interceptor de tenant.
+- `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`, `DATABASE_POOL_MAX` (conexiones por cliente de Prisma; default 10).
+- `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
+- `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.
+- `src/modules/` — `auth`, `tenant`, `tables` (mesas por sucursal), `reservations` (reservas con aforo y solapamiento), `orders`, `realtime` (gateway Socket.io), `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto.
+- `src/modules/realtime/` — `@Global` con `OrdersGateway` (namespace `/orders`), `RealtimeService` (fachada que usan los servicios) y el contrato en `realtime.types.ts`. Rooms `empresa:<id>` (roles sin sucursal) y `empresa:<id>:sucursal:<id>` (operativos); `order:<id>` vía `order:subscribe`. Sobre `{ eventId, at, data }`. Contrato completo en `docs/websockets.md`.
+- `src/common/sequences` — folios por empresa (`ORD`, `RSV`) sobre la tabla `secuencias`; el SQL crudo se califica con `DATABASE_SCHEMA` porque no pasa por Prisma. **El upsert corre en autocommit sobre `prisma.raw`, fuera de la transacción del request** (AYCDS-22): dentro de ella el lock de la fila se retiene hasta el commit y serializa las altas de la empresa. Si la creación falla después, el folio queda con hueco (aceptado). No volver a moverlo a la transacción.
+- `src/main.ts` — body parser acotado (`bodyParser: false` + `json/urlencoded`): 4 MB solo en `/api/v1/onboarding` (logo en data URL) y 100 KB en el resto. No subir el límite global.
+- `src/common/guards/rate-limit.guard.ts` — límite por IP en memoria para endpoints públicos (`ONBOARDING_RATE_LIMIT`, `ONBOARDING_RATE_WINDOW_MS`). Sin dependencias inyectadas: config por `process.env` + `configure()` para tests.
+- `test/{app,auth,onboarding,orders,tables,reservations,realtime}.e2e-spec.ts` — e2e con Prisma mockeado (`realtime` levanta Socket.io real en un puerto efímero). Configs: `vitest.config.ts` (unit `*.spec.ts`), `vitest.config.e2e.ts`, `vitest.config.db.ts` (PostgreSQL real), `oxlint.json`, `nest-cli.json`.
 
 ## Reglas api
 
 - Imports internos SIEMPRE con sufijo `.js` (ej: `./app.module.js`). Sin eso rompe `nodenext`.
-- Estructura por dominio al crecer: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts}`. No acumular en `app.*`.
-- Al agregar endpoint con DTO: activar `ValidationPipe` global + `class-validator/class-transformer` (hoy ausente).
-- No hay DB/auth/config aún (decisión: Postgres + Prisma en fase 3, ver `docs/decisiones.md`). No inventar otro ORM sin actualizar decisiones.
+- Estructura por dominio: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts,*.spec.ts}`. No acumular en `app.*`.
+- Todo endpoint con body/query usa DTO + `class-validator`; el `ValidationPipe` es global (`whitelist`, `forbidNonWhitelisted`, `transform`).
+- Toda ruta privada usa `@Roles(...)` si no es para cualquier autenticado; `@Public()` solo para login, health e info.
+- Las queries de negocio usan `prisma.scoped` (filtro automático de tenant); auth y consola SaaS usan `prisma.raw`. `findUnique/update/delete/upsert` no se auto-filtran: validar pertenencia con `findFirst`/`updateMany`.
+- DB = PostgreSQL + Prisma 7 (decisión vigente, ver `docs/decisiones.md`). No introducir otro ORM.
+- Órdenes (AYCDS-20): el precio **nunca** viene del cliente. El DTO no acepta `precioUnitario` (el `forbidNonWhitelisted` lo rechaza) y `OrdersService` resuelve los precios **en lote** (AYCDS-22): un `findMany` de platos, uno de combos y uno de `precios_platos` por comanda, y combos con `combos.precio_fijo`. No volver a consultar plato/precio por línea (N+1). `mesero_id` sale del JWT y `numero_orden` de `SequencesService`. `ANULADA` solo desde `POR_CONFIRMAR`: una comanda en cocina se entrega y se compensa, y el trigger `trg_ordenes_inmutable` aplica la misma regla.
+- Tiempo real (AYCDS-14): el handshake **no** usa el access token. `POST /auth/ws-ticket` firma un JWT de 60 s con `scope: 'ws'` y `JwtStrategy` rechaza cualquier token con `scope` (el ticket no abre la API HTTP). Los servicios emiten por `RealtimeService`, nunca por el gateway directo; el gateway solo se usa dentro del módulo `realtime`. Un rol con sucursal no entra al room de empresa (evita eventos duplicados).
+- Tablero del KDS (AYCDS-30): `GET /orders/board` **siempre** va acotado por sucursal, estados abiertos, `dias` (≤30) y `limite` (≤500). Quitar la ventana hace que, bajo RLS, el planificador recorra la tabla completa (`docs/explain-orders.md` §7). El SLA se calcula en el servidor desde `confirmacion_at ?? ingreso_at`; `OrdersSlaCron` corre cada minuto con `prisma.raw` (no hay contexto de request) y marca `alerta_sla` una sola vez usando el índice parcial `idx_ordenes_sla_pendiente`.
+- Comprobantes (AYCDS-36): se emiten **solo** sobre una comanda `PAGADA` (`POST /receipts`); el comprobante documenta un cobro, no es una forma de cobrar. El correlativo vive en `secuencias` por empresa y serie (`B001`/`F001`/`T001`) vía `SequencesService.nextComprobante`; nunca `Date.now()` ni `COUNT(*)`. La anulación (`POST /receipts/:id/void`) solo cambia estado + actor + fecha + motivo: **la reversión la hacen los triggers de AYCDS-39**, no el servicio. El IGV se deriva del total (18 %), no se guarda.
+- Caja (AYCDS-34): `PAGADA` **no** se escribe por `PATCH /orders/:id/status`; el cobro es `POST /cash/charges` (pagos parciales + propina) y usa `OrdersService.markPaid()`. Los totales del turno se derivan de `movimientos_caja` al cerrar; no se acumulan. Una sola caja abierta por sucursal (índice único parcial). `movimientos_caja` solo acepta inserts en turnos `ABIERTO`.
+- Reversión financiera (AYCDS-39): la contabilidad no se edita, se compensa. Al anular un comprobante (o una orden) los triggers insertan el movimiento contrario en caja y kardex. El egreso va al **turno abierto** (`fogoneria.turno_abierto`); sin turno abierto la operación falla con `DB_REVERSION_SIN_TURNO` (409) y no se reabre un turno cerrado. No revertir puntos aquí: eso es AYCDS-31.
 - `strictPropertyInitialization: false` en `tsconfig.json` — no confiarse, inicializar igual.
 
 ## Comandos

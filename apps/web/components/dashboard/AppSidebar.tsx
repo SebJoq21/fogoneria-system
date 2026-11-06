@@ -39,6 +39,8 @@ type Group = { label: string; entries: Entry[] };
  *  + Administración (backoffice). Cocina/Mis órdenes son vistas tablet de un
  *  solo rol (cocina/mesero) y no las ven admin/sucursal. */
 const STAFF: AppRole[] = ["admin", "sucursal"];
+/** Caja y comprobantes: también los opera el cajero. */
+const FRONT: AppRole[] = ["admin", "sucursal", "cajero"];
 const groups: Group[] = [
   {
     label: "Principal",
@@ -48,7 +50,7 @@ const groups: Group[] = [
       { href: "/app/ordenes", label: "Órdenes", icon: ReceiptText, roles: STAFF },
       { href: "/app/cocina", label: "Cocina", icon: ChefHat, roles: ["cocina"] },
       { href: "/app/mozo", label: "Mis órdenes", icon: ClipboardList, roles: ["mesero"] },
-      { href: "/app/caja", label: "Caja", icon: Banknote, roles: STAFF },
+      { href: "/app/caja", label: "Caja", icon: Banknote, roles: FRONT },
     ],
   },
   {
@@ -70,7 +72,7 @@ const groups: Group[] = [
   {
     label: "Administración",
     entries: [
-      { href: "/app/comprobantes", label: "Comprobantes", icon: Receipt, roles: STAFF },
+      { href: "/app/comprobantes", label: "Comprobantes", icon: Receipt, roles: FRONT },
       { href: "/app/modulos/inventario", label: "Inventario", icon: Warehouse, roles: STAFF },
       { href: "/app/gastos", label: "Gastos", icon: TrendingDown, roles: STAFF },
       { href: "/app/modulos/personal", label: "Personal", icon: Contact, roles: STAFF },

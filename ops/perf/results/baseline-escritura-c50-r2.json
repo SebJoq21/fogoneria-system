@@ -1,0 +1,41 @@
+{
+  "label": "baseline-escritura-c50-r2",
+  "startedAt": "1970-01-01T00:00:01.299Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 50,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 4018,
+    "rps": 66.33,
+    "ok": 4018,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 695.06,
+    "p95": 1034.19,
+    "p99": 1293.06,
+    "max": 1824.65,
+    "avg": 719.59,
+    "byStatus": {
+      "201": 4018
+    }
+  },
+  "kdsReads": {
+    "total": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0,
+    "byStatus": {}
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 13,
+    "maxActive": 12,
+    "maxWaiting": 8
+  },
+  "errors": []
+}

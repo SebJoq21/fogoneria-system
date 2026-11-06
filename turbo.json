@@ -1,6 +1,14 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "DATABASE_URL",
+    "DATABASE_URL_RLS",
+    "DATABASE_URL_SAAS",
+    "DATABASE_URL_TEST",
+    "JWT_SECRET",
+    "SESSION_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

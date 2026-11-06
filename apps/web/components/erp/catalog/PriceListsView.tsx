@@ -15,69 +15,104 @@ import { priceListsSummary } from "@/components/erp/summaries/summary-selectors"
 
 /** Listas de precios: Carta / Delivery / Eventos con vigencia y precio por producto. */
 export function PriceListsView() {
-  const { priceLists, setPriceLists, products, categoryNameOf, notify } = useModules();
+  const {
+    priceLists,
+    products,
+    categoryNameOf,
+    notify,
+    catalogLoading,
+    catalogError,
+    createPriceList,
+    activatePriceList,
+    setPrice,
+  } = useModules();
   const [selectedId, setSelectedId] = useState(
     priceLists.find((l) => l.active)?.id ?? priceLists[0]?.id ?? "",
   );
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [saving, setSaving] = useState(false);
   const [pendingActive, setPendingActive] = useState<{ id: string; name: string } | null>(null);
   // Borradores de precio: se confirman con Enter o al salir del campo (no por tecla).
-  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const selected = priceLists.find((l) => l.id === selectedId) ?? priceLists[0];
   const summary = useMemo(() => priceListsSummary(priceLists, products), [priceLists, products]);
-  if (!selected) return null;
 
-  const commitPrice = (productId: number, raw: string, productName: string) => {
+  if (!selected) {
+    return (
+      <div>
+        {catalogError && (
+          <p className="text-sm text-red-600 mb-4" role="alert">
+            {catalogError}
+          </p>
+        )}
+        <p className="text-sm text-ink-400">
+          {catalogLoading ? "Cargando listas de precios…" : "Aún no hay listas de precios."}
+        </p>
+      </div>
+    );
+  }
+
+  const commitPrice = async (platoId: string, raw: string, productName: string) => {
+    const clearDraft = () =>
+      setDrafts((d) => {
+        const next = { ...d };
+        delete next[platoId];
+        return next;
+      });
     const value = raw.trim();
     // Vacío o inválido: revierte al precio guardado en vez de dejar 0.
     if (value === "" || Number.isNaN(Number(value))) {
-      setDrafts((d) => {
-        const next = { ...d };
-        delete next[productId];
-        return next;
-      });
+      clearDraft();
       return;
     }
     const price = Number(value);
-    setPriceLists(
-      priceLists.map((l) =>
-        l.id === selected.id ? { ...l, prices: { ...l.prices, [productId]: price } } : l,
-      ),
-    );
-    setDrafts((d) => {
-      const next = { ...d };
-      delete next[productId];
-      return next;
-    });
-    notify("Precio actualizado", `"${productName}" · $${price.toFixed(2)} en ${selected.name}.`);
+    clearDraft();
+    try {
+      await setPrice(selected.id, platoId, price);
+      notify("Precio actualizado", `"${productName}" · $${price.toFixed(2)} en ${selected.name}.`);
+    } catch (error) {
+      notify("No se pudo guardar el precio", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
-  const setActive = (id: string) => {
-    setPriceLists(priceLists.map((l) => ({ ...l, active: l.id === id })));
+  const setActive = async (id: string) => {
+    const name = priceLists.find((l) => l.id === id)?.name ?? "—";
     setPendingActive(null);
-    notify(
-      "Lista activa actualizada",
-      `La Carta Virtual ahora muestra precios de "${priceLists.find((l) => l.id === id)?.name}".`,
-    );
+    try {
+      await activatePriceList(id);
+      notify(
+        "Lista activa actualizada",
+        `La Carta Virtual ahora muestra precios de "${name}".`,
+      );
+    } catch (error) {
+      notify("No se pudo activar la lista", error instanceof Error ? error.message : "Error inesperado");
+    }
   };
 
-  const duplicateList = () => {
+  const duplicateList = async () => {
     if (!newName.trim()) return;
-    const id = newName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    setPriceLists([
-      ...priceLists,
-      { id, name: newName, active: false, validFrom: "", validTo: "", prices: { ...selected.prices } },
-    ]);
-    setSelectedId(id);
-    setNewName("");
-    setModalOpen(false);
-    notify("Lista creada", `"${newName}" parte de los precios de "${selected.name}".`);
+    setSaving(true);
+    try {
+      await createPriceList(newName.trim(), selected.id);
+      notify("Lista creada", `"${newName}" parte de los precios de "${selected.name}".`);
+      setNewName("");
+      setModalOpen(false);
+    } catch (error) {
+      notify("No se pudo crear la lista", error instanceof Error ? error.message : "Error inesperado");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
+      {catalogError && (
+        <p className="text-sm text-red-600 mb-4" role="alert">
+          {catalogError}
+        </p>
+      )}
       <ModuleSummary
         kpis={summary.kpis}
         chartTitle="Precio promedio por lista"
@@ -192,7 +227,7 @@ export function PriceListsView() {
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button disabled={!newName.trim()} onClick={duplicateList}>
+              <Button disabled={!newName.trim() || saving} onClick={duplicateList}>
                 Crear lista
               </Button>
             </>

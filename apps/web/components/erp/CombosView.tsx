@@ -18,7 +18,7 @@ export function CombosView() {
   const { combos, setCombos, products, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", productIds: [] as number[], price: "", status: "Activo" as "Activo" | "Inactivo" });
+  const [form, setForm] = useState({ name: "", description: "", productIds: [] as string[], price: "", status: "Activo" as "Activo" | "Inactivo" });
 
   const openCreate = () => {
     setEditingId(null);
@@ -34,7 +34,7 @@ export function CombosView() {
     setModalOpen(true);
   };
 
-  const toggleProduct = (id: number) => {
+  const toggleProduct = (id: string) => {
     setForm({
       ...form,
       productIds: form.productIds.includes(id)
@@ -56,9 +56,9 @@ export function CombosView() {
     setModalOpen(false);
   };
 
-  const productName = (id: number) => {
+  const productName = (id: string) => {
     const p = products.find((x) => x.id === id);
-    return p ? p.name : `Plato retirado (#${id})`;
+    return p ? p.name : "Plato retirado";
   };
 
   const summary = useMemo(() => combosSummary(combos), [combos]);

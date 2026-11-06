@@ -1,0 +1,41 @@
+{
+  "label": "solo-escritura-c25",
+  "startedAt": "1970-01-01T00:00:00.832Z",
+  "api": "http://localhost:3001/api/v1",
+  "concurrency": 25,
+  "durationSec": 60,
+  "rampSec": 5,
+  "itemsPerOrder": 2,
+  "readRatio": 0,
+  "role": "MESERO",
+  "sucursalId": "22222222-2222-4222-8222-222222222222",
+  "orders": {
+    "total": 5927,
+    "rps": 98.46,
+    "ok": 5927,
+    "clientErrors": 0,
+    "serverErrors": 0,
+    "p50": 250.35,
+    "p95": 327.65,
+    "p99": 362.43,
+    "max": 459.32,
+    "avg": 243.24,
+    "byStatus": {
+      "201": 5927
+    }
+  },
+  "kdsReads": {
+    "total": 0,
+    "p50": 0,
+    "p95": 0,
+    "p99": 0,
+    "byStatus": {}
+  },
+  "database": {
+    "samples": 60,
+    "maxTotal": 19,
+    "maxActive": 4,
+    "maxWaiting": 0
+  },
+  "errors": []
+}

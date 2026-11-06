@@ -14,9 +14,12 @@ describe('AppController', () => {
     appController = app.get<AppController>(AppController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+  it('expone la información de la API', () => {
+    expect(appController.getInfo()).toEqual({
+      name: 'Fogonería API',
+      version: '1.0.0',
+      docs: '/api/docs',
+      health: '/api/v1/health',
     });
   });
 });

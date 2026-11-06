@@ -27,12 +27,32 @@ export function canCreateOrder(role: AppRole | undefined): boolean {
   return role === "mesero";
 }
 
+/** El mesero abre cuenta y atiende; la sucursal también puede atender salón. */
+export function canOpenAccount(role: AppRole | undefined): boolean {
+  return role === "mesero" || role === "sucursal";
+}
+
+/** Cobran las cuentas la sucursal y el cajero. El mesero solo atiende. */
+export function canCheckout(role: AppRole | undefined): boolean {
+  return role === "sucursal" || role === "cajero" || role === "mesero" || role === "admin";
+}
+
+/** Solo la sucursal anula cuentas (con motivo y auditoría). */
+export function canAnnulAccount(role: AppRole | undefined): boolean {
+  return role === "sucursal" || role === "mesero" || role === "admin";
+}
+
+/** Reservas: las gestionan sucursal y dueño (servicio al cliente). */
+export function canManageReservations(role: AppRole | undefined): boolean {
+  return role === "sucursal" || role === "admin";
+}
+
 /** Solo la sucursal opera el salón (cambia estados de mesa). El dueño mira en lectura. */
 export function canChangeTableStatus(role: AppRole | undefined): boolean {
   return role === "sucursal";
 }
 
-/** La caja la opera la sucursal. El administrador mira en lectura. */
+/** La caja la operan la sucursal y el cajero. El administrador mira en lectura. */
 export function canOperateCash(role: AppRole | undefined): boolean {
-  return role === "sucursal";
+  return role === "sucursal" || role === "cajero";
 }

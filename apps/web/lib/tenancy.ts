@@ -2,10 +2,12 @@ import {
   initialCashMovements,
   initialOrders,
   initialTables,
+  isoToday,
   type CashMovement,
   type Order,
   type Table,
 } from "./erp";
+import type { CashShift, TableAccount } from "./domain";
 
 /* Multitenant: una cuenta (RUC) administra N sucursales.
    Catálogo, clientes y maestros son de la empresa (compartidos);
@@ -21,11 +23,23 @@ export type Branch = {
   status: "Abierta" | "Cerrada";
 };
 
-export const company = {
+/** Empresa de demostración: solo se usa si la API no está disponible. */
+export const DEMO_COMPANY = {
   legalName: "Mi Restaurante S.A.C.",
-  ruc: "20123456789",
+  ruc: "20123456786",
 };
 
+/** `empresaId` del tenant demo del seed (ver `apps/api/prisma/seed.ts`). */
+export const DEMO_EMPRESA_ID = "11111111-1111-4111-8111-111111111111";
+
+/** Sucursales del tenant demo del seed (UUID de la API → slug de la demo). */
+export const SEED_BRANCH_SLUGS: Record<string, string> = {
+  "22222222-2222-4222-8222-222222222222": "miraflores",
+  "33333333-3333-4333-8333-333333333333": "surco",
+  "44444444-4444-4444-8444-444444444444": "san-isidro",
+};
+
+/** Sucursales demo (slugs): solo rellenan la operación del tenant demo. */
 export const initialBranches: Branch[] = [
   { id: "miraflores", name: "Miraflores · Matriz", short: "Miraflores", address: "Av. José Pardo 456, Miraflores", phone: "+51 987 654 321", isMain: true, status: "Abierta" },
   { id: "surco", name: "Surco", short: "Surco", address: "Av. Encalada 1420, Surco", phone: "+51 955 231 884", isMain: false, status: "Abierta" },
@@ -53,14 +67,14 @@ export type BranchScope = {
 };
 
 const surcoOrders: Order[] = [
-  { id: "#PD-2088", customer: "Mesa 2", items: [{ name: "Ají de Gallina", qty: 2 }], total: "$36.00", time: "13:40", elapsed: "hace 8 min", status: "pendiente", channel: "Mesa" },
-  { id: "#PD-2087", customer: "Rosa Paredes", items: [{ name: "Lomo Saltado", qty: 1 }, { name: "Chicha Morada", qty: 2 }], total: "$30.00", time: "13:22", elapsed: "hace 26 min", status: "listo", channel: "Web" },
-  { id: "#PD-2086", customer: "Mesa 5", items: [{ name: "Pisco Sour", qty: 2 }], total: "$20.00", time: "13:05", elapsed: "hace 43 min", status: "entregado", channel: "Mesa" },
+  { id: "#PD-2088", customer: "Mesa 2", items: [{ name: "Ají de Gallina", qty: 2 }], amount: 36.0, time: "13:40", elapsed: "hace 8 min", createdAt: isoToday("13:40"), status: "pendiente", channel: "Mesa" },
+  { id: "#PD-2087", customer: "Rosa Paredes", items: [{ name: "Lomo Saltado", qty: 1 }, { name: "Chicha Morada", qty: 2 }], amount: 30.0, time: "13:22", elapsed: "hace 26 min", createdAt: isoToday("13:22"), status: "listo", channel: "Web" },
+  { id: "#PD-2086", customer: "Mesa 5", items: [{ name: "Pisco Sour", qty: 2 }], amount: 20.0, time: "13:05", elapsed: "hace 43 min", createdAt: isoToday("13:05"), status: "entregado", channel: "Mesa" },
 ];
 
 const sanIsidroOrders: Order[] = [
-  { id: "#PD-3015", customer: "Mesa 1", items: [{ name: "Ceviche Clásico", qty: 1 }], total: "$15.00", time: "13:48", elapsed: "hace 2 min", status: "pendiente", channel: "Mesa" },
-  { id: "#PD-3014", customer: "Luis Vega", items: [{ name: "Tequeños de Lomo", qty: 1 }], total: "$8.00", time: "13:30", elapsed: "hace 20 min", status: "entregado", channel: "Web" },
+  { id: "#PD-3015", customer: "Mesa 1", items: [{ name: "Ceviche Clásico", qty: 1 }], amount: 15.0, time: "13:48", elapsed: "hace 2 min", createdAt: isoToday("13:48"), status: "pendiente", channel: "Mesa" },
+  { id: "#PD-3014", customer: "Luis Vega", items: [{ name: "Tequeños de Lomo", qty: 1 }], amount: 8.0, time: "13:30", elapsed: "hace 20 min", createdAt: isoToday("13:30"), status: "entregado", channel: "Web" },
 ];
 
 const surcoTables: Table[] = initialTables.map((t, i) => ({
@@ -68,7 +82,7 @@ const surcoTables: Table[] = initialTables.map((t, i) => ({
   id: 10 + t.id,
   label: `Mesa ${t.id}`,
   zone: ["Salón", "Terraza", "Barra"][i % 3],
-  status: (["libre", "ocupada", "reservada", "libre", "ocupada", "libre", "reservada", "libre"] as const)[i],
+  status: "libre" as const,
 }));
 
 const sanIsidroTables: Table[] = initialTables.slice(0, 6).map((t) => ({
@@ -79,14 +93,14 @@ const sanIsidroTables: Table[] = initialTables.slice(0, 6).map((t) => ({
 }));
 
 const surcoCash: CashMovement[] = [
-  { id: 11, datetime: "Hoy 13:50", concept: "Venta mesa 2", kind: "Ingreso", amount: 36.0, method: "Efectivo" },
-  { id: 12, datetime: "Hoy 12:10", concept: "Venta web #PD-2087", kind: "Ingreso", amount: 30.0, method: "Yape" },
-  { id: 13, datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 150.0, method: "Efectivo" },
+  { id: 11, at: isoToday("13:50"), datetime: "Hoy 13:50", concept: "Venta mesa 2", kind: "Ingreso", amount: 36.0, method: "Efectivo" },
+  { id: 12, at: isoToday("12:10"), datetime: "Hoy 12:10", concept: "Venta web #PD-2087", kind: "Ingreso", amount: 30.0, method: "Yape" },
+  { id: 13, at: isoToday("09:00"), datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 150.0, method: "Efectivo" },
 ];
 
 const sanIsidroCash: CashMovement[] = [
-  { id: 21, datetime: "Hoy 13:48", concept: "Venta mesa 1", kind: "Ingreso", amount: 15.0, method: "Tarjeta" },
-  { id: 22, datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 100.0, method: "Efectivo" },
+  { id: 21, at: isoToday("13:48"), datetime: "Hoy 13:48", concept: "Venta mesa 1", kind: "Ingreso", amount: 15.0, method: "Tarjeta" },
+  { id: 22, at: isoToday("09:00"), datetime: "Hoy 09:00", concept: "Fondo de apertura", kind: "Ingreso", amount: 100.0, method: "Efectivo" },
 ];
 
 export const initialScopes: Record<string, BranchScope> = {
@@ -94,3 +108,27 @@ export const initialScopes: Record<string, BranchScope> = {
   surco: { orders: surcoOrders, tables: surcoTables, cash: surcoCash },
   "san-isidro": { orders: sanIsidroOrders, tables: sanIsidroTables, cash: sanIsidroCash },
 };
+
+/**
+ * Operación de demo para una sucursal real: solo el tenant demo del seed tiene
+ * datos de ejemplo; el resto arranca vacío (la operación aún no está en la API).
+ */
+export function demoScopeFor(branchId: string): BranchScope | null {
+  const slug = SEED_BRANCH_SLUGS[branchId];
+  return slug ? initialScopes[slug] ?? null : null;
+}
+
+/** slug demo → UUID real (para remapear cuentas y turnos del tenant demo). */
+export const SEED_SLUG_BRANCH_IDS: Record<string, string> = Object.fromEntries(
+  Object.entries(SEED_BRANCH_SLUGS).map(([uuid, slug]) => [slug, uuid]),
+);
+
+/** Turnos de caja abiertos de la demo (el fondo coincide con el movimiento seed). */
+export const initialCashShifts: CashShift[] = [
+  { id: "CH-miraflores-hoy", branchId: "miraflores", status: "abierto", openedBy: "Rosa Quispe", openedAt: isoToday("09:00"), openingFund: 200, closedBy: null, closedAt: null, countedCash: null, expectedCash: null, difference: null, observations: "" },
+  { id: "CH-surco-hoy", branchId: "surco", status: "abierto", openedBy: "Turno Surco", openedAt: isoToday("09:00"), openingFund: 150, closedBy: null, closedAt: null, countedCash: null, expectedCash: null, difference: null, observations: "" },
+  { id: "CH-san-isidro-hoy", branchId: "san-isidro", status: "abierto", openedBy: "Turno San Isidro", openedAt: isoToday("09:00"), openingFund: 100, closedBy: null, closedAt: null, countedCash: null, expectedCash: null, difference: null, observations: "" },
+];
+
+/** Cuentas iniciales: arrancan vacías para operar solo con cuentas reales. */
+export const initialAccounts: TableAccount[] = [];
