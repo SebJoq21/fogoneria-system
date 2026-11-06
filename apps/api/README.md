@@ -127,6 +127,9 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | POST/PATCH/DELETE | `/catalog/*` | admin, sucursal |
 | GET | `/pricing/price-lists`, `/pricing/resolve` | autenticado |
 | POST/PATCH/DELETE | `/pricing/price-lists/*` | admin, sucursal |
+| GET/POST | `/cash/shifts`, `/cash/shifts/current`, `/cash/movements` | admin, sucursal, cajero |
+| PATCH | `/cash/shifts/:id/close` | admin, sucursal, cajero |
+| POST | `/cash/charges` | admin, sucursal, cajero |
 | POST | `/saas/tenants` | SUPERADMIN |
 | GET | `/saas/tenants`, `/saas/tenants/:id`, `/saas/metrics` | SUPERADMIN |
 | POST | `/saas/tenants/:id/suspend`, `/reactivate` | SUPERADMIN |
@@ -160,6 +163,16 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - El SLA son **20 minutos** desde `confirmacion_at` (o desde `ingreso_at` si la cocina aún no confirmó), calculados en el servidor: el KDS no depende del reloj del navegador.
 - `OrdersSlaCron` corre cada minuto, marca `ordenes.alerta_sla` una sola vez y emite `order.sla` por el gateway. Usa el cliente de plataforma y el índice parcial `idx_ordenes_sla_pendiente`.
 - `ADMIN_GLOBAL` puede acotar por `sucursalId` o ver la empresa completa; un rol atado a sucursal que pida otra recibe 400.
+
+## Caja y cobro (AYCDS-34)
+
+- `POST /cash/shifts` abre el turno con `fondoApertura` (un solo turno `ABIERTO` por sucursal: 409 si ya hay uno, y el índice único parcial `uq_turnos_abierto_sucursal` cubre la carrera).
+- `GET /cash/shifts/current` devuelve el turno abierto con su arqueo; `GET /cash/shifts` el historial por fecha y sucursal.
+- `POST /cash/movements` registra un ingreso o egreso manual en el turno abierto (409 sin turno). `GET /cash/movements` lista los del turno (por defecto el abierto).
+- `POST /cash/charges` cobra la comanda: admite importes parciales (varios métodos) y propina. Cuando lo cobrado cubre el total, la orden pasa a `PAGADA` (libera mesa y emite `order.updated`).
+- `PATCH /cash/shifts/:id/close` cierra con `efectivoContado` y `observaciones`; el arqueo devuelve `ingresos`, `egresos`, `esperadoEfectivo`, `saldoSistema` y `diferencia`. Los totales se calculan desde los movimientos.
+- **`PATCH /orders/:id/status` no acepta `PAGADA`**: el dinero entra solo por caja (400 con el endpoint correcto). Internamente la caja usa `OrdersService.markPaid()`.
+- La propina queda en `ordenes.propina` y como ingreso `Propina <folio>`, para que el pozo diario de AYCDS-33 la sume sin inflar el total de la comanda.
 
 ## Tiempo real (AYCDS-14)
 
