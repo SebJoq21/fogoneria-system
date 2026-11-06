@@ -130,6 +130,9 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | POST/PATCH/DELETE | `/catalog/*` | admin, sucursal |
 | GET | `/pricing/price-lists`, `/pricing/resolve` | autenticado |
 | POST/PATCH/DELETE | `/pricing/price-lists/*` | admin, sucursal |
+| GET | `/expenses`, `/expenses/summary` | admin, sucursal, cajero |
+| POST/PATCH | `/expenses`, `/expenses/:id` | admin, sucursal |
+| POST | `/expenses/:id/pay` | admin, sucursal, cajero |
 | GET/POST | `/cash/shifts`, `/cash/shifts/current`, `/cash/movements` | admin, sucursal, cajero |
 | PATCH | `/cash/shifts/:id/close` | admin, sucursal, cajero |
 | POST | `/cash/charges` | admin, sucursal, cajero |
@@ -175,6 +178,14 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - La respuesta incluye el desglose de IGV (`base = total / 1.18`), derivado y no persistido, porque el total de la comanda ya lo incluye.
 - `POST /receipts/:id/void` anula con motivo obligatorio (estado `ANULADA` + actor + fecha). **La reversión de caja y stock la hacen los triggers de AYCDS-39**; el servicio no la duplica. Una segunda anulación responde 409.
 - `GET /receipts?fecha&tipo&estado&sucursalId` filtra por el día completo en hora de Lima.
+## Gastos y cuentas por pagar (AYCDS-17)
+
+- `GET /expenses` lista con filtros por estado, categoría, vencidos y sucursal; `GET /expenses/summary` devuelve por pagar, vencido y pagado del mes.
+- `POST /expenses` registra la cuenta por pagar (concepto, monto, categoría, proveedor y vencimiento opcionales).
+- `PATCH /expenses/:id` edita solo si el gasto **no** se pagó en caja; si ya salió de caja responde **409** (la base lo bloquea con `DB_GASTO_PAGADO`).
+- `POST /expenses/:id/pay` con **EFECTIVO** exige turno abierto y deja el `EGRESO` en `movimientos_caja` con `gasto_id`; con tarjeta, transferencia o Yape solo cambia el estado y **no** toca el arqueo.
+- Un gasto pagado dos veces responde **409**: el egreso no se duplica. No hay borrado: se compensa con otro movimiento.
+
 ## Caja y cobro (AYCDS-34)
 
 - `POST /cash/shifts` abre el turno con `fondoApertura` (un solo turno `ABIERTO` por sucursal: 409 si ya hay uno, y el índice único parcial `uq_turnos_abierto_sucursal` cubre la carrera).
