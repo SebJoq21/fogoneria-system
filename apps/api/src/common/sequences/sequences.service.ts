@@ -4,7 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { limaDayKey } from '../utils/lima-day.js';
 
 /** Tipos de secuencia soportados. Se agregan aquí cuando haga falta otro folio. */
-export type SecuenciaTipo = 'ORD' | 'RSV';
+export type SecuenciaTipo = 'ORD' | 'RSV' | 'B001' | 'F001' | 'T001';
 
 interface ValorRow {
   valor: bigint;
@@ -73,6 +73,20 @@ export class SequencesService {
   async nextCodigoReserva(empresaId: string, fecha: Date): Promise<string> {
     const valor = await this.next(empresaId, 'RSV');
     return `RSV-${limaDayKey(fecha)}-${String(valor).padStart(4, '0')}`;
+  }
+
+  /**
+   * `B001-00000042`: correlativo por empresa y **serie** (AYCDS-36).
+   *
+   * Cada serie lleva su propio contador en `secuencias`, así una boleta y una
+   * factura no se pisan. El número no sale del reloj ni de `COUNT(*)`.
+   */
+  async nextComprobante(
+    empresaId: string,
+    serie: 'B001' | 'F001' | 'T001',
+  ): Promise<string> {
+    const valor = await this.next(empresaId, serie);
+    return `${serie}-${String(valor).padStart(8, '0')}`;
   }
 
   private async bump(

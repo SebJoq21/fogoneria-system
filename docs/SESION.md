@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
+
+- Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
+- Hecho (PR-A1, `feat/aycds-30-kds-sla`, **mergeado** #22): tablero `/orders/board` con SLA de 20 min, `order.sla` y cron; medición e índice parcial (`docs/explain-orders.md` §7).
+- Hecho (PR-A5, `feat/aycds-36-comprobantes`): módulo `receipts` con emisión solo sobre comanda `PAGADA`, correlativo por serie en `secuencias` (`B001/F001/T001`), RUC (módulo 11) / DNI validado, IGV derivado y anulación con motivo. La reversión de caja/stock queda a los triggers de AYCDS-39 (#23). Smoke real 14/14.
+- **Corrección de proceso:** las ramas de 34 y 41 se habían creado encima de 39 (PRs apilados). Se rebasaron sobre `development` y se force-pushearon (#24 y #25 quedaron con su diff limpio).
+- Verificado: 162 unit, 52 e2e, 54 DB, `check-types`, `lint` y `build` OK.
+- Pendiente: revisión y merge de #23 (39, Sonny), #24 (34), #25 (41, Joshua) y el PR de la 36.
+- Próximo paso: AYCDS-46 (UI caja/comprobantes) cuando 34 y 36 estén en `development`; AYCDS-50 después.
+
 ## 2026-11-06 — Fase A (S11-S12): plan y AYCDS-30 (KDS con SLA)
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, con un PR por tarea desde `development`.

@@ -123,6 +123,9 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | GET | `/orders`, `/orders/:id`, `/orders/board` | autenticado |
 | POST | `/orders` | admin, sucursal, mesero, cajero |
 | PATCH | `/orders/:id/status` | admin, sucursal, cocina, mesero, cajero |
+| GET/POST | `/receipts` | admin, sucursal, cajero |
+| GET | `/receipts/:id` | admin, sucursal, cajero |
+| POST | `/receipts/:id/void` | admin, sucursal, cajero |
 | GET | `/catalog/categories`, `/catalog/dishes`, `/catalog/modifier-groups` | autenticado |
 | POST/PATCH/DELETE | `/catalog/*` | admin, sucursal |
 | GET | `/pricing/price-lists`, `/pricing/resolve` | autenticado |
@@ -164,6 +167,14 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - `OrdersSlaCron` corre cada minuto, marca `ordenes.alerta_sla` una sola vez y emite `order.sla` por el gateway. Usa el cliente de plataforma y el índice parcial `idx_ordenes_sla_pendiente`.
 - `ADMIN_GLOBAL` puede acotar por `sucursalId` o ver la empresa completa; un rol atado a sucursal que pida otra recibe 400.
 
+## Comprobantes (AYCDS-36)
+
+- `POST /receipts` emite **solo sobre una comanda `PAGADA`**: el comprobante documenta un cobro que ya existe, no cobra. Si la comanda ya tiene uno vivo responde 409.
+- El número sale de `secuencias` por empresa y serie: `B001-00000001` (boleta), `F001-00000001` (factura), `T001-…` (ticket). El índice `uq_comp_empresa_serie` impide repetir serie-número aunque dos cajas emitan a la vez.
+- Documento: la factura exige RUC con dígito válido (módulo 11); la boleta acepta DNI de 8 dígitos; el ticket no pide documento.
+- La respuesta incluye el desglose de IGV (`base = total / 1.18`), derivado y no persistido, porque el total de la comanda ya lo incluye.
+- `POST /receipts/:id/void` anula con motivo obligatorio (estado `ANULADA` + actor + fecha). **La reversión de caja y stock la hacen los triggers de AYCDS-39**; el servicio no la duplica. Una segunda anulación responde 409.
+- `GET /receipts?fecha&tipo&estado&sucursalId` filtra por el día completo en hora de Lima.
 ## Caja y cobro (AYCDS-34)
 
 - `POST /cash/shifts` abre el turno con `fondoApertura` (un solo turno `ABIERTO` por sucursal: 409 si ya hay uno, y el índice único parcial `uq_turnos_abierto_sucursal` cubre la carrera).

@@ -23,6 +23,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { TablesModule } from './modules/tables/tables.module.js';
 import { ReservationsModule } from './modules/reservations/reservations.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
+import { ReceiptsModule } from './modules/receipts/receipts.module.js';
 import { CashModule } from './modules/cash/cash.module.js';
 
 @Module({
@@ -43,6 +44,7 @@ import { CashModule } from './modules/cash/cash.module.js';
     TablesModule,
     ReservationsModule,
     RealtimeModule,
+    ReceiptsModule,
     CashModule,
   ],
   controllers: [AppController, HealthController],

@@ -29,6 +29,9 @@
 |---|---|---|---|---|---|---|---|
 | AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | Listo | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
 | AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
+| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Por hacer | 0% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
+| AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | En revisión | 100% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
+| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Por hacer | 0% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
 | AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | En revisión | 100% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
 | AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | En revisión | 100% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
@@ -87,17 +90,19 @@
 
 ### AYCDS-36 — [38.0] API comprobantes correlativo y reversión
 
-- **Semana:** 12 · **Responsable:** David Piñarreta · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 12 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «Emision B001 + anulacion cascada RF-09 RD-01 CT-FG-03 + tests».
-- **Qué debe hacerse:**
-  1. Módulo `comprobantes`: `POST /receipts` desde una orden `ENTREGADO`/`PAGADA`, con tipo (`BOLETA`/`FACTURA`), documento del cliente validado (RUC módulo 11 / DNI) y total con IGV desglosado.
-  2. Correlativo por empresa y serie (`B001-000001`, `F001-000001`) sobre la tabla `secuencias`, sin `Date.now()` ni `COUNT(*)`.
-  3. `POST /receipts/:id/void` con motivo obligatorio: estado `ANULADA`, reversión de caja y stock (triggers de `39`) y auditoría; una segunda anulación responde 409.
-  4. `GET /receipts` con filtros por fecha, tipo y estado; `GET /receipts/:id`.
-  5. Tests unit (correlativo, IGV, validación de documento), e2e (RBAC, 409 de doble anulación) y DB (dos emisiones concurrentes no repiten número).
-- **Archivos/rutas:** `apps/api/src/modules/receipts/**`, `apps/api/src/common/sequences/**`
-- **Criterio de aceptación:** dos cajas emitiendo a la vez nunca repiten serie-número y la anulación no descuadra caja.
-- **Depende de:** **AYCDS-39**.
+- **Qué se hizo:**
+  1. Módulo `receipts`: `POST /receipts` (201), `GET /receipts` con filtros por día (hora de Lima), tipo, estado y sucursal, `GET /receipts/:id`, `POST /receipts/:id/void`.
+  2. **Solo sobre comanda `PAGADA`**: el comprobante es el documento de un cobro que ya existe (AYCDS-34), no una forma de cobrar.
+  3. Correlativo por empresa y **serie** en `secuencias` (`B001-00000001`, `F001-00000001`, `T001-…`), sin `Date.now()` ni `COUNT(*)`; el índice `uq_comp_empresa_serie` es la última defensa ante dos emisiones a la vez.
+  4. Documento validado: FAC­TURA exige RUC con dígito (módulo 11), BOLETA acepta DNI de 8 dígitos, TICKET no pide documento.
+  5. IGV desglosado en la respuesta (`base = total / 1.18`, `igv = total - base`), derivado y no persistido.
+  6. Anulación con motivo obligatorio: estado `ANULADA` + actor + fecha; la reversión de caja/stock la aplican los triggers de AYCDS-39 cuando se desplieguen, este módulo no la duplica.
+  7. Auditoría en emisión y anulación.
+- **Archivos/rutas:** `apps/api/src/modules/receipts/**`, `apps/api/src/common/sequences/sequences.service.ts`
+- **Criterio de aceptación:** dos cajas emitiendo a la vez nunca repiten serie-número y la anulación no descuadra caja. **Cumplido** (smoke 14/14 + 5 pruebas DB).
+- **Depende de:** **AYCDS-39** solo para la reversión automática (el correlativo y la emisión no la necesitan).
 - **Bloquea a:** **AYCDS-46** y **AYCDS-35** (BI de ventas).
 
 ### AYCDS-41 — [40.0] UI KDS Kanban alertas SLA
