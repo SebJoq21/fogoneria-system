@@ -12,9 +12,11 @@ import type { AccountItem, TableAccount } from "./domain";
 import { elapsedLabel } from "./domain";
 import type { Order, OrderItem, OrderStatus } from "./erp";
 import type {
+  ApiBoardOrder,
   ApiOrder,
   ApiOrderDetail,
   ApiOrderOrigen,
+  ApiOrdersBoard,
   CreateOrderItemInput,
 } from "./orders-api";
 
@@ -319,4 +321,109 @@ export function reconcileAccounts(
   }
 
   return [...newAccounts, ...updatedAccounts];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tablero del KDS (AYCDS-41)                                                 */
+/* -------------------------------------------------------------------------- */
+
+/** Columnas del tablero, en el mismo orden que devuelve la API. */
+export const KDS_COLUMNS: { status: OrderStatus; label: string }[] = [
+  { status: "pendiente", label: "Por confirmar" },
+  { status: "cocina", label: "En cocina" },
+  { status: "listo", label: "Listo" },
+  { status: "entregado", label: "Entregado" },
+];
+
+export type KdsOrder = {
+  /** Folio visible (`ORD-000123`). */
+  id: string;
+  apiId: string;
+  status: OrderStatus;
+  customer: string;
+  channel: Order["channel"];
+  waiter?: string;
+  amount: number;
+  items: number;
+  createdAt: string;
+  /** Base del reloj de SLA: confirmación o, si no la hay, ingreso. */
+  slaBaseAt: string;
+  alertaSla: boolean;
+  excedidoPor: number | null;
+  mesa: { id: string; numero: string } | null;
+};
+
+export type KdsColumn = {
+  status: OrderStatus;
+  label: string;
+  orders: KdsOrder[];
+};
+
+export type KdsBoard = {
+  columns: KdsColumn[];
+  slaMinutos: number;
+  truncado: boolean;
+  generadoAt: string;
+  metricas: {
+    abiertas: number;
+    fueraDeSla: number;
+    promedioEsperaMin: number | null;
+    promedioPreparacionMin: number | null;
+  };
+};
+
+/** Minutos desde la base del SLA; se recalcula en la vista cada 30 s. */
+export function minutosDeSla(baseAt: string, now: number = Date.now()): number {
+  const base = new Date(baseAt).getTime();
+  if (Number.isNaN(base)) return 0;
+  return Math.max(0, Math.floor((now - base) / 60000));
+}
+
+/**
+ * Urgencia de la comanda: el servidor marca `alertaSla` a los 20 min, la vista
+ * adelanta el ámbar a los 10 para que la cocina lo vea venir.
+ */
+export function slaTone(
+  minutos: number,
+  alertaSla: boolean,
+  slaMinutos: number,
+): "neutral" | "warning" | "danger" {
+  if (alertaSla || minutos > slaMinutos) return "danger";
+  return minutos > 10 ? "warning" : "neutral";
+}
+
+export function kdsOrderFromApi(item: ApiBoardOrder): KdsOrder {
+  const channel = channelFromOrigen(item.origen);
+  return {
+    id: item.numeroOrden,
+    apiId: item.id,
+    status: apiStatusToUi(item.estado),
+    customer: item.mesa?.numero ? `Mesa ${item.mesa.numero}` : channel === "Llevar" ? "Para llevar" : channel,
+    channel,
+    ...(item.mesero ? { waiter: item.mesero } : {}),
+    amount: Number(item.total ?? 0),
+    items: item.items,
+    createdAt: item.ingresoAt,
+    slaBaseAt: item.confirmacionAt ?? item.ingresoAt,
+    alertaSla: item.alertaSla,
+    excedidoPor: item.excedidoPor,
+    mesa: item.mesa,
+  };
+}
+
+/** Traduce el tablero de la API a la forma que pinta el KDS. */
+export function kdsBoardFromApi(board: ApiOrdersBoard): KdsBoard {
+  const porEstado = new Map(board.columnas.map((columna) => [apiStatusToUi(columna.estado), columna]));
+
+  return {
+    columns: KDS_COLUMNS.map(({ status, label }) => ({
+      status,
+      label,
+      orders: (porEstado.get(status)?.ordenes ?? []).map(kdsOrderFromApi),
+    })),
+    slaMinutos: board.slaMinutos,
+    truncado: board.truncado,
+    generadoAt: board.generadoAt,
+    metricas: board.metricas,
+  };
 }

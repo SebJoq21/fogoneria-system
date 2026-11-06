@@ -7,8 +7,11 @@ import {
   orderFromApi,
   orderItemsFromAccount,
   reconcileAccounts,
+  kdsBoardFromApi,
+  minutosDeSla,
+  slaTone,
 } from "./order-mapping";
-import type { ApiOrder } from "./orders-api";
+import type { ApiOrder, ApiOrdersBoard } from "./orders-api";
 import type { AccountItem, TableAccount } from "./domain";
 
 const orden: ApiOrder = {
@@ -239,5 +242,92 @@ describe("reconcileAccounts", () => {
     const result = reconcileAccounts([local], [pagada]);
     expect(result).toHaveLength(1);
     expect(result[0].status).toBe("cobrada");
+  });
+});
+
+const tableroApi: ApiOrdersBoard = {
+  generadoAt: "2026-11-06T12:00:00.000Z",
+  slaMinutos: 20,
+  ventanaDias: 7,
+  limite: 200,
+  truncado: false,
+  columnas: [
+    {
+      estado: "POR_CONFIRMAR" as const,
+      total: 1,
+      ordenes: [
+        {
+          id: "11111111-1111-4111-8111-111111111111",
+          numeroOrden: "ORD-000123",
+          estado: "POR_CONFIRMAR" as const,
+          origen: "MESA",
+          sucursalId: "33333333-3333-4333-8333-333333333333",
+          mesaId: "44444444-4444-4444-8444-444444444444",
+          mesa: { id: "44444444-4444-4444-8444-444444444444", numero: "Mesa 4" },
+          mesero: "Ana",
+          total: 24.9,
+          items: 2,
+          ingresoAt: "2026-11-06T11:50:00.000Z",
+          confirmacionAt: null,
+          listoAt: null,
+          minutos: 10,
+          alertaSla: false,
+          excedidoPor: null,
+        },
+      ],
+    },
+    { estado: "EN_COCINA" as const, total: 0, ordenes: [] },
+    { estado: "LISTO" as const, total: 0, ordenes: [] },
+    { estado: "ENTREGADO" as const, total: 0, ordenes: [] },
+  ],
+  metricas: { abiertas: 1, fueraDeSla: 0, promedioEsperaMin: 4, promedioPreparacionMin: 9 },
+};
+
+describe("tablero del KDS (AYCDS-41)", () => {
+  it("traduce las columnas en el orden del KDS", () => {
+    const board = kdsBoardFromApi(tableroApi);
+
+    expect(board.columns.map((columna) => columna.status)).toEqual([
+      "pendiente",
+      "cocina",
+      "listo",
+      "entregado",
+    ]);
+    expect(board.slaMinutos).toBe(20);
+    expect(board.metricas.abiertas).toBe(1);
+  });
+
+  it("usa la confirmación como base del SLA y cae al ingreso", () => {
+    const board = kdsBoardFromApi(tableroApi);
+    const [comanda] = board.columns[0].orders;
+
+    expect(comanda.slaBaseAt).toBe("2026-11-06T11:50:00.000Z");
+    expect(comanda.customer).toBe("Mesa Mesa 4");
+    expect(comanda.items).toBe(2);
+    expect(comanda.waiter).toBe("Ana");
+  });
+
+  it("prefiere la confirmación cuando existe", () => {
+    const conConfirmacion = structuredClone(tableroApi);
+    conConfirmacion.columnas[0].ordenes[0].confirmacionAt = "2026-11-06T11:55:00.000Z";
+
+    const [comanda] = kdsBoardFromApi(conConfirmacion).columns[0].orders;
+
+    expect(comanda.slaBaseAt).toBe("2026-11-06T11:55:00.000Z");
+  });
+
+  it("calcula minutos y tono del SLA", () => {
+    const base = "2026-11-06T12:00:00.000Z";
+    const ahora = new Date("2026-11-06T12:11:00.000Z").getTime();
+
+    expect(minutosDeSla(base, ahora)).toBe(11);
+    expect(slaTone(9, false, 20)).toBe("neutral");
+    expect(slaTone(11, false, 20)).toBe("warning");
+    expect(slaTone(21, false, 20)).toBe("danger");
+    expect(slaTone(5, true, 20)).toBe("danger");
+  });
+
+  it("no rompe con una fecha inválida", () => {
+    expect(minutosDeSla("no-es-fecha")).toBe(0);
   });
 });
