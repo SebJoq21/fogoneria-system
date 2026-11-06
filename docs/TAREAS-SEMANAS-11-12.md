@@ -9,6 +9,8 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
+| Cerradas (Listo) | **1** |
+| En revisión (PR) | **1** |
 | Cerradas (Listo) | **0** |
 | En revisión (PR) | **2** |
 | Por hacer | **5** |
@@ -25,9 +27,9 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | En revisión | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
-| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | En revisión | 100% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
-| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Por hacer | 0% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
+| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | Listo | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
+| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
+| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | En revisión | 100% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
 | AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Por hacer | 0% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
 | AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | Por hacer | 0% | `CajaView` (445 líneas, mock) y `ComprobantesView` (534 líneas, mock) | `lib/cash-api.ts` y `lib/receipts-api.ts`, conectar ambas vistas y confirmar acciones |
@@ -68,17 +70,18 @@
 
 ### AYCDS-34 — [37.0] API caja turnos ingresos-egresos
 
-- **Semana:** 11 · **Responsable:** David Piñarreta · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 11 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «Apertura/cierre, metodos pago RF-08 CT-FG-03 Swagger».
-- **Qué debe hacerse:**
-  1. Módulo `caja`: `POST /cash/shifts` (abrir con fondo), `PATCH /cash/shifts/:id/close` (arqueo: efectivo contado, diferencia, observaciones), `GET /cash/shifts` y `GET /cash/shifts/current`.
-  2. `POST /cash/movements` (INGRESO/EGRESO con concepto y método) y listado por turno; solo sobre un turno `ABIERTO` (409 si no).
-  3. Cierre calcula `ingresos_total`, `egresos_total` y `saldo`; un turno cerrado es inmutable.
-  4. Migración: `ordenes.propina` (`Decimal(12,2)`, default 0) y su `CHECK >= 0`.
-  5. RBAC `cajero`/`GERENTE_SUCURSAL`/`ADMIN_GLOBAL`, auditoría en apertura, cierre y cada movimiento.
-  6. Tests unit (arqueo, diferencia, doble cierre), e2e (RBAC y 409) y DB (concurrencia de dos aperturas en la misma sucursal).
-- **Archivos/rutas:** `apps/api/src/modules/cash/**`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/**`
-- **Criterio de aceptación:** un turno cuadra al céntimo y no se puede abrir dos veces la misma caja.
+- **Qué se hizo:**
+  1. Módulo `cash`: `POST /cash/shifts` (abrir con fondo), `PATCH /cash/shifts/:id/close` (arqueo con efectivo contado, diferencia y observaciones), `GET /cash/shifts`, `GET /cash/shifts/current`.
+  2. `POST /cash/movements` (INGRESO/EGRESO) y listado por turno; sin turno abierto responde 409.
+  3. `POST /cash/charges`: cobro de la comanda con pagos parciales y propina; cuando cubre el total, la orden pasa a `PAGADA` (libera mesa y avisa al KDS).
+  4. Cierre calcula `ingresos_total`, `egresos_total`, `saldo`, esperado en efectivo y diferencia **desde los movimientos**; el turno cerrado queda inmutable.
+  5. Migración: `ordenes.propina` con `CHECK >= 0`, columnas de arqueo y **índice único parcial** `uq_turnos_abierto_sucursal` (una caja abierta por sucursal).
+  6. `PATCH /orders/:id/status` ya **no** acepta `PAGADA`: el dinero entra solo por caja (400 con el endpoint correcto).
+  7. RBAC `CAJERO`/`GERENTE_SUCURSAL`/`ADMIN_GLOBAL` y auditoría en apertura, cierre, movimiento y cobro.
+- **Archivos/rutas:** `apps/api/src/modules/cash/**`, `apps/api/src/modules/orders/orders.service.ts`, `apps/api/prisma/migrations/20261106160000_caja_turnos_propina/`
+- **Criterio de aceptación:** un turno cuadra al céntimo y no se puede abrir dos veces la misma caja. **Cumplido** (smoke 21/21 + 5 pruebas DB).
 - **Depende de:** nada nuevo.
 - **Bloquea a:** **AYCDS-46**, **AYCDS-17** (egreso de gastos) y la fuente de propinas de **AYCDS-33**.
 
@@ -194,5 +197,6 @@ pnpm build
 | Fecha | Tarea | Responsable | Qué | Evidencia |
 |---|---|---|---|---|
 | 2026-11-06 | plan | David Piñarreta | Ficha de S11-S12 con las 7 tareas, dependencias y orden de PRs; `test:e2e` agregado al CI; decisiones de KDS bajo RLS, propina en `ordenes` y webhook por entorno | Este archivo, `docs/decisiones.md`, `.github/workflows/ci.yml` |
+| 2026-11-06 | 34 | David Piñarreta | Caja: turnos con arqueo, ingresos/egresos, cobro con propina y `PAGADA` solo por caja. Índice único de turno abierto por sucursal y `ordenes.propina` | Smoke real 21/21, 163 unit (+15), 54 e2e (+11), 60 DB (+5) |
 | 2026-11-06 | 39 | Sonny De La Cruz | Reversión financiera al anular: EGRESO compensatorio en el turno abierto, ENTRADA de stock con restauración, idempotencia y `DB_REVERSION_SIN_TURNO`. Puntos diferidos a AYCDS-31 | 6 pruebas DB (55 en total), `docs/errores-db.md`, `docs/decisiones.md` |
 | 2026-11-06 | 30 | David Piñarreta | Tablero del KDS con SLA: `/orders/board`, `order.sla` y cron de 20 min. Consulta acotada medida (1,56 ms vs 81 ms) e índice parcial para el barrido (0,072 ms) | PR (rama `feat/aycds-30-kds-sla`), `docs/explain-orders.md` §7, 146 unit + 43 e2e + 49 DB |

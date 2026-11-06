@@ -382,11 +382,46 @@ describe('OrdersService (AYCDS-20)', () => {
     prisma.scoped.reservas.count.mockResolvedValue(1);
     const service = buildService();
 
-    await service.updateStatus('o1', 'PAGADA');
+    await service.updateStatus('o1', 'CERRADA');
 
     expect(prisma.scoped.mesas.updateMany).toHaveBeenCalledWith({
       where: { id: MESA, estado: 'OCUPADA' },
       data: { estado: 'RESERVADA' },
+    });
+  });
+
+  it('rechaza marcar PAGADA desde la API de órdenes: el cobro va por caja', async () => {
+    prisma.scoped.ordenes.findFirst.mockResolvedValue({
+      id: 'o1',
+      numero_orden: 'ORD-000001',
+      estado: 'ENTREGADO',
+      mesa_id: null,
+      sucursal_id: 's1',
+    });
+    const service = buildService();
+
+    await expect(service.updateStatus('o1', 'PAGADA')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.scoped.ordenes.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('markPaid sí paga la orden (lo usa la caja)', async () => {
+    prisma.scoped.ordenes.findFirst.mockResolvedValue({
+      id: 'o1',
+      numero_orden: 'ORD-000001',
+      estado: 'ENTREGADO',
+      mesa_id: null,
+      sucursal_id: 's1',
+      mesas: null,
+    });
+    const service = buildService();
+
+    await service.markPaid('o1');
+
+    expect(prisma.scoped.ordenes.updateMany).toHaveBeenCalledWith({
+      where: { id: 'o1' },
+      data: expect.objectContaining({ estado: 'PAGADA' }),
     });
   });
 
@@ -467,14 +502,14 @@ describe('OrdersService (AYCDS-20)', () => {
       prisma.scoped.mesas.updateMany.mockResolvedValue({ count: 1 });
       const service = buildService();
 
-      await service.updateStatus('o1', 'PAGADA');
+      await service.updateStatus('o1', 'CERRADA');
 
       expect(realtime.orderUpdated).toHaveBeenCalledWith(
         'e1',
         expect.objectContaining({
           ordenId: 'o1',
           de: 'ENTREGADO',
-          a: 'PAGADA',
+          a: 'CERRADA',
           sucursalId: 's1',
         }),
       );
