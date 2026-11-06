@@ -306,6 +306,23 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, estado: estado_orden) {
+    // El dinero entra solo por caja (AYCDS-34): PAGADA lo escribe el cobro,
+    // que además deja el movimiento en el turno. Sin esto se podría cerrar una
+    // comanda sin que aparezca en el arqueo.
+    if (estado === 'PAGADA') {
+      throw new BadRequestException(
+        'El cobro se registra en caja: usa POST /cash/charges',
+      );
+    }
+    return this.transition(id, estado);
+  }
+
+  /** Cobro desde caja: la única vía para PAGADA (AYCDS-34). */
+  async markPaid(id: string) {
+    return this.transition(id, 'PAGADA');
+  }
+
+  private async transition(id: string, estado: estado_orden) {
     const orden = await this.prisma.scoped.ordenes.findFirst({
       where: { id },
       select: {
