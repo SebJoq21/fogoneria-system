@@ -264,6 +264,15 @@ describe('ReceiptsService (AYCDS-36)', () => {
         service.list({ page: 1, limit: 20, sucursalId: 's-otra' }),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
+
+    it('rechaza una fecha imposible en vez de ignorar el filtro', async () => {
+      const service = buildService();
+
+      await expect(
+        service.list({ page: 1, limit: 20, fecha: '2026-02-31' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.scoped.comprobantes.findMany).not.toHaveBeenCalled();
+    });
   });
 });
 

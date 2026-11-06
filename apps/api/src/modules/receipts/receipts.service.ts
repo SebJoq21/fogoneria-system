@@ -9,7 +9,7 @@ import { TenantContextService } from '../../common/context/tenant-context.servic
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { isValidRuc } from '../../common/utils/ruc.js';
-import { limaDayRange } from '../../common/utils/lima-day.js';
+import { limaDayKey, limaDayRange } from '../../common/utils/lima-day.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import type { tipo_comprobante } from '../../generated/prisma/enums.js';
 import type {
@@ -189,7 +189,7 @@ export class ReceiptsService {
   async list(query: ListReceiptsQueryDto) {
     const { skip, take } = paginationOf(query);
     const sucursalId = this.resolveSucursalFiltro(query.sucursalId);
-    const rango = query.fecha ? limaDayRange(query.fecha) : null;
+    const rango = query.fecha ? this.rangoDelDia(query.fecha) : null;
 
     const where = {
       ...(query.tipo ? { tipo: query.tipo } : {}),
@@ -256,6 +256,21 @@ export class ReceiptsService {
       throw new BadRequestException('El DNI de la boleta debe tener 8 dígitos');
     }
     return ref;
+  }
+
+  /**
+   * Día completo en hora de Lima, validando el calendario.
+   *
+   * El DTO comprueba la forma `YYYY-MM-DD`, pero `new Date('2026-02-31…')` en
+   * V8 rueda al mes siguiente en vez de fallar: aquí se compara la clave del
+   * día para rechazar fechas imposibles en lugar de ignorar el filtro.
+   */
+  private rangoDelDia(fecha: string): { start: Date; end: Date } {
+    const rango = limaDayRange(fecha);
+    if (!rango || limaDayKey(rango.start) !== fecha.replaceAll('-', '')) {
+      throw new BadRequestException('fecha no es una fecha válida (YYYY-MM-DD)');
+    }
+    return rango;
   }
 
   private resolveSucursalFiltro(solicitada?: string): string | null {
