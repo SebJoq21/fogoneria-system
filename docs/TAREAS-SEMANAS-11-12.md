@@ -10,9 +10,9 @@
 |---|---|
 | Tareas del rango | **7** |
 | Cerradas (Listo) | **0** |
-| En revisión (PR) | **1** |
-| Por hacer | **6** |
-| Avance global (promedio simple) | **14%** |
+| En revisión (PR) | **2** |
+| Por hacer | **5** |
+| Avance global (promedio simple) | **29%** |
 
 **Diagnóstico:** las órdenes ya se crean con precio de servidor (`20`), se optimizaron a p95 ~307 ms (`22`) y el KDS recibe eventos en vivo (`14`). Falta lo que convierte la comanda en dinero y en cocina medida: el **tablero con SLA** de la `30`, el **turno de caja** de la `34`, el **comprobante con correlativo y reversión** de la `36`, y las dos **UI** que los consumen (`41` y `46`). El esquema ya tiene `turnos_caja`, `movimientos_caja`, `comprobantes` (`serie_numero` único por empresa), `secuencias` y `ordenes.alerta_sla`: no hace falta modelo nuevo, sí módulos.
 
@@ -26,7 +26,7 @@
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
 | AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | En revisión | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
-| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
+| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | En revisión | 100% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
 | AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Por hacer | 0% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
 | AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Por hacer | 0% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
@@ -52,15 +52,17 @@
 
 ### AYCDS-39 — [39.0] ACID financiero triggers reversión
 
-- **Semana:** 11 · **Responsable:** Sonny De La Cruz · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 11 · **Responsable:** Sonny De La Cruz · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «ACID financiero triggers reversion».
-- **Qué debe hacerse:**
-  1. Trigger de reversión al anular una orden o un comprobante: devolver el stock consumido, reversar el movimiento de caja y los puntos otorgados.
-  2. Idempotencia: una segunda anulación no vuelve a reversar (clave por orden/comprobante).
-  3. Códigos de error estables (`DB_*`) y traducción documentada en `docs/errores-db.md`.
-  4. Tests DB: anulación simple, doble anulación, orden sin kardex, comprobante sin caja.
-- **Archivos/rutas:** `apps/api/prisma/migrations/**`, `apps/api/test/db/**`, `docs/errores-db.md`
-- **Criterio de aceptación:** ninguna anulación deja caja o stock descuadrados, y repetirla no mueve nada.
+- **Qué se hizo:**
+  1. `fogoneria.revertir_caja_orden()`: un EGRESO compensatorio por cada INGRESO de la orden, en el turno **abierto** de la sucursal (nunca reabre uno cerrado).
+  2. `fogoneria.revertir_kardex_orden()`: una ENTRADA compensatoria por cada SALIDA/MERMA y restauración de `stocks_sucursal`.
+  3. Triggers `AFTER UPDATE OF estado` en `comprobantes` (al pasar a `ANULADA`) y en `ordenes` (red de seguridad).
+  4. Idempotencia: si ya existe el movimiento compensatorio de esa orden no se duplica; la segunda anulación choca con `DB_COMPROBANTE_ANULADO`/`DB_ORDEN_CERRADA`.
+  5. `DB_REVERSION_SIN_TURNO` (409) cuando se anula con cobros y no hay caja abierta; documentado en `docs/errores-db.md`.
+  6. **Puntos fuera de alcance**: nada los otorga aún y el enum no tiene ajuste; entra con AYCDS-31 (decisión registrada).
+- **Archivos/rutas:** `apps/api/prisma/migrations/20261106140000_reversion_financiera/`, `apps/api/test/db/reversion-financiera.db-spec.ts`, `docs/errores-db.md`
+- **Criterio de aceptación:** ninguna anulación deja caja o stock descuadrados, y repetirla no mueve nada. **Cumplido** (6 pruebas DB).
 - **Depende de:** nada nuevo.
 - **Bloquea a:** **AYCDS-36** (la anulación en cascada del comprobante reutiliza estos triggers).
 
@@ -192,4 +194,5 @@ pnpm build
 | Fecha | Tarea | Responsable | Qué | Evidencia |
 |---|---|---|---|---|
 | 2026-11-06 | plan | David Piñarreta | Ficha de S11-S12 con las 7 tareas, dependencias y orden de PRs; `test:e2e` agregado al CI; decisiones de KDS bajo RLS, propina en `ordenes` y webhook por entorno | Este archivo, `docs/decisiones.md`, `.github/workflows/ci.yml` |
+| 2026-11-06 | 39 | Sonny De La Cruz | Reversión financiera al anular: EGRESO compensatorio en el turno abierto, ENTRADA de stock con restauración, idempotencia y `DB_REVERSION_SIN_TURNO`. Puntos diferidos a AYCDS-31 | 6 pruebas DB (55 en total), `docs/errores-db.md`, `docs/decisiones.md` |
 | 2026-11-06 | 30 | David Piñarreta | Tablero del KDS con SLA: `/orders/board`, `order.sla` y cron de 20 min. Consulta acotada medida (1,56 ms vs 81 ms) e índice parcial para el barrido (0,072 ms) | PR (rama `feat/aycds-30-kds-sla`), `docs/explain-orders.md` §7, 146 unit + 43 e2e + 49 DB |
