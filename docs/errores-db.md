@@ -28,6 +28,7 @@ y un código estable como mensaje. Prisma los entrega como
 | `DB_ORDEN_CERRADA` | 409 Conflict | La orden está en estado terminal |
 | `DB_ORDEN_TRANSICION_INVALIDA` | 422 Unprocessable | Transición fuera del flujo del KDS |
 | `DB_ORDEN_ANULACION_TARDIA` | 409 Conflict | Anulación con la orden ya en cocina o lista: se entrega y se compensa (AYCDS-20) |
+| `DB_REVERSION_SIN_TURNO` | 409 Conflict | Se anula un comprobante/orden con cobros y no hay turno de caja abierto donde imputar el egreso compensatorio (AYCDS-39) |
 | `DB_DETALLE_INMUTABLE` | 409 Conflict | Línea nueva o editada sobre una orden cerrada |
 | `DB_GASTO_PAGADO` | 409 Conflict | Gasto pagado en caja que intenta cambiar de monto o turno |
 | `DB_TABLA_NO_RESTAURABLE` | 422 Unprocessable | `restore_row` sobre una tabla fuera de la lista blanca |

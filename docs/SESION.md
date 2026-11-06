@@ -21,8 +21,10 @@
   - Migración `20261106120000_ordenes_sla_indice`: índice parcial `idx_ordenes_sla_pendiente` (el barrido pasó de 83 ms a 0,072 ms).
   - Medición del tablero en `docs/explain-orders.md` §7: 1,56 ms acotado vs 81 ms sin ventana. **No se tocó RLS** (decisión: medir primero).
 - Verificado: `check-types`, `lint`, `build` OK; 146 unit (+12), 43 e2e (+5), 49 DB (+6) y `EXPLAIN` real con el dataset de 50k órdenes (`perf:seed`, luego `perf:reset`).
-- Pendiente: PR-A1 a `development` + CI + merge + Jira `AYCDS-30 → Listo`; después PR-A2 (AYCDS-39, Sonny).
-- Próximo paso: AYCDS-39 (triggers de reversión ACID) para desbloquear AYCDS-36.
+- **Cambio de proceso:** los PR ya no se mergean solos. Se abren con reviewer (el dueño de la tarea) y los mergea otra persona; Jira pasa a Listo después del merge.
+- Hecho (PR-A4, `feat/aycds-41-ui-kds`): `getOrdersBoard()` en `lib/orders-api.ts`, `kdsBoardFromApi`/`minutosDeSla`/`slaTone` en `lib/order-mapping.ts`, hook `useOrdersBoard` y `OrdersView` contra el tablero (contadores, SLA en vivo, refresco por `order.created`/`order.updated`/`order.sla`). Sin sesión cae al estado local del demo.
+- Pendiente: revisión y merge de PR-A4 (41, Joshua). Los PR #23 (39) y #24 (34) siguen abiertos; la 36 no depende del merge para programarse, pero la 46 sí espera la 34.
+- Próximo paso: AYCDS-36 (comprobantes) y, después, la 46 cuando la 34 entre.
 
 ## 2026-10-29 — Sprint 3: AYCDS-26 (mapa de mesas + agenda de reservas) implementada
 
