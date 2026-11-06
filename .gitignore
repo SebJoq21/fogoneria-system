@@ -58,3 +58,7 @@ Thumbs.db
 
 # Misc
 *.pem
+
+# Smoke local (scripts temporales de verificación, no se commitean)
+smoke-*.tmp.mjs
+
