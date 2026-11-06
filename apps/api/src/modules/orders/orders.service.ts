@@ -17,6 +17,17 @@ import {
 import type { estado_orden, origen_orden } from '../../generated/prisma/enums.js';
 import type { CreateOrderDto, OrderItemDto } from './dto/create-order.dto.js';
 import type { ListOrdersQueryDto } from './dto/list-orders.dto.js';
+import type { BoardOrdersQueryDto } from './dto/board-orders.dto.js';
+import {
+  BOARD_DIAS,
+  BOARD_LIMITE,
+  BOARD_STATES,
+  SLA_MINUTOS,
+  inicioVentana,
+  minutosEntre,
+  promedio,
+  slaInfo,
+} from './orders.sla.js';
 
 /**
  * Transiciones del KDS (AYCDS-20).
@@ -77,6 +88,106 @@ export class OrdersService {
     ]);
 
     return { items, total, page: query.page, limit: query.limit };
+  }
+
+  /**
+   * Tablero del KDS (AYCDS-30).
+   *
+   * Devuelve las cuatro columnas con sus comandas y las métricas del turno, en
+   * una sola llamada (el KDS no debe pedir una vez por columna). La consulta se
+   * acota por sucursal, estados abiertos, ventana y límite: bajo RLS el
+   * planificador no ve estadísticas y un `findMany` sin filtros recorre la
+   * tabla completa (ver `docs/explain-orders.md`).
+   */
+  async board(query: BoardOrdersQueryDto, now: Date = new Date()) {
+    const dias = query.dias ?? BOARD_DIAS;
+    const limite = query.limite ?? BOARD_LIMITE;
+    const sucursalId = this.resolveSucursalFilter(query.sucursalId);
+    const desde = inicioVentana(now, dias);
+    const porSucursal = sucursalId ? { sucursal_id: sucursalId } : {};
+
+    const [abiertas, listas] = await Promise.all([
+      this.prisma.scoped.ordenes.findMany({
+        where: {
+          estado: { in: [...BOARD_STATES] },
+          created_at: { gte: desde },
+          ...porSucursal,
+        },
+        orderBy: { created_at: 'asc' },
+        take: limite,
+        select: {
+          id: true,
+          numero_orden: true,
+          estado: true,
+          origen: true,
+          sucursal_id: true,
+          mesa_id: true,
+          total: true,
+          ingreso_at: true,
+          confirmacion_at: true,
+          listo_at: true,
+          mesas: { select: { id: true, numero: true } },
+          usuarios: { select: { nombre: true } },
+          _count: { select: { detalles_orden: true } },
+        },
+      }),
+      // Solo para las métricas: comandas que ya llegaron a LISTO en la ventana.
+      this.prisma.scoped.ordenes.findMany({
+        where: { created_at: { gte: desde }, listo_at: { not: null }, ...porSucursal },
+        select: { ingreso_at: true, confirmacion_at: true, listo_at: true },
+      }),
+    ]);
+
+    const columnas = BOARD_STATES.map((estado) => {
+      const ordenes = abiertas
+        .filter((orden) => orden.estado === estado)
+        .map((orden) => {
+          const sla = slaInfo(orden, now);
+          return {
+            id: orden.id,
+            numeroOrden: orden.numero_orden,
+            estado: orden.estado,
+            origen: orden.origen,
+            sucursalId: orden.sucursal_id,
+            mesaId: orden.mesa_id,
+            mesa: orden.mesas
+              ? { id: orden.mesas.id, numero: orden.mesas.numero }
+              : null,
+            mesero: orden.usuarios?.nombre ?? null,
+            total: Number(orden.total),
+            items: orden._count.detalles_orden,
+            ingresoAt: orden.ingreso_at.toISOString(),
+            confirmacionAt: orden.confirmacion_at?.toISOString() ?? null,
+            listoAt: orden.listo_at?.toISOString() ?? null,
+            minutos: sla.minutos,
+            alertaSla: sla.alertaSla,
+            excedidoPor: sla.excedidoPor,
+          };
+        });
+
+      return { estado, total: ordenes.length, ordenes };
+    });
+
+    const todas = columnas.flatMap((columna) => columna.ordenes);
+
+    return {
+      generadoAt: now.toISOString(),
+      slaMinutos: SLA_MINUTOS,
+      ventanaDias: dias,
+      limite,
+      truncado: abiertas.length === limite,
+      columnas,
+      metricas: {
+        abiertas: todas.length,
+        fueraDeSla: todas.filter((orden) => orden.alertaSla).length,
+        promedioEsperaMin: promedio(
+          listas.map((orden) => minutosEntre(orden.ingreso_at, orden.confirmacion_at)),
+        ),
+        promedioPreparacionMin: promedio(
+          listas.map((orden) => minutosEntre(orden.confirmacion_at, orden.listo_at)),
+        ),
+      },
+    };
   }
 
   async findOne(id: string) {
@@ -506,5 +617,22 @@ export class OrdersService {
       throw new BadRequestException('La operación requiere empresa en el token');
     }
     return { empresaId: context.empresaId, userId: context.userId ?? null };
+  }
+
+  /**
+   * Filtro de lectura por sucursal: el rol atado a sucursal nunca ve las demás,
+   * aunque pida otra explícitamente. `ADMIN_GLOBAL` puede acotar o ver todas.
+   */
+  private resolveSucursalFilter(solicitada?: string): string | null {
+    const delToken = this.tenantContext.get()?.sucursalId ?? null;
+    if (delToken) {
+      if (solicitada && solicitada !== delToken) {
+        throw new BadRequestException(
+          'El token está atado a otra sucursal: no se puede indicar sucursalId',
+        );
+      }
+      return delToken;
+    }
+    return solicitada ?? null;
   }
 }

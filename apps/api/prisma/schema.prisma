@@ -619,6 +619,7 @@ model ordenes {
   @@index([cliente_id], map: "idx_ordenes_cliente")
   @@index([empresa_id], map: "idx_ordenes_empresa")
   @@index([sucursal_id, estado], map: "idx_ordenes_estado")
+  @@index([empresa_id, confirmacion_at, ingreso_at], map: "idx_ordenes_sla_pendiente", where: raw("alerta_sla = false AND estado IN ('POR_CONFIRMAR', 'EN_COCINA', 'LISTO')"))
   @@index([mesa_id], map: "idx_ordenes_mesa")
   @@index([mesero_id], map: "idx_ordenes_mesero")
   @@index([sucursal_id], map: "idx_ordenes_sucursal")

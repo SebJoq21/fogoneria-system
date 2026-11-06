@@ -507,4 +507,136 @@ describe('OrdersService (AYCDS-20)', () => {
       expect(realtime.tableStatus).not.toHaveBeenCalled();
     });
   });
+
+  describe('tablero del KDS (AYCDS-30)', () => {
+    const AHORA = new Date('2026-11-06T12:00:00.000Z');
+
+    function fila(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'o-1',
+        numero_orden: 'ORD-000001',
+        estado: 'EN_COCINA' as const,
+        origen: 'MESA' as const,
+        sucursal_id: 's1',
+        mesa_id: MESA,
+        total: 36,
+        ingreso_at: new Date('2026-11-06T11:00:00.000Z'),
+        confirmacion_at: new Date('2026-11-06T11:15:00.000Z'),
+        listo_at: null,
+        mesas: { id: MESA, numero: 'Mesa 1' },
+        usuarios: { nombre: 'Mesero Uno' },
+        _count: { detalles_orden: 3 },
+        ...overrides,
+      };
+    }
+
+    it('agrupa por columna y calcula el SLA desde la confirmación', async () => {
+      prisma.scoped.ordenes.findMany
+        .mockResolvedValueOnce([
+          fila(),
+          fila({ id: 'o-2', numero_orden: 'ORD-000002', estado: 'POR_CONFIRMAR' }),
+          fila({ id: 'o-3', estado: 'ENTREGADO' }),
+        ])
+        .mockResolvedValueOnce([]);
+      const service = buildService();
+
+      const board = await service.board({}, AHORA);
+
+      const enCocina = board.columnas.find((columna) => columna.estado === 'EN_COCINA');
+      expect(enCocina?.total).toBe(1);
+      // 45 minutos desde la confirmación: fuera de SLA por 25.
+      expect(enCocina?.ordenes[0]).toMatchObject({
+        minutos: 45,
+        alertaSla: true,
+        excedidoPor: 25,
+        mesa: { id: MESA, numero: 'Mesa 1' },
+        mesero: 'Mesero Uno',
+        items: 3,
+      });
+      const entregado = board.columnas.find((columna) => columna.estado === 'ENTREGADO');
+      expect(entregado?.ordenes[0]?.minutos).toBeNull();
+      expect(board.columnas).toHaveLength(4);
+    });
+
+    it('acota por la sucursal del token', async () => {
+      prisma.scoped.ordenes.findMany.mockResolvedValue([]);
+      const service = buildService();
+
+      await service.board({}, AHORA);
+
+      const arg = prisma.scoped.ordenes.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
+      expect(arg.where).toMatchObject({ sucursal_id: 's1' });
+    });
+
+    it('rechaza una sucursal que no es la del token', async () => {
+      const service = buildService();
+
+      await expect(
+        service.board({ sucursalId: 'otra-sucursal' }, AHORA),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prisma.scoped.ordenes.findMany).not.toHaveBeenCalled();
+    });
+
+    it('deja que ADMIN_GLOBAL acote o vea todas', async () => {
+      prisma.scoped.ordenes.findMany.mockResolvedValue([]);
+      const service = buildService({
+        ...context,
+        sucursalId: null,
+        rol: 'ADMIN_GLOBAL' as const,
+      });
+
+      await service.board({}, AHORA);
+      const sinFiltro = prisma.scoped.ordenes.findMany.mock.calls[0][0] as {
+        where: Record<string, unknown>;
+      };
+      expect(sinFiltro.where).not.toHaveProperty('sucursal_id');
+
+      await service.board({ sucursalId: 's-2' }, AHORA);
+      const conFiltro = prisma.scoped.ordenes.findMany.mock.calls[2][0] as {
+        where: Record<string, unknown>;
+      };
+      expect(conFiltro.where).toMatchObject({ sucursal_id: 's-2' });
+    });
+
+    it('calcula las métricas de espera y preparación', async () => {
+      prisma.scoped.ordenes.findMany
+        .mockResolvedValueOnce([fila()])
+        .mockResolvedValueOnce([
+          {
+            ingreso_at: new Date('2026-11-06T11:00:00.000Z'),
+            confirmacion_at: new Date('2026-11-06T11:05:00.000Z'),
+            listo_at: new Date('2026-11-06T11:20:00.000Z'),
+          },
+          {
+            ingreso_at: new Date('2026-11-06T11:10:00.000Z'),
+            confirmacion_at: new Date('2026-11-06T11:13:00.000Z'),
+            listo_at: new Date('2026-11-06T11:25:00.000Z'),
+          },
+        ]);
+      const service = buildService();
+
+      const board = await service.board({}, AHORA);
+
+      expect(board.metricas).toMatchObject({
+        abiertas: 1,
+        fueraDeSla: 1,
+        promedioEsperaMin: 4,
+        promedioPreparacionMin: 13.5,
+      });
+    });
+
+    it('marca el tablero como truncado al llegar al límite', async () => {
+      prisma.scoped.ordenes.findMany
+        .mockResolvedValueOnce([fila()])
+        .mockResolvedValueOnce([]);
+      const service = buildService();
+
+      const board = await service.board({ limite: 1 }, AHORA);
+
+      expect(board.truncado).toBe(true);
+      expect(board.limite).toBe(1);
+    });
+  });
 });

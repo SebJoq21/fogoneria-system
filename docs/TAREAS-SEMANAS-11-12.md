@@ -10,9 +10,9 @@
 |---|---|
 | Tareas del rango | **7** |
 | Cerradas (Listo) | **0** |
-| En curso | **0** |
-| Por hacer | **7** |
-| Avance global (promedio simple) | **0%** |
+| En revisión (PR) | **1** |
+| Por hacer | **6** |
+| Avance global (promedio simple) | **14%** |
 
 **Diagnóstico:** las órdenes ya se crean con precio de servidor (`20`), se optimizaron a p95 ~307 ms (`22`) y el KDS recibe eventos en vivo (`14`). Falta lo que convierte la comanda en dinero y en cocina medida: el **tablero con SLA** de la `30`, el **turno de caja** de la `34`, el **comprobante con correlativo y reversión** de la `36`, y las dos **UI** que los consumen (`41` y `46`). El esquema ya tiene `turnos_caja`, `movimientos_caja`, `comprobantes` (`serie_numero` único por empresa), `secuencias` y `ordenes.alerta_sla`: no hace falta modelo nuevo, sí módulos.
 
@@ -25,7 +25,7 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | Por hacer | 0% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
+| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | En revisión | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
 | AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
 | AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Por hacer | 0% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
@@ -37,17 +37,16 @@
 
 ### AYCDS-30 — [36.0] API KDS columnas + SLA 20min
 
-- **Semana:** 11 · **Responsable:** David Piñarreta · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 11 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «Por confirmar/En cocina/Listo/Entregado + timer RF-07 CT-FG-08».
-- **Qué debe hacerse:**
-  1. `GET /orders/board?sucursalId=` que devuelva las cuatro columnas con sus comandas y el conteo, ordenadas por antigüedad.
-  2. Acotar la consulta (sucursal + estados abiertos + ventana de 7 días + `LIMIT`) y medir con `EXPLAIN (ANALYZE, BUFFERS)` como `fogoneria_rls` antes de tocar nada más.
-  3. `alertaSla` calculado: `> 20 min` desde `confirmacion_at` (o `ingreso_at` si aún no se confirmó); persistir `alerta_sla` en cada transición y emitir `order.sla` por el gateway.
-  4. `GET /orders/board/metrics` con tiempo medio de preparación y cuántas van fuera de SLA.
-  5. Test unitario de umbrales (19/20/21 min, sin confirmar), e2e de RBAC y tenant, y DB con dos empresas.
-  6. Documentar el plan real de la consulta y el resultado en `docs/explain-orders.md` (sección nueva «Tablero KDS»).
-- **Archivos/rutas:** `apps/api/src/modules/orders/{orders.controller,orders.service,orders.gateway?}.ts`, `apps/api/src/modules/realtime/realtime.types.ts`, `docs/explain-orders.md`
-- **Criterio de aceptación:** el KDS puede pintar el tablero con una sola llamada, la alerta de 20 min es determinista y el `EXPLAIN` queda documentado.
+- **Qué se hizo:**
+  1. `GET /orders/board?dias&limite&sucursalId`: cuatro columnas con sus comandas, `alertaSla` calculado y métricas del turno (abiertas, fuera de SLA, espera media y preparación media) en una sola llamada.
+  2. Consulta acotada (sucursal + estados abiertos + 7 días + `LIMIT 200`) y medida: **1,56 ms** con `idx_ordenes_tenant_fecha`, contra **81 ms** del mismo listado sin ventana (`docs/explain-orders.md` §7).
+  3. SLA de 20 min desde `confirmacion_at` (o `ingreso_at` si no se confirmó), con `orders.sla.ts` como única fuente; a los 20 justos no alerta.
+  4. `OrdersSlaCron` cada minuto: marca `ordenes.alerta_sla` una sola vez y emite `order.sla`; índice parcial nuevo `idx_ordenes_sla_pendiente` (**0,072 ms** con el rol del cron).
+  5. Tests: 12 unitarios nuevos (umbrales 19/20/21, base del reloj, métricas, cron) + 5 e2e (columnas, query, 400, 401) + 6 DB (dos empresas, sin confirmar, idempotencia).
+- **Archivos/rutas:** `apps/api/src/modules/orders/{orders.sla,orders.sla.cron,orders.service,orders.controller}.ts`, `dto/board-orders.dto.ts`, `apps/api/prisma/migrations/20261106120000_ordenes_sla_indice`, `db/scripts/perf/explain-board.sql`, `docs/explain-orders.md`
+- **Criterio de aceptación:** el KDS pinta el tablero con una sola llamada, la alerta de 20 min es determinista y el `EXPLAIN` está documentado. **Cumplido.**
 - **Depende de:** nada nuevo (`20`, `22` y `14` están en `development`).
 - **Bloquea a:** **AYCDS-41**.
 
@@ -193,3 +192,4 @@ pnpm build
 | Fecha | Tarea | Responsable | Qué | Evidencia |
 |---|---|---|---|---|
 | 2026-11-06 | plan | David Piñarreta | Ficha de S11-S12 con las 7 tareas, dependencias y orden de PRs; `test:e2e` agregado al CI; decisiones de KDS bajo RLS, propina en `ordenes` y webhook por entorno | Este archivo, `docs/decisiones.md`, `.github/workflows/ci.yml` |
+| 2026-11-06 | 30 | David Piñarreta | Tablero del KDS con SLA: `/orders/board`, `order.sla` y cron de 20 min. Consulta acotada medida (1,56 ms vs 81 ms) e índice parcial para el barrido (0,072 ms) | PR (rama `feat/aycds-30-kds-sla`), `docs/explain-orders.md` §7, 146 unit + 43 e2e + 49 DB |

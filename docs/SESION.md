@@ -1,5 +1,19 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — Fase A (S11-S12): plan y AYCDS-30 (KDS con SLA)
+
+- Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, con un PR por tarea desde `development`.
+- Hecho (PR-0, `chore/sprint-11-12-plan-ci`): `docs/TAREAS-SEMANAS-11-12.md` (fichas, dependencias, ruta crítica, DoD), 3 decisiones en `docs/decisiones.md` y `api test:e2e` agregado al CI (no se ejecutaba).
+- Hecho (PR-A1, `feat/aycds-30-kds-sla`):
+  - `GET /orders/board?dias&limite&sucursalId` con las 4 columnas, `alertaSla` y métricas (abiertas, fuera de SLA, espera y preparación medias) en una llamada.
+  - `apps/api/src/modules/orders/orders.sla.ts`: SLA de 20 min desde `confirmacion_at ?? ingreso_at`; única fuente del cálculo (umbrales 19/20/21 cubiertos).
+  - `OrdersSlaCron` cada minuto: marca `alerta_sla` una sola vez y emite `order.sla` (`RealtimeService`/gateway/`docs/websockets.md`).
+  - Migración `20261106120000_ordenes_sla_indice`: índice parcial `idx_ordenes_sla_pendiente` (el barrido pasó de 83 ms a 0,072 ms).
+  - Medición del tablero en `docs/explain-orders.md` §7: 1,56 ms acotado vs 81 ms sin ventana. **No se tocó RLS** (decisión: medir primero).
+- Verificado: `check-types`, `lint`, `build` OK; 146 unit (+12), 43 e2e (+5), 49 DB (+6) y `EXPLAIN` real con el dataset de 50k órdenes (`perf:seed`, luego `perf:reset`).
+- Pendiente: PR-A1 a `development` + CI + merge + Jira `AYCDS-30 → Listo`; después PR-A2 (AYCDS-39, Sonny).
+- Próximo paso: AYCDS-39 (triggers de reversión ACID) para desbloquear AYCDS-36.
+
 ## 2026-10-29 — Sprint 3: AYCDS-26 (mapa de mesas + agenda de reservas) implementada
 
 - Objetivo: ejecutar la tarea de Diego (AYCDS-26) sobre `development` (`d969cb2`), sin tocar lo de Sebastián (AYCDS-28). Además, dejar el checklist del sprint con el estado real y aclarar la autoría de AYCDS-22.
