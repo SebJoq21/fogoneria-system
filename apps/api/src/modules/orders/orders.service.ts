@@ -10,6 +10,7 @@ import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { InventoryService } from '../inventory/inventory.service.js';
+import { PromotionsService } from '../promotions/promotions.service.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   ACTIVE_RESERVATION_STATES,
@@ -64,6 +65,7 @@ export class OrdersService {
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
     private readonly inventory: InventoryService,
+    private readonly promotions: PromotionsService,
   ) {}
 
   async list(query: ListOrdersQueryDto) {
@@ -232,10 +234,13 @@ export class OrdersService {
     const subtotal = round2(
       items.reduce((sum, item) => sum + item.subtotal, 0),
     );
-    const descuento = round2(dto.descuento ?? 0);
-    if (descuento > subtotal) {
-      throw new BadRequestException('El descuento no puede superar el subtotal');
-    }
+
+    // El descuento lo calcula el servidor desde el cupón (AYCDS-19): el cliente
+    // manda un código, nunca un importe. El uso se consume aquí mismo.
+    const cupon = dto.cuponCodigo
+      ? await this.promotions.resolverCupon(dto.cuponCodigo, subtotal)
+      : null;
+    const descuento = cupon?.descuento ?? 0;
 
     const numeroOrden = await this.sequences.nextNumeroOrden(empresaId);
     const origen: origen_orden = dto.origen ?? (mesa ? 'MESA' : 'BARRA');
@@ -253,10 +258,19 @@ export class OrdersService {
         subtotal,
         descuento_cupon: descuento,
         total: round2(subtotal - descuento),
+        cupon_id: cupon?.id ?? null,
         detalles_orden: { create: items },
       },
       include: { detalles_orden: true },
     });
+
+    if (cupon) {
+      await this.promotions.registrarCanje(
+        cupon,
+        { id: orden.id, empresaId, sucursalId },
+        userId,
+      );
+    }
 
     if (mesa) {
       await this.prisma.scoped.mesas.updateMany({

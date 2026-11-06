@@ -10,9 +10,9 @@
 |---|---|
 | Tareas del rango | **8** |
 | Cerradas (Listo) | **0** |
-| En revisión (PR) | **1** |
-| Por hacer | **7** |
-| Avance global (promedio simple) | **13%** |
+| En revisión (PR) | **2** |
+| Por hacer | **6** |
+| Avance global (promedio simple) | **25%** |
 
 **Diagnóstico:** el esquema ya tiene todo lo que el inventario necesita (`insumos`, `escandallos_recetas`, `stocks_sucursal`, `movimientos_inventario`, `gastos`, `proveedores`, `combos`, `combos_platos`, `cupones`, `reglas_horarias_promos`). Falta el trabajo por comanda (kardex), el semáforo con alerta, el gasto que sale de caja y la promoción que se aplica en el cobro. La caja y los comprobantes ya están en `development` (S11–S12), así que el gasto y la promoción se apoyan en módulos reales.
 
@@ -23,7 +23,7 @@
 | AYCDS-11 | [43.0] Job Kardex auto por escandallo | 13 | David Piñarreta | En revisión | 100% | `escandallos_recetas`, `stocks_sucursal`, `movimientos_inventario`, `combos_platos` | Descuento al `ENTREGADO`, idempotencia, explosión de combos y stock sin negativos |
 | AYCDS-13 | [44.0] Semáforo stock + webhook n8n | 13 | David Piñarreta | Por hacer | 0% | `stocks_sucursal.stock_minimo`, `STOCK_WEBHOOK_*` en `.env.example` | Endpoint de estado, alerta y webhook firmado |
 | AYCDS-17 | [45.0] API gastos CxP cruce a caja | 13 | David Piñarreta | Por hacer | 0% | `gastos` con `estado_pago`, `pagado_en_caja`, `turno_id`; caja real (S11) | Módulo de gastos y egreso automático en efectivo |
-| AYCDS-19 | [46.0] API combos precio fijo y promos | 14 | David Piñarreta | Por hacer | 0% | `combos.precio_fijo`, `cupones`, `reglas_horarias_promos`, `canjes_cupones` | CRUD de combos/cupones, validación anti-inflación y aplicación en la comanda |
+| AYCDS-19 | [46.0] API combos precio fijo y promos | 14 | David Piñarreta | En revisión | 100% | `combos.precio_fijo`, `cupones`, `reglas_horarias_promos`, `canjes_cupones` | CRUD de combos/cupones, validación anti-inflación y aplicación en la comanda |
 | AYCDS-23 | [47.0] Modelo escandallos recetas-insumos N-M | 13 | Sonny De La Cruz | Por hacer | 0% | Tabla `escandallos_recetas` (PK compuesta) | Definir merma/rendimiento si el negocio lo pide |
 | AYCDS-24 | [48.0] UI inventario Kardex semáforos | 13 | Diego Arévalo | Por hacer | 0% | `InventoryMovementsView` (mock) | Conectar kardex y semáforo a la API |
 | AYCDS-27 | [49.0] UI gastos combos promos | 14 | Joshua Chávez | Por hacer | 0% | `GastosView`, `CombosView`, `PromocionesView` (mock) | Conectar a los módulos de 17 y 19 |
@@ -75,14 +75,15 @@
 
 ### AYCDS-19 — [46.0] API combos precio fijo y promos
 
-- **Semana:** 14 · **Responsable:** David Piñarreta · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 14 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «Bloqueo inflacion + cupones/horarias RF-04 CT-FG-05 CT-FG-06 validaciones».
-- **Qué debe hacerse:**
-  1. CRUD de `combos` con sus `combos_platos` y **bloqueo anti-inflación**: el `precio_fijo` no puede superar la suma de los platos a la lista activa.
-  2. CRUD de `cupones` (código único por empresa, tipo, valor, límite, vencimiento) y consulta de `reglas_horarias_promos`.
-  3. Validación del cupón en `POST /orders`: activo, vigente, con usos, dentro de la regla horaria; registra `canjes_cupones` y descuenta del total en el servidor.
-  4. `POST /coupons/:codigo/validate` para que la UI muestre el descuento antes de cobrar.
-- **Criterio de aceptación:** un combo nunca es más caro que sus partes y un cupón no se puede usar fuera de regla ni dos veces de más.
+- **Qué se hizo:**
+  1. Módulo `promotions`: CRUD de combos con sus platos y **bloqueo anti-inflación** (el `precio_fijo` no puede superar la suma a la lista activa), con `precioReferencia` y `ahorro` en el listado.
+  2. CRUD de cupones (código único por empresa, tipo, valor, límite, vencimiento), validación de porcentaje ≤ 100 y baja lógica.
+  3. `POST /promotions/coupons/:codigo/validate` calcula el descuento **sin consumir** el cupón.
+  4. `POST /orders` acepta `cuponCodigo` (ya **no** `descuento`): el servidor valida, calcula, incrementa usos con actualización condicional y registra `canjes_cupones`.
+  5. `GET /promotions/schedule` devuelve las reglas horarias activas y si aplican ahora (día y hora de Lima, con ventanas que cruzan medianoche).
+- **Criterio de aceptación:** un combo nunca es más caro que sus partes y un cupón no se puede usar fuera de regla ni una vez de más. **Cumplido** (smoke 14/14 + 17 unit + 9 e2e).
 - **Depende de:** nada bloqueante (catálogo y precios ya existen).
 - **Bloquea a:** **AYCDS-27** (UI de combos y promos).
 
@@ -122,4 +123,5 @@ El de S11–S12: funciona contra la API real, RBAC y aislamiento probados, unit 
 | Fecha | Tarea | Responsable | Qué | Evidencia |
 |---|---|---|---|---|
 | 2026-11-06 | plan | David Piñarreta | Ficha de S13-S14 con las 8 tareas, dependencias y orden de PRs | Este archivo |
+| 2026-11-06 | 19 | David Piñarreta | Combos con bloqueo anti-inflación, cupones con límite y vigencia, y descuento calculado en el servidor (el cliente manda código, no importe) | Smoke real 14/14, 17 unit, 9 e2e |
 | 2026-11-06 | 11 | David Piñarreta | Kardex por escandallo al entregar: explosión de combos, idempotencia, stock sin negativos y dentro de la transacción del request | Smoke real 9/9 (lomo 12 → 11 kg), 6 pruebas DB, 8 unit |
