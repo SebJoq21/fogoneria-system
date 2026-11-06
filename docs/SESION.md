@@ -11,8 +11,10 @@
   - Migración `20261106120000_ordenes_sla_indice`: índice parcial `idx_ordenes_sla_pendiente` (el barrido pasó de 83 ms a 0,072 ms).
   - Medición del tablero en `docs/explain-orders.md` §7: 1,56 ms acotado vs 81 ms sin ventana. **No se tocó RLS** (decisión: medir primero).
 - Verificado: `check-types`, `lint`, `build` OK; 146 unit (+12), 43 e2e (+5), 49 DB (+6) y `EXPLAIN` real con el dataset de 50k órdenes (`perf:seed`, luego `perf:reset`).
-- Pendiente: PR-A1 a `development` + CI + merge + Jira `AYCDS-30 → Listo`; después PR-A2 (AYCDS-39, Sonny).
-- Próximo paso: AYCDS-39 (triggers de reversión ACID) para desbloquear AYCDS-36.
+- Hecho (PR-A2, `feat/aycds-39-reversion-financiera`): migración `20261106140000_reversion_financiera` con `revertir_caja_orden` (EGRESO compensatorio en el turno abierto), `revertir_kardex_orden` (ENTRADA + restauración de `stocks_sucursal`), triggers en `comprobantes`/`ordenes`, idempotencia y `DB_REVERSION_SIN_TURNO`. Puntos diferidos a AYCDS-31. 6 pruebas DB nuevas (55 en total).
+- **Cambio de proceso:** los PR ya no se mergean solos. Se abren con reviewer (el dueño de la tarea) y los mergea otra persona; Jira pasa a Listo después del merge.
+- Pendiente: revisión y merge de PR-A2 por Sonny (`SOoOnny`); luego PR-A3 (AYCDS-34, caja).
+- Próximo paso: AYCDS-34 (módulo `caja` + `ordenes.propina`) en `feat/aycds-34-caja`.
 
 ## 2026-10-29 — Sprint 3: AYCDS-26 (mapa de mesas + agenda de reservas) implementada
 
