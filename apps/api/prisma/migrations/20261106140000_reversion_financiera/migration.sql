@@ -95,10 +95,12 @@ BEGIN
   END IF;
 
   -- Sin cobros no hay nada que devolver (orden anulada antes de pagar).
+  -- La propina no cuenta: es un ingreso aparte que no cubre el comprobante.
   IF NOT EXISTS (
     SELECT 1 FROM movimientos_caja
      WHERE orden_id = p_orden
        AND tipo = 'INGRESO'
+       AND concepto NOT LIKE 'Propina%'
   ) THEN
     RETURN 0;
   END IF;
@@ -109,6 +111,7 @@ BEGIN
     SELECT * FROM movimientos_caja
      WHERE orden_id = p_orden
        AND tipo = 'INGRESO'
+       AND concepto NOT LIKE 'Propina%'
        AND concepto NOT LIKE 'Reversión%'
      ORDER BY created_at
   LOOP

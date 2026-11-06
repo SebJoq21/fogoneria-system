@@ -141,6 +141,30 @@ describeDb('Reversión financiera al anular (AYCDS-39)', () => {
     expectDbError(error, 'DB_REVERSION_SIN_TURNO');
   });
 
+  it('no revierte la propina, solo el cobro de la comanda', async () => {
+    const ordenId = await createOrden(db, tenant, 'ENTREGADO', 'ORD-REV-PROP');
+    const comprobanteId = await crearComprobante(db, tenant, ordenId, 36);
+    await cobrar(db, tenant, turnoId, ordenId, 36);
+    await db.$executeRawUnsafe(
+      `INSERT INTO fogoneria.movimientos_caja
+         (empresa_id, turno_id, tipo, concepto, monto, metodo, orden_id, actor_id)
+       VALUES ($1, $2, 'INGRESO', 'Propina ORD-REV-PROP', 5, 'EFECTIVO', $3, $4)`,
+      tenant.empresaId,
+      turnoId,
+      ordenId,
+      tenant.usuarioId,
+    );
+
+    await anularComprobante(db, comprobanteId, tenant.usuarioId);
+
+    const filas = await movimientos(db, ordenId);
+    const egresos = filas.filter((fila) => fila.tipo === 'EGRESO');
+    expect(egresos).toHaveLength(1);
+    expect(Number(egresos[0].monto)).toBe(36);
+    // La propina sigue como ingreso intacto.
+    expect(filas.filter((fila) => fila.concepto.startsWith('Propina'))).toHaveLength(1);
+  });
+
   it('no duplica la reversión ni permite anular dos veces', async () => {
     const ordenId = await createOrden(db, tenant, 'ENTREGADO', 'ORD-REV-3');
     const comprobanteId = await crearComprobante(db, tenant, ordenId, 36);
