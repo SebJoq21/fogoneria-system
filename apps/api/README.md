@@ -87,6 +87,7 @@ src/
     tables/       mesas por sucursal + bloqueo/liberación
     reservations/ reservas con aforo, solapamiento y estados
     orders/       órdenes con transiciones de estado
+    inventory/    kardex por escandallo al entregar (descuenta stock)
     realtime/     gateway Socket.io /orders (eventos de comanda y mesa)
     catalog/      categorías, platos, grupos/opciones de modificadores
     pricing/      listas de precios y precios por plato

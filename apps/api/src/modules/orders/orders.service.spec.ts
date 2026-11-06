@@ -10,6 +10,7 @@ import type { TenantContextService } from '../../common/context/tenant-context.s
 import type { SequencesService } from '../../common/sequences/sequences.service.js';
 import type { AuditService } from '../audit/audit.service.js';
 import type { RealtimeService } from '../realtime/realtime.service.js';
+import type { InventoryService } from '../inventory/inventory.service.js';
 
 const context = {
   userId: 'u1',
@@ -56,6 +57,7 @@ describe('OrdersService (AYCDS-20)', () => {
     orderUpdated: ReturnType<typeof vi.fn>;
     tableStatus: ReturnType<typeof vi.fn>;
   };
+  let inventory: { consumeOrder: ReturnType<typeof vi.fn> };
 
   function buildService(tenant: Record<string, unknown> = context) {
     return new OrdersService(
@@ -64,6 +66,7 @@ describe('OrdersService (AYCDS-20)', () => {
       sequences as unknown as SequencesService,
       audit as unknown as AuditService,
       realtime as unknown as RealtimeService,
+      inventory as unknown as InventoryService,
     );
   }
 
@@ -76,6 +79,7 @@ describe('OrdersService (AYCDS-20)', () => {
       orderUpdated: vi.fn(),
       tableStatus: vi.fn(),
     };
+    inventory = { consumeOrder: vi.fn().mockResolvedValue({ aplicado: true }) };
     vi.clearAllMocks();
 
     prisma.scoped.listas_precios.findFirst.mockResolvedValue({ id: 'l1' });

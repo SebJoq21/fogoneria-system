@@ -9,6 +9,7 @@ import { TenantContextService } from '../../common/context/tenant-context.servic
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
+import { InventoryService } from '../inventory/inventory.service.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   ACTIVE_RESERVATION_STATES,
@@ -62,6 +63,7 @@ export class OrdersService {
     private readonly sequences: SequencesService,
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
+    private readonly inventory: InventoryService,
   ) {}
 
   async list(query: ListOrdersQueryDto) {
@@ -366,6 +368,13 @@ export class OrdersService {
 
     const liberada =
       TERMINAL.includes(estado) ? await this.releaseTable(orden.mesa_id) : null;
+
+    // Kardex automático (AYCDS-11): al entregar se descuenta la receta. Corre
+    // dentro de esta transacción: si el descuento falla, la entrega no se
+    // confirma. Un plato sin receta se omite y no rompe nada.
+    if (estado === 'ENTREGADO') {
+      await this.inventory.consumeOrder(orden.id, this.tenant().userId);
+    }
 
     await this.audit.record({
       empresaId: this.tenant().empresaId,

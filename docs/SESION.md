@@ -1,5 +1,16 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — S11-S12 cerrado y arranque de S13-S14 (kardex)
+
+- Objetivo: cerrar la Fase A y empezar las tareas de David de S13–S14.
+- **Fase A cerrada**: #23 (39), #24 (34), #25 (41) y #26 (36) fueron aprobados y mergeados. Jira 39/34/41/36 → Listo con comentario de evidencia. CI de `development` en verde tras cada merge (2m25 / 1m48 / 1m50 / 2m19).
+- Auditoría en `development`: `pnpm lint` 3/3, `check-types` 3/3, api **180** unit, **63** e2e, **66** DB, web **108** y build OK.
+- Hecho (PR-B1, `feat/aycds-11-kardex`): módulo `inventory` con `InventoryService.consumeOrder()`, invocado desde `OrdersService` al pasar a `ENTREGADO`. Explota recetas (y combos), es idempotente por `SALIDA`, omite platos sin receta y descuenta con concurrencia optimista **sin bajar de cero** (la base tiene un `CHECK` de no negativos).
+- Hallazgo: mi primer intento creaba el stock en negativo y la base lo rechazó (`23514`). Corregido con `Math.max(0, …)` + reintento optimista.
+- Verificado: 188 unit (+8), 72 DB (+6), `check-types` y smoke real **9/9** (Lomo Saltado: 12 → 11 kg, 3 movimientos, reintento sin descontar).
+- Pendiente: PR-B1 a revisión; después AYCDS-13 (semáforo + webhook) y AYCDS-19 (combos/promos, independiente).
+- Próximo paso: abrir el PR de la 11 y seguir con la 13.
+
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
