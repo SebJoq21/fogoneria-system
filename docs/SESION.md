@@ -1,5 +1,16 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — AYCDS-31 (CRM: segmentos y puntos) lista para revisión
+
+- Objetivo: seguir con la siguiente tarea de David de S15–S16 sin esperar merges.
+- Hecho (PR-E1, `feat/aycds-31-crm`): módulo `crm` con comensales (listado por segmento y búsqueda, alta con teléfono único, edición, ficha con movimientos), historial y ajuste manual de puntos, configuración de lealtad (`GET/PATCH /crm/config`) y `POST /crm/process`.
+- **Worker de consumos**: cron cada 5 minutos que busca comandas `PAGADA` con cliente y sin movimiento `GANANCIA`, otorga `total × puntos por sol` y recalcula visitas y segmento desde las fuentes. No toca el cobro: un fallo del CRM no tumba una venta; es idempotente por movimiento de la orden.
+- **Segmento derivado**: `visitas` = comandas pagadas y `NUEVO/FRECUENTE/VIP` por umbrales de `config_lealtad`; repetir el proceso no infla nada.
+- Verificado: 200 unit (+20), 73 e2e (+10), 71 DB (+5), `check-types` y smoke real **15/15** (cliente NUEVO → cobro con cliente → worker 36 puntos → visita 1 → reproceso 0 → canje 26 → base `1/26/NUEVO`).
+- Hallazgo corregido en el smoke: `ADMIN_GLOBAL` no lleva sucursal en el token, así que el ajuste de puntos ahora acepta `sucursalId` en el body (misma regla que mesas y gastos).
+- Pendiente: revisión de #28 (11), #29 (19), #30 (46 p1), #31 (17) y este; AYCDS-13 espera el merge de la 11.
+- Próximo paso: AYCDS-33 (RRHH) o AYCDS-13 al mergear la 11.
+
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
