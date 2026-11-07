@@ -58,3 +58,6 @@ Thumbs.db
 
 # Misc
 *.pem
+
+# Respaldos locales (nunca se commitean)
+ops/backups/

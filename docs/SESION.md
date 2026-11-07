@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-07 — AYCDS-38 (vistas BI + backup/restore) lista para revisión
+
+- Objetivo: cerrar la tarea sin dependencias del rango (vistas de BI y respaldo probado) mientras siguen abiertos #28–#34.
+- Hecho (rama `feat/aycds-38-vistas-bi`, desde `development`): migración `20261107120000_vistas_bi` con 6 vistas (`v_bi_ventas_dia`, `v_bi_gastos_dia`, `v_bi_comprobado_dia`, `v_bi_pl_dia`, `v_bi_platos_top`, `v_bi_cobros_metodo`) en día de Lima; `db:backup`/`db:restore` en PowerShell (dump con `docker cp`, verificación de conteos y bloqueo sobre `fogoneria_db`); `docs/bi-vistas.md` y `docs/respaldo-recuperacion.md` (RPO ≤24 h / RTO ≤30 min).
+- **Hallazgo de seguridad:** `fogoneria_app` es superusuario con `BYPASSRLS`, así que una vista creada por él **no aplica RLS** (las 4 vistas del esquema inicial dejaban ver datos de otra empresa). Se corrigió con `security_invoker = true` en todas, verificado con un test DB de aislamiento.
+- **Hallazgo de datos:** el primer `pg_restore` falló por 150 000 líneas de `detalles_orden` huérfanas del volumen perf: `reset-perf.sql` borraba con `session_replication_role = replica`, que **no ejecuta los CASCADE**. Ahora borra las hijas explícitamente.
+- Verificado: 9 tests DB nuevos (`bi.db-spec.ts`), `migrate deploy` en `fogoneria_test` y `fogoneria_db`, backup 0,28 MB en 0,4 s y restore en 3,3 s con 6 vistas BI y conteos coherentes.
+- Pendiente: revisión de #28–#34 y de este PR; Jira 38 a En revisión con la evidencia. La ficha `docs/TAREAS-SEMANAS-15-16.md` se actualiza cuando entre el PR #34 (evita PRs apilados).
+- Próximo paso: AYCDS-35 (API de BI) cuando entre #31 (gastos), consumiendo estas vistas; AYCDS-13 cuando entre #28.
+
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
