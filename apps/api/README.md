@@ -147,6 +147,7 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | GET/POST | `/cash/shifts`, `/cash/shifts/current`, `/cash/movements` | admin, sucursal, cajero |
 | PATCH | `/cash/shifts/:id/close` | admin, sucursal, cajero |
 | POST | `/cash/charges` | admin, sucursal, cajero |
+| GET | `/bi/pnl`, `/bi/pnl/daily`, `/bi/top-dishes`, `/bi/sales-by-method` | admin, sucursal |
 | POST | `/saas/tenants` | SUPERADMIN |
 | GET | `/saas/tenants`, `/saas/tenants/:id`, `/saas/metrics` | SUPERADMIN |
 | POST | `/saas/tenants/:id/suspend`, `/reactivate` | SUPERADMIN |

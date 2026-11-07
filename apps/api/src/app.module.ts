@@ -29,6 +29,7 @@ import { CashModule } from './modules/cash/cash.module.js';
 import { StaffModule } from './modules/staff/staff.module.js';
 import { CrmModule } from './modules/crm/crm.module.js';
 import { ExpensesModule } from './modules/expenses/expenses.module.js';
+import { BiModule } from './modules/bi/bi.module.js';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module.js';
     StaffModule,
     CrmModule,
     ExpensesModule,
+    BiModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

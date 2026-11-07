@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-07 — AYCDS-35 (API de BI) implementada, en espera de #38
+
+- Objetivo: exponer los reportes de P&L, ranking y cobros por método sobre las vistas de AYCDS-38.
+- Hecho (rama local `feat/aycds-35-bi-api`, **encima de** `feat/aycds-38-vistas-bi`): módulo `bi` con `GET /bi/pnl`, `/bi/pnl/daily`, `/bi/top-dishes` y `/bi/sales-by-method` (solo `ADMIN_GLOBAL` y `GERENTE_SUCURSAL`); rango obligatorio con tope de 366 días, sucursal del token y agregado de empresa para el admin; los importes salen como number redondeado a 2.
+- Clave: las consultas corren **dentro de la transacción del request** (`tenantContext.get()?.tx`); las vistas son `security_invoker` y fuera de esa tx devuelven 0 filas. No se filtra `empresa_id` en el SQL: lo pone RLS.
+- Verificado: 194 unit (+14), 70 e2e (+7), 5 DB nuevos contra las vistas, `check-types` y smoke real **16/16** (P&L, serie diaria, ranking, métodos, 403 de mesero y cajero, 400 de rango invertido y >12 meses, y acotado por sucursal).
+- **PR abierto** tras el merge de #38: rebase a `development` y PR de un solo commit (la tarea consume esas vistas).
+- Próximo paso: AYCDS-13 (semáforo + webhook) cuando entre #28; AYCDS-46 parte 2 espera decisión del usuario sobre el mock SUNAT.
+
 ## 2026-11-07 — AYCDS-38 (vistas BI + backup/restore) lista para revisión
 
 - Objetivo: cerrar la tarea sin dependencias del rango (vistas de BI y respaldo probado) mientras siguen abiertos #28–#34.
