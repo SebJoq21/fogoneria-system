@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-07 — Ficha de S15-S16 y espera de merges
+
+- Objetivo: cerrar el hueco documental de la última fase mientras se aprueban los seis PRs abiertos (#28, #29, #30, #31, #32, #33). Ninguno se mergeó todavía.
+- Hecho: `docs/TAREAS-SEMANAS-15-16.md` con las 8 tareas del rango (31, 33, 35, 38, 40, 45, 49, 52), fichas de las de API, dependencias, ruta crítica (`38 → 35 → 45 → 49 → 52`), orden de PRs y DoD. Refleja el estado real: 31 y 33 en revisión con su evidencia; 35 bloqueada por 17 (PR #31) y 38.
+- Auditoría: `development` sin cambios (`d1689d7`), árbol limpio, `pnpm lint` 3/3.
+- Pendiente: que se aprueben y mergeen los seis PRs; después mover 11/17/19/31/33 a **Listo** en Jira y seguir con la decisión de la 46 parte 2 (mock SUNAT) y la 13 (semáforo, necesita la 11).
+- Próximo paso: al mergear #31 o #28, arrancar AYCDS-38 (vistas BI) o AYCDS-13 según lo que entre primero.
+
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
 - Objetivo: cerrar las 7 tareas de S11-S12 en orden `30 → 39 → 34 → 36 → 41 → 46 → 50`, un PR por tarea desde `development`, con revisión de otra persona.
