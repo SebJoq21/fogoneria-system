@@ -132,6 +132,8 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | POST/PATCH/DELETE | `/catalog/*` | admin, sucursal |
 | GET | `/pricing/price-lists`, `/pricing/resolve` | autenticado |
 | POST/PATCH/DELETE | `/pricing/price-lists/*` | admin, sucursal |
+| GET/POST | `/crm/customers`, `/crm/config` | autenticado (escritura: admin, sucursal, cajero, mesero) |
+| POST | `/crm/customers/:id/points`, `/crm/process` | admin, sucursal |
 | GET | `/expenses`, `/expenses/summary` | admin, sucursal, cajero |
 | POST/PATCH | `/expenses`, `/expenses/:id` | admin, sucursal |
 | POST | `/expenses/:id/pay` | admin, sucursal, cajero |
@@ -183,6 +185,13 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - La respuesta incluye el desglose de IGV (`base = total / 1.18`), derivado y no persistido, porque el total de la comanda ya lo incluye.
 - `POST /receipts/:id/void` anula con motivo obligatorio (estado `ANULADA` + actor + fecha). **La reversión de caja y stock la hacen los triggers de AYCDS-39**; el servicio no la duplica. Una segunda anulación responde 409.
 - `GET /receipts?fecha&tipo&estado&sucursalId` filtra por el día completo en hora de Lima.
+## CRM y fidelización (AYCDS-31)
+
+- `GET /crm/customers` filtra por segmento (`NUEVO`/`FRECUENTE`/`VIP`) y busca por nombre o teléfono; `GET /crm/customers/:id` trae la ficha con sus últimos movimientos y `/points` el historial.
+- `POST /crm/customers` registra al comensal (teléfono único por empresa, 409 si se repite).`r
+- El **segmento se deriva** de las comandas `PAGADA`: no hay contador que se desincronice. Los umbrales salen de `config_lealtad` (`GET/PATCH /crm/config`).
+- Los puntos por consumo los otorga un **worker** (cron cada 5 min y `POST /crm/process` para reprocesar): `total × puntos por sol`, idempotente por movimiento `GANANCIA` de la orden. El cobro no depende del CRM.
+- `POST /crm/customers/:id/points` ajusta a mano (cortesía, canje, caducidad). El importe se guarda positivo, el signo lo da el tipo, y el saldo se recalcula desde los movimientos.
 ## Gastos y cuentas por pagar (AYCDS-17)
 
 - `GET /expenses` lista con filtros por estado, categoría, vencidos y sucursal; `GET /expenses/summary` devuelve por pagar, vencido y pagado del mes.
