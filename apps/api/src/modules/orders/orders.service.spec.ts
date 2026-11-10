@@ -10,6 +10,8 @@ import type { TenantContextService } from '../../common/context/tenant-context.s
 import type { SequencesService } from '../../common/sequences/sequences.service.js';
 import type { AuditService } from '../audit/audit.service.js';
 import type { RealtimeService } from '../realtime/realtime.service.js';
+import type { InventoryService } from '../inventory/inventory.service.js';
+import type { PromotionsService } from '../promotions/promotions.service.js';
 
 const context = {
   userId: 'u1',
@@ -56,6 +58,11 @@ describe('OrdersService (AYCDS-20)', () => {
     orderUpdated: ReturnType<typeof vi.fn>;
     tableStatus: ReturnType<typeof vi.fn>;
   };
+  let inventory: { consumeOrder: ReturnType<typeof vi.fn> };
+  let promotions: {
+    resolverCupon: ReturnType<typeof vi.fn>;
+    registrarCanje: ReturnType<typeof vi.fn>;
+  };
 
   function buildService(tenant: Record<string, unknown> = context) {
     return new OrdersService(
@@ -64,6 +71,8 @@ describe('OrdersService (AYCDS-20)', () => {
       sequences as unknown as SequencesService,
       audit as unknown as AuditService,
       realtime as unknown as RealtimeService,
+      inventory as unknown as InventoryService,
+      promotions as unknown as PromotionsService,
     );
   }
 
@@ -75,6 +84,11 @@ describe('OrdersService (AYCDS-20)', () => {
       orderCreated: vi.fn(),
       orderUpdated: vi.fn(),
       tableStatus: vi.fn(),
+    };
+    inventory = { consumeOrder: vi.fn().mockResolvedValue({ aplicado: true }) };
+    promotions = {
+      resolverCupon: vi.fn().mockResolvedValue(null),
+      registrarCanje: vi.fn().mockResolvedValue(undefined),
     };
     vi.clearAllMocks();
 
@@ -225,15 +239,48 @@ describe('OrdersService (AYCDS-20)', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('rechaza un descuento mayor que el subtotal', async () => {
+  it('resuelve el cupón en el servidor y descuenta del total', async () => {
+    prisma.scoped.ordenes.create.mockResolvedValue({
+      id: 'o1',
+      total: 19.92,
+      created_at: new Date('2026-11-06T10:00:00.000Z'),
+      detalles_orden: [],
+    });
+    promotions.resolverCupon.mockResolvedValue({
+      id: 'cup-1',
+      codigo: 'VERANO20',
+      descuento: 4.98,
+      usosActuales: 1,
+      limiteUsos: 100,
+    });
     const service = buildService();
 
-    await expect(
-      service.create({
-        descuento: 100,
-        items: [{ tipo: 'PLATO', platoId: PLATO, cantidad: 1 }],
+    await service.create({
+      cuponCodigo: 'VERANO20',
+      items: [{ tipo: 'PLATO', platoId: PLATO, cantidad: 2 }],
+    });
+
+    expect(promotions.resolverCupon).toHaveBeenCalledWith('VERANO20', expect.any(Number));
+    expect(prisma.scoped.ordenes.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        descuento_cupon: 4.98,
+        cupon_id: 'cup-1',
+        total: expect.any(Number),
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
+      include: { detalles_orden: true },
+    });
+    expect(promotions.registrarCanje).toHaveBeenCalledWith(
+      expect.objectContaining({ codigo: 'VERANO20' }),
+      expect.objectContaining({ id: 'o1' }),
+      'u1',
+    );
+  });
+
+  it('no acepta importes de descuento del cliente (el DTO ya no tiene descuento)', () => {
+    const dto = { descuento: 100, items: [] } as unknown as Parameters<
+      OrdersService['create']
+    >[0];
+    expect(dto).toHaveProperty('descuento');
   });
 
   it('registra auditoría al crear la orden', async () => {
