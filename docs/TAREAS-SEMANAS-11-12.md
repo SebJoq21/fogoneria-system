@@ -9,10 +9,10 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **7** |
-| Cerradas (Listo) | **5** |
+| Cerradas (Listo) | **6** |
 | En revisión | **1** |
-| Por hacer | **1** |
-| Avance global (promedio simple) | **86%** |
+| Por hacer | **0** |
+| Avance global (promedio simple) | **100%** |
 
 **Diagnóstico:** las órdenes ya se crean con precio de servidor (`20`), se optimizaron a p95 ~307 ms (`22`) y el KDS recibe eventos en vivo (`14`). Falta lo que convierte la comanda en dinero y en cocina medida: el **tablero con SLA** de la `30`, el **turno de caja** de la `34`, el **comprobante con correlativo y reversión** de la `36`, y las dos **UI** que los consumen (`41` y `46`). El esquema ya tiene `turnos_caja`, `movimientos_caja`, `comprobantes` (`serie_numero` único por empresa), `secuencias` y `ordenes.alerta_sla`: no hace falta modelo nuevo, sí módulos.
 
@@ -30,8 +30,8 @@
 | AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Listo | 100% | `turnos_caja`, `movimientos_caja`, `metodo_pago`, `canOperateCash` en la web | — |
 | AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Listo | 100% | Tabla `comprobantes`, `secuencias`, IGV derivado | — |
 | AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Listo | 100% | `OrdersView` con columnas, canal en vivo y `useNow` | — |
-| AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | En revisión | 100% | `CajaView` y `ComprobantesView` contra `cash-api`/`receipts-api`; SUNAT queda «pendiente de OSE» | Revisión del PR |
-| AYCDS-50 | [42.0] Auditoría CT-FG-03 acta mensual 2 | 12 | Sebastián Chicata | Por hacer | 0% | Acta anterior (`docs/acta-qa-aycds-66.md`) y la evidencia de caja/comprobantes ya lista | Evidencia de la corrida y firma |
+| AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | Listo | 100% | `CajaView` y `ComprobantesView` contra `cash-api`/`receipts-api`; SUNAT queda «pendiente de OSE» | Revisión del PR |
+| AYCDS-50 | [42.0] Auditoría CT-FG-03 acta mensual 2 | 12 | Sebastián Chicata | En revisión | 100% | Acta anterior (`docs/acta-qa-aycds-66.md`) y la evidencia de caja/comprobantes ya lista | Evidencia de la corrida y firma |
 
 ## 3. Fichas por tarea
 
@@ -130,8 +130,8 @@
 
 ### AYCDS-50 — [42.0] Auditoría CT-FG-03 acta mensual 2
 
-- **Semana:** 12 · **Responsable:** Sebastián Chicata · **Estado Jira:** Por hacer · **Avance:** 0 %
-- **Qué debe hacerse:** matriz de control `CT-FG-03` con evidencia de caja y comprobantes (capturas, `EXPLAIN`, salidas de test) y firma del acta mensual 2.
+- **Semana:** 12 · **Responsable:** Sebastián Chicata · **Estado Jira:** En revisión · **Avance:** 100 %
+- **Qué entrega:** `docs/acta-qa-aycds-50.md` con la matriz CT-FG-03 (7 controles), la evidencia por PR, el smoke de cierre del 2026-11-10, los cinco hallazgos con su acción y el comando reproducible. **Firma del responsable pendiente.**
 - **Depende de:** **AYCDS-34** y **AYCDS-36**.
 
 ## 4. Dependencias
