@@ -8,6 +8,39 @@
 - Hallazgo: el smoke falló al principio porque `ADMIN_GLOBAL` no lleva sucursal; `calculate` exige `sucursalId` en el body (igual que mesas, gastos y puntos).
 - Pendiente: revisión de #28 (11), #29 (19), #30 (46 p1), #31 (17), #32 (31) y este.
 - Próximo paso: AYCDS-35 (BI) cuando entre la 17, o la parte 2 de la 46.
+## 2026-11-06 — AYCDS-31 (CRM: segmentos y puntos) lista para revisión
+
+- Objetivo: seguir con la siguiente tarea de David de S15–S16 sin esperar merges.
+- Hecho (PR-E1, `feat/aycds-31-crm`): módulo `crm` con comensales (listado por segmento y búsqueda, alta con teléfono único, edición, ficha con movimientos), historial y ajuste manual de puntos, configuración de lealtad (`GET/PATCH /crm/config`) y `POST /crm/process`.
+- **Worker de consumos**: cron cada 5 minutos que busca comandas `PAGADA` con cliente y sin movimiento `GANANCIA`, otorga `total × puntos por sol` y recalcula visitas y segmento desde las fuentes. No toca el cobro: un fallo del CRM no tumba una venta; es idempotente por movimiento de la orden.
+- **Segmento derivado**: `visitas` = comandas pagadas y `NUEVO/FRECUENTE/VIP` por umbrales de `config_lealtad`; repetir el proceso no infla nada.
+- Verificado: 200 unit (+20), 73 e2e (+10), 71 DB (+5), `check-types` y smoke real **15/15** (cliente NUEVO → cobro con cliente → worker 36 puntos → visita 1 → reproceso 0 → canje 26 → base `1/26/NUEVO`).
+- Hallazgo corregido en el smoke: `ADMIN_GLOBAL` no lleva sucursal en el token, así que el ajuste de puntos ahora acepta `sucursalId` en el body (misma regla que mesas y gastos).
+- Pendiente: revisión de #28 (11), #29 (19), #30 (46 p1), #31 (17) y este; AYCDS-13 espera el merge de la 11.
+- Próximo paso: AYCDS-33 (RRHH) o AYCDS-13 al mergear la 11.
+## 2026-11-06 — AYCDS-17 (gastos → caja) lista para revisión
+
+- Objetivo: avanzar la siguiente tarea de David de S13–S14 sin esperar merges.
+- Hecho (PR-D1, `feat/aycds-17-gastos`): módulo `expenses` con listado (estado, categoría, vencidos, sucursal), resumen (por pagar, vencido, pagado del mes), alta, edición y **pago**. En efectivo el egreso entra en `movimientos_caja` con `gasto_id` vía `CashService.egresoDeGasto` (turno abierto obligatorio); con tarjeta/transferencia/Yape solo cambia el estado. Un gasto pagado en caja no se edita (409, y `DB_GASTO_PAGADO` en la base) ni se borra.
+- Verificado: 193 unit (+13), 71 e2e (+8), 71 DB (+5), `check-types` y smoke real **16/16** (gasto 120 en efectivo → esperado de caja 380 y diferencia 0; transferencia sin movimiento; doble pago 409; edición de pagado 409; resumen 600 del mes).
+- Nota: la ficha de S13–S14 vive en la rama del PR #28 (aún abierta); al mergearse se actualiza la fila de AYCDS-17 allí.
+- Pendiente: revisión de #28 (11), #29 (19), #30 (46 parte 1) y este; AYCDS-13 espera el merge de la 11.
+- Próximo paso: AYCDS-13 (semáforo + webhook) al mergear la 11, o la parte 2 de la 46.
+## 2026-11-06 — S11-S12 cerrado y arranque de S13-S14 (kardex)
+
+- Objetivo: cerrar la Fase A y empezar las tareas de David de S13–S14.
+- **Fase A cerrada**: #23 (39), #24 (34), #25 (41) y #26 (36) fueron aprobados y mergeados. Jira 39/34/41/36 → Listo con comentario de evidencia. CI de `development` en verde tras cada merge (2m25 / 1m48 / 1m50 / 2m19).
+- Auditoría en `development`: `pnpm lint` 3/3, `check-types` 3/3, api **180** unit, **63** e2e, **66** DB, web **108** y build OK.
+- Hecho (PR-B1, `feat/aycds-11-kardex`): módulo `inventory` con `InventoryService.consumeOrder()`, invocado desde `OrdersService` al pasar a `ENTREGADO`. Explota recetas (y combos), es idempotente por `SALIDA`, omite platos sin receta y descuenta con concurrencia optimista **sin bajar de cero** (la base tiene un `CHECK` de no negativos).
+- Hallazgo: mi primer intento creaba el stock en negativo y la base lo rechazó (`23514`). Corregido con `Math.max(0, …)` + reintento optimista.
+- Verificado: 188 unit (+8), 72 DB (+6), `check-types` y smoke real **9/9** (Lomo Saltado: 12 → 11 kg, 3 movimientos, reintento sin descontar).
+- Hecho (PR-B2, `feat/aycds-19-combos-promos`): módulo `promotions` con combos (CRUD + **bloqueo anti-inflación** y `precioReferencia`/`ahorro`), cupones (CRUD, código único, validación de porcentaje), `POST /promotions/coupons/:codigo/validate`, `GET /promotions/schedule` con reglas horarias. **`POST /orders` ya no acepta `descuento`**: recibe `cuponCodigo`, el servidor calcula, consume el uso con actualización condicional y registra `canjes_cupones`.
+- Verificado: 216 unit (+26), 72 e2e (+9), 108 web; `check-types` y smoke real **14/14** (combo inflado 400, cupón 10 % sobre 44 → 4.40, orden 39.60, canje registrado, `descuento` inyectado 400).
+- Hecho (PR-C1, `feat/aycds-46-ui-caja`): `lib/cash-api.ts` y `lib/receipts-api.ts` (turno, arqueo, movimientos, cobro, comprobantes) y `CajaView` contra la API: turno y arqueo del servidor, movimientos del turno, historial, apertura/cierre y cobro de comandas `ENTREGADO` con pago parcial y propina. Sin sesión mantiene el demo. 20 tests nuevos en los clientes.
+- **AYCDS-46 queda al 60 %**: falta `ComprobantesView`, que hoy tiene el ciclo SUNAT mock (CDR, resumen diario, contingencia) que la API no expone; sustituirlo perdería esa demo. Decisión pendiente: listar/emitir/anular por API dejando SUNAT como «pendiente de OSE», o esperar la integración real.
+- Verificado: 128 tests web, `check-types`, `lint` y `build` OK.
+- Pendiente: revisión de PR-B1 (11), PR-B2 (19) y PR-C1 (46 parcial); AYCDS-13 espera el merge de la 11; AYCDS-17 (gastos) ya está desbloqueada.
+- Próximo paso: cerrar la parte 2 de la 46 (comprobantes) y luego AYCDS-17.
 
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
