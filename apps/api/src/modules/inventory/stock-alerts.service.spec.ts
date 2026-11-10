@@ -51,12 +51,23 @@ describe('StockAlertsService (AYCDS-13)', () => {
       sucursalId: 's1',
       userId: 'u1',
     },
+    config: { url: string; secret: string } = {
+      url: 'https://n8n.local/webhook/stock',
+      secret: 'secreto',
+    },
   ) {
     return new StockAlertsService(
       prisma as unknown as PrismaService,
       { get: () => ({ ...contexto, tx: undefined }) } as unknown as TenantContextService,
       audit as unknown as AuditService,
-      { get: () => 'fogoneria' } as never,
+      {
+        get: (clave: string) =>
+          clave === 'STOCK_WEBHOOK_URL'
+            ? config.url
+            : clave === 'STOCK_WEBHOOK_SECRET'
+              ? config.secret
+              : 'fogoneria',
+      } as never,
     );
   }
 
@@ -67,8 +78,6 @@ describe('StockAlertsService (AYCDS-13)', () => {
     audit = { record: vi.fn().mockResolvedValue(undefined) };
     fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202 });
     vi.stubGlobal('fetch', fetchMock);
-    process.env.STOCK_WEBHOOK_URL = 'https://n8n.local/webhook/stock';
-    process.env.STOCK_WEBHOOK_SECRET = 'secreto';
   });
 
   describe('semáforo', () => {
@@ -198,8 +207,7 @@ describe('StockAlertsService (AYCDS-13)', () => {
     });
 
     it('sin URL no envía pero registra la alerta', async () => {
-      process.env.STOCK_WEBHOOK_URL = '';
-      const service = buildService();
+      const service = buildService(undefined, { url: '', secret: '' });
       prisma.rls.$queryRawUnsafe.mockResolvedValue([BAJO]);
 
       const resumen = await service.checkAlerts({});

@@ -59,6 +59,8 @@ export interface AlertaResumen {
 export class StockAlertsService {
   private readonly logger = new Logger(StockAlertsService.name);
   private readonly schema: string;
+  private readonly webhookUrl: string;
+  private readonly webhookSecret: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -71,6 +73,9 @@ export class StockAlertsService {
       throw new Error(`DATABASE_SCHEMA inválido: ${schema}`);
     }
     this.schema = schema;
+    // Se leen una sola vez: cambiar la URL exige reiniciar la API, igual que el resto de la config.
+    this.webhookUrl = config.get<string>('STOCK_WEBHOOK_URL') ?? '';
+    this.webhookSecret = config.get<string>('STOCK_WEBHOOK_SECRET') ?? '';
   }
 
   /* ------------------------------- semáforo ------------------------------- */
@@ -281,7 +286,7 @@ export class StockAlertsService {
    * sin `notificado_at` y el siguiente ciclo reintenta.
    */
   private async notificar(empresaId: string, alertas: StockBajo[]): Promise<boolean> {
-    const url = process.env.STOCK_WEBHOOK_URL ?? '';
+    const url = this.webhookUrl;
     if (!url) {
       this.logger.warn(
         `Stock bajo sin STOCK_WEBHOOK_URL: ${alertas.length} alerta(s) registradas`,
@@ -304,7 +309,7 @@ export class StockAlertsService {
       })),
     });
 
-    const secreto = process.env.STOCK_WEBHOOK_SECRET ?? '';
+    const secreto = this.webhookSecret;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'X-Fogoneria-Event': 'stock.alert',
