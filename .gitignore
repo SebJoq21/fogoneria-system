@@ -59,6 +59,8 @@ Thumbs.db
 # Misc
 *.pem
 
+# Respaldos locales (nunca se commitean)
+ops/backups/
 # Smoke local (scripts temporales de verificación, no se commitean)
 smoke-*.tmp.mjs
 
