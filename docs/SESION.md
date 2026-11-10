@@ -10,8 +10,11 @@
 - Verificado: 188 unit (+8), 72 DB (+6), `check-types` y smoke real **9/9** (Lomo Saltado: 12 → 11 kg, 3 movimientos, reintento sin descontar).
 - Hecho (PR-B2, `feat/aycds-19-combos-promos`): módulo `promotions` con combos (CRUD + **bloqueo anti-inflación** y `precioReferencia`/`ahorro`), cupones (CRUD, código único, validación de porcentaje), `POST /promotions/coupons/:codigo/validate`, `GET /promotions/schedule` con reglas horarias. **`POST /orders` ya no acepta `descuento`**: recibe `cuponCodigo`, el servidor calcula, consume el uso con actualización condicional y registra `canjes_cupones`.
 - Verificado: 216 unit (+26), 72 e2e (+9), 108 web; `check-types` y smoke real **14/14** (combo inflado 400, cupón 10 % sobre 44 → 4.40, orden 39.60, canje registrado, `descuento` inyectado 400).
-- Pendiente: revisión y merge de PR-B1 (11) y PR-B2 (19); después AYCDS-13 (semáforo, depende de 11) y AYCDS-17 (gastos, depende de caja ya mergeada).
-- Próximo paso: con la 11 mergeada, abrir `feat/aycds-13-semaforo-stock`.
+- Hecho (PR-C1, `feat/aycds-46-ui-caja`): `lib/cash-api.ts` y `lib/receipts-api.ts` (turno, arqueo, movimientos, cobro, comprobantes) y `CajaView` contra la API: turno y arqueo del servidor, movimientos del turno, historial, apertura/cierre y cobro de comandas `ENTREGADO` con pago parcial y propina. Sin sesión mantiene el demo. 20 tests nuevos en los clientes.
+- **AYCDS-46 queda al 60 %**: falta `ComprobantesView`, que hoy tiene el ciclo SUNAT mock (CDR, resumen diario, contingencia) que la API no expone; sustituirlo perdería esa demo. Decisión pendiente: listar/emitir/anular por API dejando SUNAT como «pendiente de OSE», o esperar la integración real.
+- Verificado: 128 tests web, `check-types`, `lint` y `build` OK.
+- Pendiente: revisión de PR-B1 (11), PR-B2 (19) y PR-C1 (46 parcial); AYCDS-13 espera el merge de la 11; AYCDS-17 (gastos) ya está desbloqueada.
+- Próximo paso: cerrar la parte 2 de la 46 (comprobantes) y luego AYCDS-17.
 
 ## 2026-11-06 — Fase A (S11-S12): 30 y 36 listas para revisión
 
