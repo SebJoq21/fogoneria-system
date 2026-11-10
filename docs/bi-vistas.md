@@ -45,6 +45,15 @@ Regla: **toda vista nueva en este esquema se crea con `security_invoker = true`.
 Lo cubre `apps/api/test/db/bi.db-spec.ts`: sin contexto de sesión devuelve 0 filas y
 con el contexto de la empresa A no aparece la empresa B.
 
+## Consumo desde la API (AYCDS-35)
+
+`src/modules/bi` expone `GET /bi/pnl`, `GET /bi/pnl/daily`, `GET /bi/top-dishes` y
+`GET /bi/sales-by-method` (solo `ADMIN_GLOBAL` y `GERENTE_SUCURSAL`). Consultan las
+vistas con SQL crudo **dentro de la transacción del request**: como son
+`security_invoker`, fuera de esa transacción devolverían 0 filas, y es justo la
+garantía de aislamiento. El rango es obligatorio (≤366 días) y la sucursal sale del
+token; `ADMIN_GLOBAL` puede omitirla para el agregado de la empresa.
+
 ## Rendimiento
 
 Las vistas no crean índices nuevos: `idx_ordenes_tenant_fecha`,
