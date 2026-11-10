@@ -6,7 +6,6 @@ import {
   IsArray,
   IsEnum,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   IsUUID,
@@ -83,11 +82,15 @@ export class CreateOrderDto {
   @IsUUID()
   listaPrecioId?: string;
 
-  @ApiPropertyOptional({ example: 0 })
+  @ApiPropertyOptional({
+    example: 'VERANO20',
+    description:
+      'Código del cupón. El descuento lo calcula el servidor: el cliente no manda importes.',
+  })
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  descuento?: number;
+  @IsString()
+  @MaxLength(40)
+  cuponCodigo?: string;
 
   @ApiProperty({ type: [OrderItemDto] })
   @IsArray()

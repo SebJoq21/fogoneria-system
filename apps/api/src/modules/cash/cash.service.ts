@@ -369,6 +369,57 @@ export class CashService {
     };
   }
 
+  /**
+   * Egreso de caja por el pago de un gasto (AYCDS-17).
+   *
+   * Vive aquí y no en `ExpensesService` para que el turno abierto y las reglas
+   * de `movimientos_caja` se validen en un solo sitio. El movimiento queda
+   * ligado al gasto con `gasto_id`, así el arqueo lo muestra y la auditoría lo
+   * puede rastrear.
+   */
+  async egresoDeGasto(
+    sucursalId: string,
+    input: {
+      concepto: string;
+      monto: number;
+      gastoId: string;
+      actorId?: string | null;
+    },
+  ) {
+    const { empresaId, userId } = this.tenant();
+    const turno = await this.turnoAbierto(sucursalId);
+
+    const movimiento = await this.prisma.scoped.movimientos_caja.create({
+      data: {
+        empresa_id: empresaId,
+        turno_id: turno.id,
+        tipo: 'EGRESO',
+        concepto: input.concepto.slice(0, 200),
+        monto: input.monto,
+        metodo: 'EFECTIVO',
+        gasto_id: input.gastoId,
+        actor_id: input.actorId ?? userId,
+      },
+    });
+
+    await this.audit.record({
+      empresaId,
+      sucursalId,
+      usuarioId: input.actorId ?? userId,
+      accion: 'caja.egreso',
+      entidad: 'movimientos_caja',
+      entidadId: movimiento.id,
+      detalle: {
+        concepto: input.concepto,
+        monto: input.monto,
+        gastoId: input.gastoId,
+        turnoId: turno.id,
+      },
+    });
+
+    return { movimiento, turno };
+  }
+
   /** Arqueo del turno: totales, esperado en efectivo y diferencia. */
   async arqueoDe(turnoId: string, fondo: number) {
     const movimientos = await this.prisma.scoped.movimientos_caja.findMany({
