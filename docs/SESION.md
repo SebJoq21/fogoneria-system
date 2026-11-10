@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-06 — AYCDS-17 (gastos → caja) lista para revisión
+
+- Objetivo: avanzar la siguiente tarea de David de S13–S14 sin esperar merges.
+- Hecho (PR-D1, `feat/aycds-17-gastos`): módulo `expenses` con listado (estado, categoría, vencidos, sucursal), resumen (por pagar, vencido, pagado del mes), alta, edición y **pago**. En efectivo el egreso entra en `movimientos_caja` con `gasto_id` vía `CashService.egresoDeGasto` (turno abierto obligatorio); con tarjeta/transferencia/Yape solo cambia el estado. Un gasto pagado en caja no se edita (409, y `DB_GASTO_PAGADO` en la base) ni se borra.
+- Verificado: 193 unit (+13), 71 e2e (+8), 71 DB (+5), `check-types` y smoke real **16/16** (gasto 120 en efectivo → esperado de caja 380 y diferencia 0; transferencia sin movimiento; doble pago 409; edición de pagado 409; resumen 600 del mes).
+- Nota: la ficha de S13–S14 vive en la rama del PR #28 (aún abierta); al mergearse se actualiza la fila de AYCDS-17 allí.
+- Pendiente: revisión de #28 (11), #29 (19), #30 (46 parte 1) y este; AYCDS-13 espera el merge de la 11.
+- Próximo paso: AYCDS-13 (semáforo + webhook) al mergear la 11, o la parte 2 de la 46.
 ## 2026-11-06 — S11-S12 cerrado y arranque de S13-S14 (kardex)
 
 - Objetivo: cerrar la Fase A y empezar las tareas de David de S13–S14.

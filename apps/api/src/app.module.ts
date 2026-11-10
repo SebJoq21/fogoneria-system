@@ -26,6 +26,7 @@ import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { ReceiptsModule } from './modules/receipts/receipts.module.js';
 import { PromotionsModule } from './modules/promotions/promotions.module.js';
 import { CashModule } from './modules/cash/cash.module.js';
+import { ExpensesModule } from './modules/expenses/expenses.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { CashModule } from './modules/cash/cash.module.js';
     RealtimeModule,
     ReceiptsModule,
     CashModule,
+    ExpensesModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
