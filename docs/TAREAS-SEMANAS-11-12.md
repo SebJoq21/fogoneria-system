@@ -10,9 +10,9 @@
 |---|---|
 | Tareas del rango | **7** |
 | Cerradas (Listo) | **5** |
-| En curso | **1** |
+| En revisión | **1** |
 | Por hacer | **1** |
-| Avance global (promedio simple) | **80%** |
+| Avance global (promedio simple) | **86%** |
 
 **Diagnóstico:** las órdenes ya se crean con precio de servidor (`20`), se optimizaron a p95 ~307 ms (`22`) y el KDS recibe eventos en vivo (`14`). Falta lo que convierte la comanda en dinero y en cocina medida: el **tablero con SLA** de la `30`, el **turno de caja** de la `34`, el **comprobante con correlativo y reversión** de la `36`, y las dos **UI** que los consumen (`41` y `46`). El esquema ya tiene `turnos_caja`, `movimientos_caja`, `comprobantes` (`serie_numero` único por empresa), `secuencias` y `ordenes.alerta_sla`: no hace falta modelo nuevo, sí módulos.
 
@@ -25,16 +25,13 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | Listo | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | Endpoint de tablero, cálculo de SLA y alerta, tests y `EXPLAIN` |
-| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Por hacer | 0% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | Triggers de reversión de caja/kardex/puntos y sus tests DB |
-| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Por hacer | 0% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
-| AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | En revisión | 100% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
-| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Por hacer | 0% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
-| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | En revisión | 100% | `turnos_caja`, `movimientos_caja` (tipo INGRESO/EGRESO), `metodo_pago`, `canOperateCash` en la web | Módulo `caja` (abrir/cerrar, movimientos, arqueo), `ordenes.propina`, RBAC y auditoría |
-| AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Por hacer | 0% | Tabla `comprobantes` con `serie_numero` único por empresa, `secuencias`, IGV en `domain.ts`, `MockFacturacionAdapter` en la web | Módulo `comprobantes`: correlativo por serie, emisión, anulación en cascada y listado |
-| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | En revisión | 100% | `OrdersView` con columnas, canal en vivo y `useNow` | Consumir `/orders/board`, badge de SLA y contadores por columna |
-| AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | En curso | 60% | `CajaView` (445 líneas, mock) y `ComprobantesView` (534 líneas, mock) | `lib/cash-api.ts` y `lib/receipts-api.ts`, conectar ambas vistas y confirmar acciones |
-| AYCDS-50 | [42.0] Auditoría CT-FG-03 acta mensual 2 | 12 | Sebastián Chicata | Por hacer | 0% | Acta anterior (`docs/acta-qa-aycds-66.md`) | Evidencia de caja/comprobantes y firma |
+| AYCDS-30 | [36.0] API KDS columnas + SLA 20min | 11 | David Piñarreta | Listo | 100% | `ordenes.estado` + `confirmacion_at`/`listo_at`/`alerta_sla`, evento `order.updated`, `idx_ordenes_tenant_sucursal_estado` | — |
+| AYCDS-39 | [39.0] ACID financiero triggers reversión | 11 | Sonny De La Cruz | Listo | 100% | Trigger `trg_ordenes_inmutable`, `comprobantes.estado = ANULADA`, inmutabilidad contable | — |
+| AYCDS-34 | [37.0] API caja turnos ingresos-egresos | 11 | David Piñarreta | Listo | 100% | `turnos_caja`, `movimientos_caja`, `metodo_pago`, `canOperateCash` en la web | — |
+| AYCDS-36 | [38.0] API comprobantes correlativo y reversión | 12 | David Piñarreta | Listo | 100% | Tabla `comprobantes`, `secuencias`, IGV derivado | — |
+| AYCDS-41 | [40.0] UI KDS Kanban alertas SLA | 11 | Joshua Chávez | Listo | 100% | `OrdersView` con columnas, canal en vivo y `useNow` | — |
+| AYCDS-46 | [41.0] UI caja y comprobantes emisión-anulación | 12 | Diego Arévalo | En revisión | 100% | `CajaView` y `ComprobantesView` contra `cash-api`/`receipts-api`; SUNAT queda «pendiente de OSE» | Revisión del PR |
+| AYCDS-50 | [42.0] Auditoría CT-FG-03 acta mensual 2 | 12 | Sebastián Chicata | Por hacer | 0% | Acta anterior (`docs/acta-qa-aycds-66.md`) y la evidencia de caja/comprobantes ya lista | Evidencia de la corrida y firma |
 
 ## 3. Fichas por tarea
 
@@ -117,14 +114,18 @@
 
 ### AYCDS-46 — [41.0] UI caja y comprobantes emisión-anulación
 
-- **Semana:** 12 · **Responsable:** Diego Arévalo · **Estado Jira:** En curso · **Avance:** 60 %
+- **Semana:** 12 · **Responsable:** Diego Arévalo · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Qué se hizo (parte 1 — caja):**
   1. `lib/cash-api.ts`: turno actual, apertura, cierre con arqueo, movimientos y cobro; traducciones de método (Plin → Yape) y de tipo.
   2. `lib/receipts-api.ts`: listado con filtros, detalle con IGV, emisión y anulación; `fechaLima` y código SUNAT del tipo.
   3. `CajaView` contra la API con sesión: turno y arqueo del servidor, movimientos del turno, historial de turnos cerrados, apertura/cierre y **cobro de comandas `ENTREGADO`** con pago parcial y propina (`POST /cash/charges`). Sin sesión mantiene el estado local del demo.
   4. Tests: 20 nuevos en los dos clientes (queries, cuerpos, traducciones, fecha de Lima).
-- **Falta (parte 2 — comprobantes):** `ComprobantesView` contra la API. Se deja aparte a propósito: la vista actual tiene el ciclo SUNAT mock (CDR, resumen diario, contingencia) que la API todavía no expone, y sustituirla entera perdería esa demo. La parte 2 debe decidir entre (a) listar/emitir/anular por API dejando la columna SUNAT como «pendiente de OSE», o (b) esperar a la integración SUNAT real.
-- **Criterio de aceptación:** caja y comprobantes operan contra la API, sin `localStorage`. **Caja cumplida**; comprobantes pendiente.
+- **Qué se hizo (parte 2 — comprobantes):**
+  1. `ComprobantesView` lista, emite y anula contra `receipts-api` cuando hay sesión; sin sesión conserva el flujo demo.
+  2. La emisión **solo** acepta una comanda `PAGADA` (selector de comandas cobradas); el importe lo pone el servidor.
+  3. La columna SUNAT muestra **«Pendiente de OSE»**: se retiró la simulación de CDR/resumen/contingencia en modo API (siguen solo en el demo). Decisión: no fingir un ciclo tributario que la API no tiene.
+  4. `lib/receipt-mapping.ts` + 7 tests del mapeo (IGV derivado, factura/boleta, anulada con motivo, sin cliente, sin orden).
+- **Criterio de aceptación:** caja y comprobantes operan contra la API, sin `localStorage`. **Cumplido.**
 - **Depende de:** **AYCDS-34** y **AYCDS-36**.
 
 ### AYCDS-50 — [42.0] Auditoría CT-FG-03 acta mensual 2

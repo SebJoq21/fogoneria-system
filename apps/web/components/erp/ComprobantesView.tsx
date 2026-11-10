@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, Textarea, TextInput } from "@/components/ui/fields";
@@ -23,10 +23,14 @@ import {
   splitIgv,
 } from "@/lib/domain";
 import type { Receipt, ReceiptType } from "@/lib/erp";
+import { listOrders, type ApiOrder } from "@/lib/orders-api";
+import { createReceipt, listReceipts, voidReceipt } from "@/lib/receipts-api";
+import { receiptsFromApi } from "@/lib/receipt-mapping";
 
 /** Comprobantes: boletas, facturas y notas de crédito con ciclo de vida SUNAT. */
 export function ComprobantesView() {
   const {
+    hasSession,
     receipts,
     setReceipts,
     annulReceipt,
@@ -38,6 +42,11 @@ export function ComprobantesView() {
   } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [cdrTarget, setCdrTarget] = useState<Receipt | null>(null);
+  const [apiRows, setApiRows] = useState<Receipt[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [paidOrders, setPaidOrders] = useState<ApiOrder[]>([]);
+  const [ordenId, setOrdenId] = useState("");
   const [form, setForm] = useState({
     customer: "",
     total: "",
@@ -49,9 +58,47 @@ export function ComprobantesView() {
   const [annulTarget, setAnnulTarget] = useState<Receipt | null>(null);
   const [motivo, setMotivo] = useState("");
   const [tab, setTab] = useState<"panel" | "gestion">("panel");
-  const summary = useMemo(() => comprobantesSummary(receipts), [receipts]);
 
-  const bajasPendientes = receipts.filter(
+  /** Con sesión, los comprobantes salen de la API; sin sesión, del demo local. */
+  const refresh = useCallback(async (signal?: AbortSignal) => {
+    if (!hasSession) return;
+    setApiLoading(true);
+    setApiError(null);
+    try {
+      const [lista, pagadas] = await Promise.all([
+        listReceipts({ limit: 100, signal }),
+        listOrders({ estado: "PAGADA", limit: 50, signal }),
+      ]);
+      setApiRows(receiptsFromApi(lista.items));
+      setPaidOrders(pagadas.items);
+    } catch (error) {
+      if (signal?.aborted) return;
+      setApiError(
+        error instanceof Error ? error.message : "No se pudieron cargar los comprobantes.",
+      );
+    } finally {
+      if (!signal?.aborted) setApiLoading(false);
+    }
+  }, [hasSession]);
+
+  useEffect(() => {
+    if (!hasSession) return;
+    const controller = new AbortController();
+    // Diferido al siguiente tick: el efecto no debe disparar renders en
+    // cascada (regla `react-hooks/set-state-in-effect`), igual que CajaView.
+    const timer = setTimeout(() => {
+      void refresh(controller.signal);
+    }, 0);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [hasSession, refresh]);
+
+  const rows = hasSession ? apiRows : receipts;
+  const summary = useMemo(() => comprobantesSummary(rows), [rows]);
+
+  const bajasPendientes = rows.filter(
     (r) => r.type === "03" && r.status === "Anulada" && r.bajaResumenId === "RC-pendiente",
   ).length;
 
@@ -64,10 +111,38 @@ export function ComprobantesView() {
     form.docType === "" ||
     (form.docType === "1" ? isValidDni(form.docNumber) : isValidRuc(form.docNumber));
   const typeOk = form.receiptType === "03" || form.docType === "6";
-  const canEmit = form.customer.trim() !== "" && Number(form.total) > 0 && docOk && typeOk;
+  /** Con API se emite sobre una comanda PAGADA; el importe lo pone el servidor. */
+  const canEmit = hasSession
+    ? Boolean(ordenId) && docOk && typeOk
+    : form.customer.trim() !== "" && Number(form.total) > 0 && docOk && typeOk;
 
-  const emit = () => {
+  const emit = async () => {
     if (!canEmit) return;
+
+    if (hasSession) {
+      try {
+        const { comprobante } = await createReceipt({
+          ordenId,
+          tipo: form.receiptType === "01" ? "FACTURA" : "BOLETA",
+          ...(form.docNumber ? { clienteRef: form.docNumber } : {}),
+        });
+        notify(
+          "Comprobante emitido",
+          `${comprobante.serie_numero} sobre ${comprobante.orden_id.slice(0, 8)}.`,
+        );
+        setModalOpen(false);
+        setOrdenId("");
+        setForm({ customer: "", total: "", source: "", receiptType: "03", docType: "", docNumber: "" });
+        await refresh();
+      } catch (error) {
+        notify(
+          "No se pudo emitir",
+          error instanceof Error ? error.message : "Revisa la comanda y vuelve a intentar.",
+        );
+      }
+      return;
+    }
+
     const total = Number(form.total);
     const { subtotal, igv } = splitIgv(total);
     const at = nowIso();
@@ -99,8 +174,28 @@ export function ComprobantesView() {
     setForm({ customer: "", total: "", source: "", receiptType: "03", docType: "", docNumber: "" });
   };
 
-  const annul = () => {
+  const annul = async () => {
     if (!annulTarget || !motivo.trim()) return;
+
+    if (hasSession) {
+      try {
+        await voidReceipt(annulTarget.id, motivo.trim());
+        notify(
+          "Comprobante anulado",
+          `${annulTarget.id} · la reversión de caja y stock la aplica la base.`,
+        );
+        setAnnulTarget(null);
+        setMotivo("");
+        await refresh();
+      } catch (error) {
+        notify(
+          "No se pudo anular",
+          error instanceof Error ? error.message : "Vuelve a intentar.",
+        );
+      }
+      return;
+    }
+
     annulReceipt(annulTarget.id, motivo.trim());
     notify("Comprobante anulado", `${annulTarget.id} · reverso de caja registrado.`);
     setAnnulTarget(null);
@@ -174,43 +269,51 @@ export function ComprobantesView() {
           <Toolbar
             left={
               <p className="text-sm text-ink-400">
-                {receipts.length} comprobantes. Series B001 / F001 / NC01 ·{" "}
-                {bajasPendientes > 0
-                  ? `${bajasPendientes} baja(s) pendiente(s) de resumen diario.`
-                  : "sin bajas pendientes."}
+                {rows.length} comprobantes. Series B001 / F001 / T001 ·{" "}
+                {hasSession
+                  ? apiLoading
+                    ? "cargando…"
+                    : (apiError ?? "SUNAT pendiente de OSE.")
+                  : bajasPendientes > 0
+                    ? `${bajasPendientes} baja(s) pendiente(s) de resumen diario.`
+                    : "sin bajas pendientes."}
               </p>
             }
             right={
               <div className="flex flex-wrap gap-2 justify-end">
-                <Button
-                  variant="secondary"
-                  disabled={bajasPendientes === 0}
-                  onClick={() => {
-                    const res = generarResumenDiario();
-                    if (res) {
-                      notify(
-                        "Resumen diario generado",
-                        `${res.resumenId} · ${res.count} baja(s) comunicada(s).`,
-                      );
-                    }
-                  }}
-                >
-                  Resumen diario ({bajasPendientes})
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    toggleSunatContingencia();
-                    notify(
-                      sunatContingencia ? "Contingencia desactivada" : "Contingencia activada",
-                      sunatContingencia
-                        ? "El envío a SUNAT vuelve a estar disponible."
-                        : "Los CPE quedarán en cola: la venta no se detiene.",
-                    );
-                  }}
-                >
-                  Contingencia SUNAT: {sunatContingencia ? "ON" : "OFF"}
-                </Button>
+                {!hasSession && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={bajasPendientes === 0}
+                      onClick={() => {
+                        const res = generarResumenDiario();
+                        if (res) {
+                          notify(
+                            "Resumen diario generado",
+                            `${res.resumenId} · ${res.count} baja(s) comunicada(s).`,
+                          );
+                        }
+                      }}
+                    >
+                      Resumen diario ({bajasPendientes})
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        toggleSunatContingencia();
+                        notify(
+                          sunatContingencia ? "Contingencia desactivada" : "Contingencia activada",
+                          sunatContingencia
+                            ? "El envío a SUNAT vuelve a estar disponible."
+                            : "Los CPE quedarán en cola: la venta no se detiene.",
+                        );
+                      }}
+                    >
+                      Contingencia SUNAT: {sunatContingencia ? "ON" : "OFF"}
+                    </Button>
+                  </>
+                )}
                 <Button onClick={() => setModalOpen(true)}>
                   + Emitir comprobante
                 </Button>
@@ -233,7 +336,7 @@ export function ComprobantesView() {
                 </tr>
               </THead>
               <tbody>
-                {receipts.map((r) => {
+                {rows.map((r) => {
                   const sunat = sunatLabels[r.estadoSunat];
                   return (
                     <TR key={r.id}>
@@ -260,16 +363,25 @@ export function ComprobantesView() {
                         </Badge>
                       </TD>
                       <TD nowrap>
-                        <Badge tone={sunat.tone} dot>
-                          {sunat.label}
-                        </Badge>
-                        {r.bajaResumenId && (
-                          <span className="text-xs text-ink-400 block mt-0.5">{r.bajaResumenId}</span>
+                        {hasSession ? (
+                          <Badge tone="neutral" dot>
+                            Pendiente de OSE
+                          </Badge>
+                        ) : (
+                          <>
+                            <Badge tone={sunat.tone} dot>
+                              {sunat.label}
+                            </Badge>
+                            {r.bajaResumenId && (
+                              <span className="text-xs text-ink-400 block mt-0.5">{r.bajaResumenId}</span>
+                            )}
+                          </>
                         )}
                       </TD>
                       <TD right nowrap>
                         <span className="flex items-center gap-3 justify-end">
-                          {r.status !== "Anulada" &&
+                          {!hasSession &&
+                            r.status !== "Anulada" &&
                             (r.estadoSunat === "en_cola" || r.estadoSunat === "rechazado") && (
                               <button
                                 type="button"
@@ -279,7 +391,7 @@ export function ComprobantesView() {
                                 {r.estadoSunat === "rechazado" ? "Reenviar" : "Enviar"}
                               </button>
                             )}
-                          {r.cdr && (
+                          {!hasSession && r.cdr && (
                             <button
                               type="button"
                               onClick={() => setCdrTarget(r)}
@@ -422,7 +534,7 @@ export function ComprobantesView() {
       {modalOpen && (
         <Modal
           onClose={() => setModalOpen(false)}
-          title={`Emitir comprobante · ${nextNumber}`}
+          title={hasSession ? "Emitir comprobante" : `Emitir comprobante · ${nextNumber}`}
           footer={
             <>
               <Button variant="ghost" onClick={() => setModalOpen(false)}>
@@ -495,37 +607,65 @@ export function ComprobantesView() {
                 </Field>
               </div>
             )}
-            <div>
-              <Field label="Cliente">
-                <TextInput
-                  type="text"
-                  value={form.customer}
-                  onChange={(e) => setForm({ ...form, customer: e.target.value })}
-                  placeholder="Ej. Mesa 4"
-                />
-              </Field>
-            </div>
-            <div>
-              <Field label="Total ($)" hint="Incluye IGV 18%; se desglosa al emitir.">
-                <TextInput
-                  type="number"
-                  value={form.total}
-                  onChange={(e) => setForm({ ...form, total: e.target.value })}
-                  placeholder="0.00"
-                  className="tnum"
-                />
-              </Field>
-            </div>
-            <div className="sm:col-span-2">
-              <Field label="Origen">
-                <TextInput
-                  type="text"
-                  value={form.source}
-                  onChange={(e) => setForm({ ...form, source: e.target.value })}
-                  placeholder="Ej. Orden #PD-1043"
-                />
-              </Field>
-            </div>
+            {hasSession ? (
+              <div className="sm:col-span-2">
+                <Field
+                  label="Comanda cobrada"
+                  hint="Solo se emite sobre una comanda PAGADA; el importe lo pone el servidor."
+                >
+                  <Select
+                    value={ordenId}
+                    onChange={(e) => setOrdenId(e.target.value)}
+                  >
+                    <option value="">Selecciona una comanda</option>
+                    {paidOrders.map((orden) => (
+                      <option key={orden.id} value={orden.id}>
+                        {orden.numero_orden} · {fmtMoney(Number(orden.total))}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {paidOrders.length === 0 && (
+                  <p className="text-xs text-ink-400 mt-1">
+                    No hay comandas cobradas sin comprobante. Cobra en Caja y vuelve aquí.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Field label="Cliente">
+                    <TextInput
+                      type="text"
+                      value={form.customer}
+                      onChange={(e) => setForm({ ...form, customer: e.target.value })}
+                      placeholder="Ej. Mesa 4"
+                    />
+                  </Field>
+                </div>
+                <div>
+                  <Field label="Total ($)" hint="Incluye IGV 18%; se desglosa al emitir.">
+                    <TextInput
+                      type="number"
+                      value={form.total}
+                      onChange={(e) => setForm({ ...form, total: e.target.value })}
+                      placeholder="0.00"
+                      className="tnum"
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Origen">
+                    <TextInput
+                      type="text"
+                      value={form.source}
+                      onChange={(e) => setForm({ ...form, source: e.target.value })}
+                      placeholder="Ej. Orden #PD-1043"
+                    />
+                  </Field>
+                </div>
+              </>
+            )}
           </div>
         </Modal>
       )}
