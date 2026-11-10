@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-10 — Cierre de S11–S16: 46 p2, filtro de errores y acta 50
+
+- Objetivo: cerrar las tareas que quedaban en revisión y dejar el sistema listo para el acta.
+- **Merges:** #36 (35 BI), #37 (13 semáforo) y #38 (46 p2). Jira **46 → Listo** y **13 → Listo**; comentario de corrección en 39.
+- **46 p2 (PR #38):** `ComprobantesView` lista/emite/anula contra `/receipts`; emisión solo sobre comanda `PAGADA` con importe del servidor; SUNAT «pendiente de OSE» (sin CDR simulado, el mock queda en demo). `lib/receipt-mapping.ts` + 7 tests.
+- **Bug encontrado y corregido (PR #38):** anular sin turno de caja devolvía **500** (`DB_REVERSION_SIN_TURNO`). Nuevo `DatabaseExceptionFilter` global que mapea los `DB_*` de `docs/errores-db.md` a 409/422/404/403 y RLS `42501` a 403; solo atrapa errores de Prisma.
+- **AYCDS-50 (acta):** `docs/acta-qa-aycds-50.md` con matriz CT-FG-03, evidencia por PR, smoke de cierre y 5 hallazgos; firma de Sebastián pendiente. TAREAS S11–S12 al **100 %**.
+- Verificado en `development` (`b34bfd7`): api **297** unit, **112** e2e, **109** DB; web **135**; lint/types/build OK; smoke 46 p2 **8/8**.
+- Próximo paso: PR del acta; después quedan las tareas de UI/QA del equipo (24, 27, 40, 45, 49, 52).
+
 ## 2026-11-10 — Merges de S13–S16, AYCDS-13 y arranque del cierre
 
 - Objetivo: cerrar la revisión pendiente y seguir con la última tarea de API de S13–S14.
