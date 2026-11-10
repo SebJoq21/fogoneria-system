@@ -87,6 +87,8 @@ src/
     tables/       mesas por sucursal + bloqueo/liberación
     reservations/ reservas con aforo, solapamiento y estados
     orders/       órdenes con transiciones de estado
+    inventory/    kardex por escandallo al entregar (descuenta stock)
+    promotions/   combos con precio fijo, cupones y reglas horarias
     realtime/     gateway Socket.io /orders (eventos de comanda y mesa)
     catalog/      categorías, platos, grupos/opciones de modificadores
     pricing/      listas de precios y precios por plato
@@ -133,6 +135,9 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | GET | `/expenses`, `/expenses/summary` | admin, sucursal, cajero |
 | POST/PATCH | `/expenses`, `/expenses/:id` | admin, sucursal |
 | POST | `/expenses/:id/pay` | admin, sucursal, cajero |
+| GET/POST | `/promotions/combos`, `/promotions/coupons` | autenticado (escritura: admin, sucursal) |
+| POST | `/promotions/coupons/:codigo/validate` | autenticado |
+| GET | `/promotions/schedule` | autenticado |
 | GET/POST | `/cash/shifts`, `/cash/shifts/current`, `/cash/movements` | admin, sucursal, cajero |
 | PATCH | `/cash/shifts/:id/close` | admin, sucursal, cajero |
 | POST | `/cash/charges` | admin, sucursal, cajero |
@@ -185,6 +190,14 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - `PATCH /expenses/:id` edita solo si el gasto **no** se pagó en caja; si ya salió de caja responde **409** (la base lo bloquea con `DB_GASTO_PAGADO`).
 - `POST /expenses/:id/pay` con **EFECTIVO** exige turno abierto y deja el `EGRESO` en `movimientos_caja` con `gasto_id`; con tarjeta, transferencia o Yape solo cambia el estado y **no** toca el arqueo.
 - Un gasto pagado dos veces responde **409**: el egreso no se duplica. No hay borrado: se compensa con otro movimiento.
+## Combos y promociones (AYCDS-19)
+
+- `GET /promotions/combos` devuelve los combos con `precioReferencia` (suma de sus platos a la lista activa) y `ahorro`.
+- `POST/PATCH /promotions/combos` valida el **bloqueo anti-inflación**: el `precio_fijo` no puede superar la suma de sus platos. Si la lista activa no tiene precio de algún plato, la comprobación se omite.
+- `GET/POST/PATCH/DELETE /promotions/coupons`: código único por empresa, tipo (`PORCENTAJE`/`MONTO`), valor, límite de usos y vencimiento.
+- `POST /promotions/coupons/:codigo/validate` calcula el descuento **sin consumir** el cupón (lo usa la UI antes de cobrar).
+- `GET /promotions/schedule` lista las reglas horarias activas y si aplican ahora (día y hora de Lima; soporta ventanas que cruzan medianoche).
+- **`POST /orders` ya no acepta `descuento`**: recibe `cuponCodigo`. El servidor valida, calcula el importe, incrementa `usos_actuales` con actualización condicional y registra `canjes_cupones`. Un importe enviado por el cliente da 400.
 
 ## Caja y cobro (AYCDS-34)
 
