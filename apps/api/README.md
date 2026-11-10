@@ -132,6 +132,10 @@ Prefijo global: `/api/v1`. Documentación Swagger: `/api/docs`.
 | POST/PATCH/DELETE | `/catalog/*` | admin, sucursal |
 | GET | `/pricing/price-lists`, `/pricing/resolve` | autenticado |
 | POST/PATCH/DELETE | `/pricing/price-lists/*` | admin, sucursal |
+| GET | `/staff/employees`, `/staff/shifts`, `/staff/attendance`, `/staff/tips` | autenticado |
+| POST/DELETE | `/staff/shifts`, `/staff/shifts/:id` | admin, sucursal |
+| POST | `/staff/attendance` | admin, sucursal, cajero |
+| POST | `/staff/tips/calculate`, `/staff/tips/:id/confirm` | admin, sucursal |
 | GET/POST | `/crm/customers`, `/crm/config` | autenticado (escritura: admin, sucursal, cajero, mesero) |
 | POST | `/crm/customers/:id/points`, `/crm/process` | admin, sucursal |
 | GET | `/expenses`, `/expenses/summary` | admin, sucursal, cajero |
@@ -185,6 +189,13 @@ La colección Postman está en `docs/postman/fogoneria-api.postman_collection.js
 - La respuesta incluye el desglose de IGV (`base = total / 1.18`), derivado y no persistido, porque el total de la comanda ya lo incluye.
 - `POST /receipts/:id/void` anula con motivo obligatorio (estado `ANULADA` + actor + fecha). **La reversión de caja y stock la hacen los triggers de AYCDS-39**; el servicio no la duplica. Una segunda anulación responde 409.
 - `GET /receipts?fecha&tipo&estado&sucursalId` filtra por el día completo en hora de Lima.
+## RRHH: turnos, asistencia y propinas (AYCDS-33)
+
+- `GET /staff/employees` lista el personal de la sucursal con su rol.
+- `GET/POST/DELETE /staff/shifts` gestiona el plan del día (empleado + fecha + bloque); un empleado no puede repetir bloque el mismo día (409).
+- `POST /staff/attendance` marca la asistencia con upsert por `(empleado, fecha)`: corregir una marcación no duplica.`r
+- `POST /staff/tips/calculate` suma `ordenes.propina` del día y reparte entre los `PRESENTE`/`TARDANZA`; el reparto es exacto al céntimo y hay un pozo por sucursal y día (409 si se repite).`r
+- `POST /staff/tips/:id/confirm` marca el pozo como `REPARTIDO` (idempotente).
 ## CRM y fidelización (AYCDS-31)
 
 - `GET /crm/customers` filtra por segmento (`NUEVO`/`FRECUENTE`/`VIP`) y busca por nombre o teléfono; `GET /crm/customers/:id` trae la ficha con sus últimos movimientos y `/points` el historial.
