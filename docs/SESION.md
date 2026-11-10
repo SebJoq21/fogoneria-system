@@ -7,8 +7,8 @@
 - **AYCDS-13** (rama `feat/aycds-13-semaforo-stock`): `GET /inventory/stock` (semáforo desde `v_stock_bajo`), `POST /inventory/alerts/check` y cron cada 10 min; tabla `alertas_stock` (una alerta vigente por insumo y sucursal, se borra al reponer) y webhook HMAC `X-Fogoneria-Signature`. Sin `STOCK_WEBHOOK_URL` no envía: deja `notificado_at = null` y auditoría.
 - **Code review de la 13:** URL y secreto pasan de `process.env` a `ConfigService` (se leen una vez, igual que `DATABASE_SCHEMA`); los tests inyectan la config.
 - Verificado (13): 12 unit, 5 e2e, 6 DB y smoke real 13/13; `migrate deploy` en `fogoneria_test` y `fogoneria_db`.
-- 46 parte 2: se implementa con la API real y SUNAT queda como «pendiente de OSE» (no se conserva el mock CDR en la vista).
-- Próximo paso: mergear #37 y cerrar 46 p2 + 50 (acta).
+- 46 parte 2 **hecha**: `ComprobantesView` lista, emite (solo comanda `PAGADA`) y anula contra `/receipts`; SUNAT visible como «pendiente de OSE», sin CDR simulado. `lib/receipt-mapping.ts` + 7 tests. 135 web tests, lint, types y build OK.
+- Próximo paso: mergear #37 (hecho) y el PR de la 46 p2; después 50 (acta).
 
 ## 2026-11-07 — AYCDS-35 (API de BI) implementada, en espera de #38
 

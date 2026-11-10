@@ -1,5 +1,6 @@
 import { ValidationPipe, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DatabaseExceptionFilter } from './common/filters/database-exception.filter.js';
 
 /** Configuración compartida entre main.ts y los tests e2e. */
 export function configureApp(app: INestApplication): void {
@@ -12,6 +13,8 @@ export function configureApp(app: INestApplication): void {
       .map((origin) => origin.trim()),
     credentials: true,
   });
+  // Un DB_* de los triggers es una regla de negocio (409/422), no un 500.
+  app.useGlobalFilters(new DatabaseExceptionFilter());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
