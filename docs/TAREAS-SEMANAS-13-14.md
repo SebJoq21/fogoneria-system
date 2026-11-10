@@ -9,10 +9,10 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **8** |
-| Cerradas (Listo) | **0** |
-| En revisión (PR) | **2** |
+| Cerradas (Listo) | **3** |
+| En revisión (PR) | **1** |
 | Por hacer | **6** |
-| Avance global (promedio simple) | **25%** |
+| Avance global (promedio simple) | **60%** |
 
 **Diagnóstico:** el esquema ya tiene todo lo que el inventario necesita (`insumos`, `escandallos_recetas`, `stocks_sucursal`, `movimientos_inventario`, `gastos`, `proveedores`, `combos`, `combos_platos`, `cupones`, `reglas_horarias_promos`). Falta el trabajo por comanda (kardex), el semáforo con alerta, el gasto que sale de caja y la promoción que se aplica en el cobro. La caja y los comprobantes ya están en `development` (S11–S12), así que el gasto y la promoción se apoyan en módulos reales.
 
@@ -20,10 +20,10 @@
 
 | Jira | Tarea | Sem. | Responsable | Estado Jira | Avance | Ya existe | Falta |
 |---|---|---|---|---|---|---|---|
-| AYCDS-11 | [43.0] Job Kardex auto por escandallo | 13 | David Piñarreta | En revisión | 100% | `escandallos_recetas`, `stocks_sucursal`, `movimientos_inventario`, `combos_platos` | Descuento al `ENTREGADO`, idempotencia, explosión de combos y stock sin negativos |
-| AYCDS-13 | [44.0] Semáforo stock + webhook n8n | 13 | David Piñarreta | Por hacer | 0% | `stocks_sucursal.stock_minimo`, `STOCK_WEBHOOK_*` en `.env.example` | Endpoint de estado, alerta y webhook firmado |
-| AYCDS-17 | [45.0] API gastos CxP cruce a caja | 13 | David Piñarreta | Por hacer | 0% | `gastos` con `estado_pago`, `pagado_en_caja`, `turno_id`; caja real (S11) | Módulo de gastos y egreso automático en efectivo |
-| AYCDS-19 | [46.0] API combos precio fijo y promos | 14 | David Piñarreta | En revisión | 100% | `combos.precio_fijo`, `cupones`, `reglas_horarias_promos`, `canjes_cupones` | CRUD de combos/cupones, validación anti-inflación y aplicación en la comanda |
+| AYCDS-11 | [43.0] Job Kardex auto por escandallo | 13 | David Piñarreta | Listo | 100% | `escandallos_recetas`, `stocks_sucursal`, `movimientos_inventario`, `combos_platos` | Descuento al `ENTREGADO`, idempotencia, explosión de combos y stock sin negativos |
+| AYCDS-13 | [44.0] Semáforo stock + webhook n8n | 13 | David Piñarreta | En revisión | 100% | `stocks_sucursal.stock_minimo`, `v_stock_bajo`, `STOCK_WEBHOOK_*` en `.env.example` | Endpoint de estado, alerta y webhook firmado |
+| AYCDS-17 | [45.0] API gastos CxP cruce a caja | 13 | David Piñarreta | Listo | 100% | `gastos` con `estado_pago`, `pagado_en_caja`, `turno_id`; caja real (S11) | Módulo de gastos y egreso automático en efectivo |
+| AYCDS-19 | [46.0] API combos precio fijo y promos | 14 | David Piñarreta | Listo | 100% | `combos.precio_fijo`, `cupones`, `reglas_horarias_promos`, `canjes_cupones` | CRUD de combos/cupones, validación anti-inflación y aplicación en la comanda |
 | AYCDS-23 | [47.0] Modelo escandallos recetas-insumos N-M | 13 | Sonny De La Cruz | Por hacer | 0% | Tabla `escandallos_recetas` (PK compuesta) | Definir merma/rendimiento si el negocio lo pide |
 | AYCDS-24 | [48.0] UI inventario Kardex semáforos | 13 | Diego Arévalo | Por hacer | 0% | `InventoryMovementsView` (mock) | Conectar kardex y semáforo a la API |
 | AYCDS-27 | [49.0] UI gastos combos promos | 14 | Joshua Chávez | Por hacer | 0% | `GastosView`, `CombosView`, `PromocionesView` (mock) | Conectar a los módulos de 17 y 19 |
@@ -33,7 +33,7 @@
 
 ### AYCDS-11 — [43.0] Job Kardex auto por escandallo
 
-- **Semana:** 13 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
+- **Semana:** 13 · **Responsable:** David Piñarreta · **Estado Jira:** Listo · **Avance:** 100 %
 - **Descripción Jira:** «Descarga receta\*qty al Entregado RF-11 RD-03 CT-FG-04 + unit tests».
 - **Qué se hizo:**
   1. `InventoryService.consumeOrder()`: al pasar la comanda a `ENTREGADO` explota la receta de cada plato (`cantidad × cantidad_por_plato`), agrega por insumo y descuenta `stocks_sucursal` con un `movimientos_inventario` `SALIDA`.
@@ -49,15 +49,16 @@
 
 ### AYCDS-13 — [44.0] Semáforo stock + webhook n8n WhatsApp
 
-- **Semana:** 13 · **Responsable:** David Piñarreta · **Estado Jira:** Por hacer · **Avance:** 0 %
+- **Semana:** 13 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
 - **Descripción Jira:** «Optimo/Bajo/Agotado + alerta CT-FG-04 endpoint + webhook».
-- **Qué debe hacerse:**
-  1. `GET /inventory/stock?sucursalId` con estado por insumo frente a `stock_minimo`: `OPTIMO`, `BAJO`, `AGOTADO`.
-  2. `GET /inventory/alerts` con solo lo que cruzó el umbral, ordenado por criticidad.
-  3. Webhook saliente a n8n con `STOCK_WEBHOOK_URL` + `STOCK_WEBHOOK_SECRET` (HMAC `X-Fogoneria-Signature`); **sin URL configurada es no-op** con log y registro en `auditoria`.
-  4. Reintento con backoff y sin bloquear el request (el kardex no espera a n8n).
+- **Qué entrega:**
+  1. `GET /inventory/stock?sucursalId&estado` con el semáforo de `v_stock_bajo` (`OPTIMO`/`BAJO`/`AGOTADO`) y resumen por estado.
+  2. `POST /inventory/alerts/check` (admin/sucursal) y cron cada 10 min: reconcilian `alertas_stock`, una fila por insumo y sucursal, que se **borra al reponer** el stock.
+  3. Webhook a n8n con `STOCK_WEBHOOK_URL` + `STOCK_WEBHOOK_SECRET` (HMAC `X-Fogoneria-Signature`); sin URL es **no-op** con log, `notificado_at = null` y registro en `auditoria`.
+  4. El envío no bloquea el kardex y un fallo de red se reintenta en el siguiente ciclo.
 - **Criterio de aceptación:** el semáforo refleja el stock real y una alerta llega firmada al webhook configurado.
-- **Depende de:** **AYCDS-11**.
+- **Evidencia:** 12 unit, 5 e2e, 6 DB y smoke real **13/13** (3 alertas nuevas, segundo barrido sin duplicar, reposición resuelve 1, alerta del insumo desaparece, mesero 403).
+- **Depende de:** **AYCDS-11** (mergeada).
 - **Bloquea a:** **AYCDS-24** (semáforos en la UI).
 
 ### AYCDS-17 — [45.0] API gastos CxP cruce a caja
@@ -75,7 +76,7 @@
 
 ### AYCDS-19 — [46.0] API combos precio fijo y promos
 
-- **Semana:** 14 · **Responsable:** David Piñarreta · **Estado Jira:** En revisión · **Avance:** 100 %
+- **Semana:** 14 · **Responsable:** David Piñarreta · **Estado Jira:** Listo · **Avance:** 100 %
 - **Descripción Jira:** «Bloqueo inflacion + cupones/horarias RF-04 CT-FG-05 CT-FG-06 validaciones».
 - **Qué se hizo:**
   1. Módulo `promotions`: CRUD de combos con sus platos y **bloqueo anti-inflación** (el `precio_fijo` no puede superar la suma a la lista activa), con `precioReferencia` y `ahorro` en el listado.
@@ -125,3 +126,4 @@ El de S11–S12: funciona contra la API real, RBAC y aislamiento probados, unit 
 | 2026-11-06 | plan | David Piñarreta | Ficha de S13-S14 con las 8 tareas, dependencias y orden de PRs | Este archivo |
 | 2026-11-06 | 19 | David Piñarreta | Combos con bloqueo anti-inflación, cupones con límite y vigencia, y descuento calculado en el servidor (el cliente manda código, no importe) | Smoke real 14/14, 17 unit, 9 e2e |
 | 2026-11-06 | 11 | David Piñarreta | Kardex por escandallo al entregar: explosión de combos, idempotencia, stock sin negativos y dentro de la transacción del request | Smoke real 9/9 (lomo 12 → 11 kg), 6 pruebas DB, 8 unit |
+| 2026-11-10 | 11, 17, 19, 13 | David Piñarreta | #28, #29 y #31 aprobados y mergeados (Jira a Listo). AYCDS-13: semáforo de stock, alertas con `alertas_stock` y webhook firmado con cron cada 10 min | AYCDS-13: smoke 13/13, 12 unit, 5 e2e, 6 DB |
