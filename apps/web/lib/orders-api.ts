@@ -89,7 +89,8 @@ export type CreateOrderInput = {
   clienteId?: string;
   origen?: ApiOrderOrigen;
   listaPrecioId?: string;
-  descuento?: number;
+  /** Código de cupón; el descuento lo calcula el servidor (AYCDS-19). */
+  cuponCodigo?: string;
   items: CreateOrderItemInput[];
 };
 
@@ -121,7 +122,7 @@ export async function createOrder(input: CreateOrderInput): Promise<ApiOrder> {
       ...(input.clienteId ? { clienteId: input.clienteId } : {}),
       ...(input.origen ? { origen: input.origen } : {}),
       ...(input.listaPrecioId ? { listaPrecioId: input.listaPrecioId } : {}),
-      ...(input.descuento ? { descuento: input.descuento } : {}),
+      ...(input.cuponCodigo ? { cuponCodigo: input.cuponCodigo } : {}),
       items: input.items,
     },
   });

@@ -24,6 +24,7 @@ import { TablesModule } from './modules/tables/tables.module.js';
 import { ReservationsModule } from './modules/reservations/reservations.module.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { ReceiptsModule } from './modules/receipts/receipts.module.js';
+import { PromotionsModule } from './modules/promotions/promotions.module.js';
 import { CashModule } from './modules/cash/cash.module.js';
 
 @Module({
