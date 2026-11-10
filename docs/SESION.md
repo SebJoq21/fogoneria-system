@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-10 — Merges de S13–S16, AYCDS-13 y arranque del cierre
+
+- Objetivo: cerrar la revisión pendiente y seguir con la última tarea de API de S13–S14.
+- **Merges:** #28 (11), #29 (19), #31 (17), #32 (31), #33 (33), #34 (docs), #35 (38) y #36 (35) aprobados y mergeados; Jira 11/17/19/31/33/38 → **Listo** con evidencia. 46 y 13 quedan En curso.
+- **AYCDS-13** (rama `feat/aycds-13-semaforo-stock`): `GET /inventory/stock` (semáforo desde `v_stock_bajo`), `POST /inventory/alerts/check` y cron cada 10 min; tabla `alertas_stock` (una alerta vigente por insumo y sucursal, se borra al reponer) y webhook HMAC `X-Fogoneria-Signature`. Sin `STOCK_WEBHOOK_URL` no envía: deja `notificado_at = null` y auditoría.
+- **Code review de la 13:** URL y secreto pasan de `process.env` a `ConfigService` (se leen una vez, igual que `DATABASE_SCHEMA`); los tests inyectan la config.
+- Verificado (13): 12 unit, 5 e2e, 6 DB y smoke real 13/13; `migrate deploy` en `fogoneria_test` y `fogoneria_db`.
+- 46 parte 2: se implementa con la API real y SUNAT queda como «pendiente de OSE» (no se conserva el mock CDR en la vista).
+- Próximo paso: mergear #37 y cerrar 46 p2 + 50 (acta).
+
 ## 2026-11-07 — AYCDS-35 (API de BI) implementada, en espera de #38
 
 - Objetivo: exponer los reportes de P&L, ranking y cobros por método sobre las vistas de AYCDS-38.

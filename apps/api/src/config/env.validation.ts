@@ -35,6 +35,9 @@ export function validateEnv(config: Record<string, unknown>): Record<string, unk
   next.TRIAL_DAYS = positiveInt(next.TRIAL_DAYS, 14);
   next.ONBOARDING_RATE_LIMIT = positiveInt(next.ONBOARDING_RATE_LIMIT, 5);
   next.ONBOARDING_RATE_WINDOW_MS = positiveInt(next.ONBOARDING_RATE_WINDOW_MS, 600_000);
+  // AYCDS-13: sin URL no se envia el webhook (desarrollo y CI no dependen de n8n).
+  next.STOCK_WEBHOOK_URL = next.STOCK_WEBHOOK_URL ? String(next.STOCK_WEBHOOK_URL) : '';
+  next.STOCK_WEBHOOK_SECRET = next.STOCK_WEBHOOK_SECRET ? String(next.STOCK_WEBHOOK_SECRET) : '';
 
   return next;
 }

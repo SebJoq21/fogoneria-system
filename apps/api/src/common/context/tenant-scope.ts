@@ -11,6 +11,7 @@ export interface TenantModelScope {
  * heredan el aislamiento a través de su padre.
  */
 export const TENANT_SCOPED_MODELS: Record<string, TenantModelScope> = {
+  alertas_stock: { empresa: true, sucursal: true },
   asistencias: { empresa: true, sucursal: true },
   auditoria: { empresa: true, sucursal: true },
   canjes_cupones: { empresa: true, sucursal: true },
