@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-10 — AYCDS-40 (CRM en la UI) lista para revisión
+
+- Objetivo: conectar el maestro de clientes a la API del CRM (lista, ficha y puntos).
+- Hecho (rama `feat/aycds-40-ui-crm`): `lib/crm-api.ts` (listar/buscar/filtrar, ficha con movimientos, alta y ajuste de puntos) y `ClientesView` contra la API: búsqueda por nombre/teléfono, filtro por segmento, ficha con los últimos movimientos y ajuste (cortesía/canje/caducidad). Sin sesión conserva el demo.
+- **Hallazgo del smoke:** el ajuste de puntos devolvía **400** para `ADMIN_GLOBAL` porque `sucursalId` es obligatorio en el body (AYCDS-31); la vista ahora manda `activeBranchId`. También se corrigió el tipo de retorno: la API devuelve el **cliente recalculado**, no el movimiento.
+- Verificado: 5 tests del cliente (143 web), lint/types/build OK; smoke real: 7 clientes, ficha con `ultima_visita`, ajuste +5 y canje de 3 con saldo recalculado.
+- Nota: el `id` numérico del modelo de la UI se deriva de visitas+puntos porque la tabla usa `Customer`; la clave real de la fila es el teléfono.
+- Próximo paso: AYCDS-45 (RRHH + analíticas) o AYCDS-27 (gastos/combos/promos).
+
 ## 2026-11-10 — AYCDS-24 (kardex + semáforo) al 80 %
 
 - Objetivo: empezar las tareas de UI con la API ya cerrada.
