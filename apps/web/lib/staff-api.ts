@@ -121,3 +121,25 @@ export function attendanceLabel(estado: ApiAttendanceState): "Presente" | "Tarda
       return "Presente";
   }
 }
+
+export type ShiftBlock = "MANANA" | "TARDE" | "NOCHE";
+
+export async function createShift(input: {
+  empleadoId: string;
+  fecha: string;
+  bloque: ShiftBlock;
+  sucursalId?: string;
+}): Promise<ApiShift> {
+  return apiFetch<ApiShift>("/staff/shifts", { method: "POST", body: input });
+}
+
+export async function removeShift(id: string): Promise<{ id: string; eliminado: boolean }> {
+  return apiFetch<{ id: string; eliminado: boolean }>(`/staff/shifts/${id}`, {
+    method: "DELETE",
+  });
+}
+
+/** Etiqueta del bloque de turno. */
+export function shiftBlockLabel(bloque: ShiftBlock): "Mañana" | "Tarde" | "Noche" {
+  return bloque === "MANANA" ? "Mañana" : bloque === "TARDE" ? "Tarde" : "Noche";
+}
