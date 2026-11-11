@@ -10,8 +10,8 @@
 |---|---|
 | Tareas del rango | **8** |
 | En revisión (PR) | **1** |
-| Por hacer | **4** |
-| Avance global (promedio simple) | **50%** |
+| Por hacer | **3** |
+| Avance global (promedio simple) | **62.5%** |
 
 **Diagnóstico:** el CRM y el RRHH ya tienen API (PR #32 y PR #33, en revisión): comensales con segmento derivado y puntos por consumo, y personal con turnos, marcación y reparto de propinas exacto. Falta lo que cierra el ciclo: **BI** (P&L y ranking de platos), las **vistas de base** que lo alimentan, las **dos UI** que consumen CRM y RRHH, y el **QA integral con Docker** que valida todo el sistema antes de la sustentación.
 
@@ -23,9 +23,9 @@
 |---|---|---|---|---|---|---|---|
 | AYCDS-31 | [51.0] API CRM recategoriza VIP puntos | 15 | David Piñarreta | Listo | 100% | Módulo `crm` (PR #32): segmento por visitas, worker de puntos, ajuste manual y config | — |
 | AYCDS-33 | [52.0] API RRHH turnos asistencia propinas | 15 | David Piñarreta | Listo | 100% | Módulo `staff` (PR #33): turnos, marcación y pozo de propinas exacto | — |
-| AYCDS-35 | [53.0] Endpoints BI P&L ranking platos | 16 | David Piñarreta | En revisión | 100% | Órdenes, caja, comprobantes, gastos y propinas con datos reales | Módulo `bi` con P&L, ranking de platos y series |
-| AYCDS-38 | [54.0] Vistas BI + backup restore final | 16 | Sonny De La Cruz | Por hacer | 0% | Migración inicial con 4 vistas, RLS y triggers | Vistas materializadas/índices de BI y guion de restore probado |
-| AYCDS-40 | [55.0] UI CRM comensales fidelización | 16 | Diego Arévalo | Por hacer | 0% | `ClientesView` (mock) | Conectar ficha, segmentos, puntos y canjes a `/crm` |
+| AYCDS-35 | [53.0] Endpoints BI P&L ranking platos | 16 | David Piñarreta | Listo | 100% | Órdenes, caja, comprobantes, gastos y propinas con datos reales | — |
+| AYCDS-38 | [54.0] Vistas BI + backup restore final | 16 | David Piñarreta | Listo | 100% | 6 vistas BI con `security_invoker`, `db:backup`/`db:restore` y restore medido | — |
+| AYCDS-40 | [55.0] UI CRM comensales fidelización | 16 | Diego Arévalo | En revisión | 100% | `ClientesView` lista/busca/filtra, ficha con movimientos y ajuste de puntos contra `/crm` | — |
 | AYCDS-45 | [56.0] UI RRHH y analíticas | 16 | Joshua Chávez | Por hacer | 0% | `StaffAttendanceView` (mock), `AnaliticasView` (mock) | Conectar turnos/asistencia/propinas y los endpoints de BI |
 | AYCDS-49 | [57.0] QA integral CT-01-09 deploy Docker | 16 | Sebastián Chicata | Por hacer | 0% | CI con Postgres, Compose y 6 roles | Corrida integral de controles, despliegue Docker y acta |
 | AYCDS-52 | [58.0] Ensayo y sustentación final | 16 | Sebastián Chicata | Por hacer | 0% | Demos y documentación | Guion, ensayo y sustentación |
@@ -98,7 +98,7 @@ todo ──► 49 QA integral ──► 52 sustentación
 |---|---|---|---|
 | 1 | AYCDS-38 | `feat/aycds-38-vistas-bi` | Mergeado (#35) |
 | 2 | AYCDS-35 | `feat/aycds-35-bi-api` | PR #36 (base con 38 y 17 mergeadas) |
-| 3 | AYCDS-40 | `feat/aycds-40-ui-crm-diego` | Base con 31 mergeada |
+| 3 | AYCDS-40 | `feat/aycds-40-ui-crm` | Mergeado (#41) |
 | 4 | AYCDS-45 | `feat/aycds-45-ui-rrhh-joshua` | Base con 33 y 35 |
 | 5 | AYCDS-49 | `test/aycds-49-qa-integral-sebastian` | Todo mergeado |
 | 6 | AYCDS-52 | `docs/aycds-52-sustentacion-sebastian` | Cierre |
