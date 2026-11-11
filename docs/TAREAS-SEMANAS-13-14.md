@@ -10,7 +10,7 @@
 |---|---|
 | Tareas del rango | **8** |
 | Cerradas (Listo) | **3** |
-| En revisión (PR) | **1** |
+| En revisión (PR) | **2** |
 | Por hacer | **6** |
 | Avance global (promedio simple) | **60%** |
 
@@ -25,7 +25,7 @@
 | AYCDS-17 | [45.0] API gastos CxP cruce a caja | 13 | David Piñarreta | Listo | 100% | `gastos` con `estado_pago`, `pagado_en_caja`, `turno_id`; caja real (S11) | Módulo de gastos y egreso automático en efectivo |
 | AYCDS-19 | [46.0] API combos precio fijo y promos | 14 | David Piñarreta | Listo | 100% | `combos.precio_fijo`, `cupones`, `reglas_horarias_promos`, `canjes_cupones` | CRUD de combos/cupones, validación anti-inflación y aplicación en la comanda |
 | AYCDS-23 | [47.0] Modelo escandallos recetas-insumos N-M | 13 | Sonny De La Cruz | Por hacer | 0% | Tabla `escandallos_recetas` (PK compuesta) | Definir merma/rendimiento si el negocio lo pide |
-| AYCDS-24 | [48.0] UI inventario Kardex semáforos | 13 | Diego Arévalo | Por hacer | 0% | `InventoryMovementsView` (mock) | Conectar kardex y semáforo a la API |
+| AYCDS-24 | [48.0] UI inventario Kardex semáforos | 13 | Diego Arévalo | En revisión | 80% | `InventoryMovementsView` (mock) | Conectar kardex y semáforo a la API |
 | AYCDS-27 | [49.0] UI gastos combos promos | 14 | Joshua Chávez | Por hacer | 0% | `GastosView`, `CombosView`, `PromocionesView` (mock) | Conectar a los módulos de 17 y 19 |
 | AYCDS-29 | [50.0] Pruebas Kardex inventario-ventas | 14 | Sebastián Chicata | Por hacer | 0% | Suites unit/e2e/DB | Pruebas cruzadas inventario↔ventas y acta |
 

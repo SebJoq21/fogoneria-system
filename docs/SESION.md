@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-10 — AYCDS-24 (kardex + semáforo) al 80 %
+
+- Objetivo: empezar las tareas de UI con la API ya cerrada.
+- Hecho (rama `feat/aycds-24-inventario`): **API** `GET /inventory/movements` (kardex con insumo, unidad, folio y ventana de fechas, `limit` ≤500) en `InventoryService.listMovements`; **web** `lib/inventory-api.ts` (stock + kardex) y `InventoryMovementsView` contra la API con el semáforo (`agotados/bajos/óptimos`) arriba; fallback demo sin sesión.
+- Verificado: 5 unit del servicio, 3 del cliente web, 138 web tests, lint/types/build OK; smoke real: movimientos con folio `ORD-050009`, `tipo=VOLADOR` → 400, semáforo 1/1/4.
+- **Falta de la 24 (20 %)**: el maestro de insumos, los ajustes y las recetas de `InventoryModule` siguen en demo; necesitan endpoints de insumos/stock por insumo antes de conectarse.
+- Próximo paso: AYCDS-40 (CRM) o 27 (gastos/combos/promos), misma receta: cliente API + vista.
+
 ## 2026-11-10 — Cierre de S11–S16: 46 p2, filtro de errores y acta 50
 
 - Objetivo: cerrar las tareas que quedaban en revisión y dejar el sistema listo para el acta.
