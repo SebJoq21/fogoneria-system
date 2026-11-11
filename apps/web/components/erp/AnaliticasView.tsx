@@ -11,10 +11,12 @@ import {
   diaCorto,
   getPnl,
   getPnlDaily,
+  getSalesByMethod,
   getTopDishes,
   ultimosDias,
   type ApiPnl,
   type ApiPnlDay,
+  type ApiSalesMethod,
   type ApiTopDish,
 } from "@/lib/bi-api";
 
@@ -36,6 +38,7 @@ export function AnaliticasView() {
   const [pnl, setPnl] = useState<ApiPnl | null>(null);
   const [daily, setDaily] = useState<ApiPnlDay[]>([]);
   const [top, setTop] = useState<ApiTopDish[]>([]);
+  const [metodos, setMetodos] = useState<ApiSalesMethod[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,11 +51,13 @@ export function AnaliticasView() {
         getPnl(rango, controller.signal),
         getPnlDaily(rango, controller.signal),
         getTopDishes({ ...rango, limit: 5 }, controller.signal),
+        getSalesByMethod(rango, controller.signal),
       ])
-        .then(([resumen, serie, ranking]) => {
+        .then(([resumen, serie, ranking, cobros]) => {
           setPnl(resumen);
           setDaily(serie.items);
           setTop(ranking.items);
+          setMetodos(cobros.items);
         })
         .catch((problema: unknown) => {
           if (controller.signal.aborted) return;
@@ -161,6 +166,35 @@ export function AnaliticasView() {
                 <TD tone="strong">Margen</TD>
                 <TD tone="strong" right className="tnum">{fmtMoney(margen)}</TD>
               </TR>
+            </tbody>
+          </TableCard>
+        </div>
+        <div className="scroll-mt-4">
+          <h3 className="text-sm font-medium text-ink-900 mb-3">Cobros por método</h3>
+          <TableCard>
+            <THead>
+              <tr>
+                <TH>Método</TH>
+                <TH right>Cobros</TH>
+                <TH right>Monto</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {metodos.length === 0 ? (
+                <TR>
+                  <TD tone="muted">Sin cobros en el rango.</TD>
+                  <TD>—</TD>
+                  <TD>—</TD>
+                </TR>
+              ) : (
+                metodos.map((metodo) => (
+                  <TR key={metodo.metodo}>
+                    <TD tone="strong">{metodo.metodo}</TD>
+                    <TD right className="tnum">{metodo.cobros}</TD>
+                    <TD right className="tnum">{fmtMoney(metodo.monto)}</TD>
+                  </TR>
+                ))
+              )}
             </tbody>
           </TableCard>
         </div>

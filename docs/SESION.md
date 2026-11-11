@@ -1,12 +1,12 @@
 # SESION — estado entre sesiones
 
-## 2026-11-10 — Auditoría + AYCDS-45 (RRHH y analíticas) al 80 %
+## 2026-11-10 — Auditoría + AYCDS-45 (RRHH y analíticas) al 100 %
 
 - **Auditoría** de `development` (`4ed719a`): árbol limpio, 0 ramas sin mergear, sin marcas de deuda fuera de lo generado; `lint` y `check-types` 3/3; api **302** unit, **112** e2e, **109** DB; web **143**; build OK. Sin hallazgos nuevos.
 - Hecho (rama `feat/aycds-45-ui-rrhh`): `lib/staff-api.ts` y `lib/bi-api.ts`; `StaffAttendanceView` marca asistencia del día (Presente/Tardanza/Falta) y lista/confirma pozos; `AnaliticasView` pinta P&L, serie de 7 días y ranking de platos desde `/bi`. Ambas caen al demo sin sesión.
 - **Hallazgo del smoke:** `GET /staff/attendance` daba **400** para `ADMIN_GLOBAL` (sucursal obligatoria, igual que mesas/gastos/puntos); los clientes y la vista ahora mandan `sucursalId`.
 - Verificado: 148 web tests (+5 de BI/staff), lint/types/build OK; smoke real: P&L (ventas 288, gastos 600, margen -312, propinas 105), serie 2 días, top 1 plato; staff 6 empleados, marca TARDANZA y pozo REPARTIDO 105.
-- **Falta de la 45 (20 %)**: plan de turnos (asignar/quitar) y ventas por método; el cliente ya expone `listShifts` y `getSalesByMethod`.
+- **Cierre de la 45:** `StaffTurnosView` (asignar/quitar turno por empleado, día y bloque) y bloque de **cobros por método** en analíticas. Smoke real: turno creado y quitado, métodos EFECTIVO 198.
 - Próximo paso: cerrar ese 20 % o AYCDS-27 (gastos/combos/promos).
 
 ## 2026-11-10 — AYCDS-40 (CRM en la UI) lista para revisión
