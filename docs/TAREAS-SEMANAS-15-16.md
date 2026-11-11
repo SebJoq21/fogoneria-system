@@ -9,9 +9,9 @@
 | Indicador | Valor |
 |---|---|
 | Tareas del rango | **8** |
-| En revisión (PR) | **1** |
-| Por hacer | **3** |
-| Avance global (promedio simple) | **62.5%** |
+| En revisión (PR) | **2** |
+| Por hacer | **2** |
+| Avance global (promedio simple) | **75%** |
 
 **Diagnóstico:** el CRM y el RRHH ya tienen API (PR #32 y PR #33, en revisión): comensales con segmento derivado y puntos por consumo, y personal con turnos, marcación y reparto de propinas exacto. Falta lo que cierra el ciclo: **BI** (P&L y ranking de platos), las **vistas de base** que lo alimentan, las **dos UI** que consumen CRM y RRHH, y el **QA integral con Docker** que valida todo el sistema antes de la sustentación.
 
@@ -26,7 +26,7 @@
 | AYCDS-35 | [53.0] Endpoints BI P&L ranking platos | 16 | David Piñarreta | Listo | 100% | Órdenes, caja, comprobantes, gastos y propinas con datos reales | — |
 | AYCDS-38 | [54.0] Vistas BI + backup restore final | 16 | David Piñarreta | Listo | 100% | 6 vistas BI con `security_invoker`, `db:backup`/`db:restore` y restore medido | — |
 | AYCDS-40 | [55.0] UI CRM comensales fidelización | 16 | Diego Arévalo | En revisión | 100% | `ClientesView` lista/busca/filtra, ficha con movimientos y ajuste de puntos contra `/crm` | — |
-| AYCDS-45 | [56.0] UI RRHH y analíticas | 16 | Joshua Chávez | Por hacer | 0% | `StaffAttendanceView` (mock), `AnaliticasView` (mock) | Conectar turnos/asistencia/propinas y los endpoints de BI |
+| AYCDS-45 | [56.0] UI RRHH y analíticas | 16 | Joshua Chávez | En revisión | 80% | `StaffAttendanceView` (mock), `AnaliticasView` (mock) | Conectar turnos/asistencia/propinas y los endpoints de BI |
 | AYCDS-49 | [57.0] QA integral CT-01-09 deploy Docker | 16 | Sebastián Chicata | Por hacer | 0% | CI con Postgres, Compose y 6 roles | Corrida integral de controles, despliegue Docker y acta |
 | AYCDS-52 | [58.0] Ensayo y sustentación final | 16 | Sebastián Chicata | Por hacer | 0% | Demos y documentación | Guion, ensayo y sustentación |
 

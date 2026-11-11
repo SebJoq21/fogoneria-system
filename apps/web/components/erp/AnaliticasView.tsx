@@ -1,49 +1,114 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { ChartCard } from "@/components/erp/workspace-ui";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
+import { fmtMoney } from "@/lib/domain";
+import {
+  diaCorto,
+  getPnl,
+  getPnlDaily,
+  getTopDishes,
+  ultimosDias,
+  type ApiPnl,
+  type ApiPnlDay,
+  type ApiTopDish,
+} from "@/lib/bi-api";
 
-const salesByDay = [
+const salesByDayDemo = [
   { name: "Lun", v: 320 }, { name: "Mar", v: 410 }, { name: "Mié", v: 380 },
   { name: "Jue", v: 520 }, { name: "Vie", v: 740 }, { name: "Sáb", v: 890 }, { name: "Dom", v: 610 },
 ];
-const tick = { fontSize: 12, fill: "var(--c-mute)" };
-
-const topDishes = [
+const topDishesDemo = [
   { name: "Lomo Saltado", qty: 86 },
   { name: "Ceviche Clásico", qty: 74 },
   { name: "Ají de Gallina", qty: 51 },
   { name: "Pisco Sour", qty: 47 },
 ];
+const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
-/** Analíticas: ventas, platos top y gastos vs ingresos. */
+/** Analíticas: P&L, ventas por día y platos top (AYCDS-45). */
 export function AnaliticasView() {
-  const { expenses } = useModules();
-  const totalSales = salesByDay.reduce((s, d) => s + d.v, 0);
-  const totalExpenses = expenses.reduce((s, e) => s + (Number(e.amount.replace("$", "")) || 0), 0);
+  const { hasSession, expenses } = useModules();
+  const [pnl, setPnl] = useState<ApiPnl | null>(null);
+  const [daily, setDaily] = useState<ApiPnlDay[]>([]);
+  const [top, setTop] = useState<ApiTopDish[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasSession) return;
+    const controller = new AbortController();
+    const rango = ultimosDias(7);
+    // Diferido al siguiente tick: el efecto no debe disparar renders en cascada.
+    const timer = setTimeout(() => {
+      Promise.all([
+        getPnl(rango, controller.signal),
+        getPnlDaily(rango, controller.signal),
+        getTopDishes({ ...rango, limit: 5 }, controller.signal),
+      ])
+        .then(([resumen, serie, ranking]) => {
+          setPnl(resumen);
+          setDaily(serie.items);
+          setTop(ranking.items);
+        })
+        .catch((problema: unknown) => {
+          if (controller.signal.aborted) return;
+          setError(problema instanceof Error ? problema.message : "No se pudieron cargar las analíticas.");
+        });
+    }, 0);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [hasSession]);
+
+  const demoExpenses = useMemo(
+    () => expenses.reduce((total, gasto) => total + (Number(gasto.amount.replace("$", "")) || 0), 0),
+    [expenses],
+  );
+
+  const ventas = pnl?.ventas ?? salesByDayDemo.reduce((suma, dia) => suma + dia.v, 0);
+  const gastos = pnl?.gastos ?? demoExpenses;
+  const margen = pnl?.margen ?? ventas - gastos;
+  const chart = daily.length
+    ? daily.map((dia) => ({ name: diaCorto(dia.fecha), v: dia.ventas }))
+    : salesByDayDemo;
+  const platos = top.length
+    ? top.map((plato) => ({ name: plato.nombre, qty: plato.unidades, ingresos: plato.ingresos }))
+    : topDishesDemo.map((plato) => ({ ...plato, ingresos: 0 }));
 
   return (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        <KpiCard label="Ventas 7 días" value={`$${totalSales.toLocaleString("es-PE")}.00`} hint="+12% vs semana anterior" />
-        <KpiCard label="Ticket promedio" value="$15.20" hint="32 pedidos hoy" />
-        <KpiCard label="Gastos registrados" value={`$${totalExpenses.toFixed(2)}`} hint="ver detalle en Gastos" />
+        <KpiCard
+          label="Ventas 7 días"
+          value={fmtMoney(ventas)}
+          hint={pnl ? `comprobado ${fmtMoney(pnl.comprobado)}` : "demo"}
+        />
+        <KpiCard label="Margen" value={fmtMoney(margen)} hint={`gastos ${fmtMoney(gastos)}`} />
+        <KpiCard
+          label="Propinas"
+          value={fmtMoney(pnl?.propinas ?? 0)}
+          hint="traspaso al personal, no es ingreso"
+        />
       </div>
 
+      {error && <p className="mb-3 text-sm text-danger">{error}</p>}
+
       <div className="scroll-mt-4">
-      <ChartCard title="Ventas por día" subtitle="Últimos 7 días">
-        <div className="h-full w-full text-primary">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={salesByDay} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} dy={10} />
-              <Bar dataKey="v" fill="currentColor" radius={[4, 4, 0, 0]} barSize={28} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </ChartCard>
+        <ChartCard title="Ventas por día" subtitle="Últimos 7 días (día de Lima)">
+          <div className="h-full w-full text-primary">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chart} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={tick} dy={10} />
+                <Bar dataKey="v" fill="currentColor" radius={[4, 4, 0, 0]} barSize={28} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -54,13 +119,15 @@ export function AnaliticasView() {
               <tr>
                 <TH>Plato</TH>
                 <TH right>Porciones</TH>
+                <TH right>Ingresos</TH>
               </tr>
             </THead>
             <tbody>
-              {topDishes.map((d) => (
-                <TR key={d.name}>
-                  <TD tone="strong">{d.name}</TD>
-                  <TD right className="tnum">{d.qty}</TD>
+              {platos.map((plato) => (
+                <TR key={plato.name}>
+                  <TD tone="strong">{plato.name}</TD>
+                  <TD right className="tnum">{plato.qty}</TD>
+                  <TD right className="tnum">{fmtMoney(plato.ingresos)}</TD>
                 </TR>
               ))}
             </tbody>
@@ -78,17 +145,21 @@ export function AnaliticasView() {
             <tbody>
               <TR>
                 <TD>Ventas 7 días</TD>
-                <TD tone="strong" right className="tnum">${totalSales.toLocaleString("es-PE")}.00</TD>
+                <TD tone="strong" right className="tnum">{fmtMoney(ventas)}</TD>
               </TR>
               <TR>
                 <TD>Gastos registrados</TD>
-                <TD tone="strong" right className="tnum">-${totalExpenses.toFixed(2)}</TD>
+                <TD tone="strong" right className="tnum">-{fmtMoney(gastos)}</TD>
               </TR>
+              {pnl && pnl.ventaSinComprobante > 0 && (
+                <TR>
+                  <TD>Venta sin comprobante</TD>
+                  <TD right className="tnum">{fmtMoney(pnl.ventaSinComprobante)}</TD>
+                </TR>
+              )}
               <TR>
-                <TD tone="strong">Margen estimado</TD>
-                <TD tone="strong" right className="tnum">
-                  ${(totalSales - totalExpenses).toLocaleString("es-PE", { maximumFractionDigits: 2 })}
-                </TD>
+                <TD tone="strong">Margen</TD>
+                <TD tone="strong" right className="tnum">{fmtMoney(margen)}</TD>
               </TR>
             </tbody>
           </TableCard>
