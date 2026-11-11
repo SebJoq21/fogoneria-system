@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import type { MovementsQueryDto } from './dto/movements-query.dto.js';
 
 /** Los insumos se mueven con 3 decimales (`Decimal(12,3)`). */
 function round3(value: number): number {
@@ -264,5 +265,76 @@ export class InventoryService {
     }
 
     return porPlato;
+  }
+
+  /* --------------------------------- kardex -------------------------------- */
+
+  /**
+   * Kardex de la sucursal (AYCDS-24): movimientos con el insumo y el folio de la
+   * comanda que los originó. Solo lectura.
+   *
+   * - Un rol con sucursal consulta la suya; `ADMIN_GLOBAL` la indica o ve todas.
+   * - La ventana de fechas es opcional, pero el `limit` (máx. 500) siempre acota:
+   *   sin él, un kardex viejo devolvería miles de filas.
+   */
+  async listMovements(query: MovementsQueryDto) {
+    const sucursalId = this.sucursalDelAlcance(query.sucursalId);
+    const limite = query.limit ?? 100;
+
+    const where: Record<string, unknown> = {
+      ...(sucursalId ? { sucursal_id: sucursalId } : {}),
+      ...(query.insumoId ? { insumo_id: query.insumoId } : {}),
+      ...(query.tipo ? { tipo: query.tipo } : {}),
+    };
+    if (query.desde || query.hasta) {
+      const rango: Record<string, Date> = {};
+      if (query.desde) rango.gte = new Date(`${query.desde}T00:00:00-05:00`);
+      if (query.hasta) {
+        const fin = new Date(`${query.hasta}T00:00:00-05:00`);
+        rango.lt = new Date(fin.getTime() + 24 * 60 * 60 * 1000);
+      }
+      where.created_at = rango;
+    }
+
+    const filas = await this.prisma.scoped.movimientos_inventario.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: limite,
+      include: {
+        insumos: { select: { id: true, nombre: true, unidad: true } },
+        ordenes: { select: { numero_orden: true } },
+      },
+    });
+
+    return {
+      sucursalId,
+      items: filas.map((fila) => ({
+        id: fila.id,
+        fecha: fila.created_at.toISOString(),
+        tipo: fila.tipo,
+        insumoId: fila.insumo_id,
+        insumo: fila.insumos?.nombre ?? '',
+        unidad: fila.insumos?.unidad ?? '',
+        cantidad: Number(fila.cantidad ?? 0),
+        stockResultante:
+          fila.stock_resultante === null ? null : Number(fila.stock_resultante),
+        motivo: fila.motivo,
+        orden: fila.ordenes?.numero_orden ?? null,
+      })),
+    };
+  }
+
+  /** Rol con sucursal: solo la suya. Admin: la indicada o todas. */
+  private sucursalDelAlcance(solicitada?: string): string | null {
+    const delToken = this.tenantContext.get()?.sucursalId ?? null;
+    if (delToken) {
+      if (solicitada && solicitada !== delToken) {
+        throw new BadRequestException(
+          'El token está atado a otra sucursal: no se puede indicar sucursalId',
+        );
+      }
+      return delToken;
+    }
+    return solicitada ?? null;
   }
 }
