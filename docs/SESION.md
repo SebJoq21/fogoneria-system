@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-11 — Demo levantada y seed idempotente
+
+- **Stack de demo corriendo:** PostgreSQL 16 (`localhost:5433`, contenedor `fogoneria-postgres`), API en `http://localhost:3001` (Swagger `/api/docs`) y web en `http://localhost:3000`.
+- **Fix real:** el seed fallaba al re-ejecutarse con `DB_TURNO_CERRADO` (el turno demo quedaba cerrado por una corrida de caja y el trigger prohíbe insertar movimientos). Ahora, si el turno no está `ABIERTO`, el seed omite los movimientos de ejemplo: es idempotente y no reabre una caja cerrada.
+- **Verificado:** login por el BFF (200 + cookies `fogoneria.session`/`fogoneria.token`), BI por BFF (ventas 288, margen -312), y 12 rutas del ERP en 200. RBAC: mesero `/app/caja` → 307 y `/app/mozo` 200; cajero `/app/caja` 200 y `/app/productos` 307; superadmin `/saas` 200; cocina `/app/caja` 307.
+- **Credenciales demo:** `admin@mirestaurante.com`, `caja@mirestaurante.com`, `mesero@mirestaurante.com`, `cocina@mirestaurante.com`, `super@fogoneria.com` — contraseña `Fogoneria123!`.
+- Próximo paso: recorrido de demo por rol; después 24 (20 %) y 27.
+
 ## 2026-11-10 — Auditoría + AYCDS-45 (RRHH y analíticas) al 100 %
 
 - **Auditoría** de `development` (`4ed719a`): árbol limpio, 0 ramas sin mergear, sin marcas de deuda fuera de lo generado; `lint` y `check-types` 3/3; api **302** unit, **112** e2e, **109** DB; web **143**; build OK. Sin hallazgos nuevos.
