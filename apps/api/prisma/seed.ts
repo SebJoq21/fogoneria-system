@@ -1313,8 +1313,19 @@ async function main() {
     skipDuplicates: true,
   });
 
-  await prisma.movimientos_caja.createMany({
-    data: [
+  // Con `skipDuplicates` el turno demo puede estar ya CERRADO (una corrida de
+  // caja lo cerró). El trigger `DB_TURNO_CERRADO` prohíbe inserts en ese turno,
+  // así que los movimientos de ejemplo solo se cargan si sigue abierto: el seed
+  // es idempotente y no reabre una caja cerrada.
+  const turnoDemo = await prisma.turnos_caja.findUnique({
+    where: { id: TURNO_CAJA },
+    select: { estado: true },
+  });
+  const turnoAbierto = turnoDemo?.estado === 'ABIERTO';
+
+  if (turnoAbierto) {
+    await prisma.movimientos_caja.createMany({
+      data: [
       {
         id: 'f0000000-0000-4000-8000-000000000001',
         empresa_id: EMPRESA,
@@ -1360,6 +1371,7 @@ async function main() {
     ],
     skipDuplicates: true,
   });
+  }
 
   await prisma.gastos.createMany({
     data: [
