@@ -40,6 +40,7 @@
     "test:db": "prisma generate && vitest run --config ./vitest.config.db.ts",
     "perf:seed": "prisma db execute --file ../../db/scripts/perf/seed-perf.sql",
     "perf:reset": "prisma db execute --file ../../db/scripts/perf/reset-perf.sql",
+    "db:demo:clean": "prisma db execute --file ../../db/scripts/demo/limpiar-demo.sql",
     "perf:load": "node test/load/orders-load.mjs",
     "db:rls:roles": "prisma db execute --file ../../db/scripts/rls/000-roles.sql",
     "db:rls:force": "prisma db execute --file ../../db/scripts/rls/010-force-rls.sql"
