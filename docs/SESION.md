@@ -5,6 +5,7 @@
 - **Stack de demo corriendo:** PostgreSQL 16 (`localhost:5433`, contenedor `fogoneria-postgres`), API en `http://localhost:3001` (Swagger `/api/docs`) y web en `http://localhost:3000`.
 - **Fix real:** el seed fallaba al re-ejecutarse con `DB_TURNO_CERRADO` (el turno demo quedaba cerrado por una corrida de caja y el trigger prohíbe insertar movimientos). Ahora, si el turno no está `ABIERTO`, el seed omite los movimientos de ejemplo: es idempotente y no reabre una caja cerrada.
 - **Verificado:** login por el BFF (200 + cookies `fogoneria.session`/`fogoneria.token`), BI por BFF (ventas 288, margen -312), y 12 rutas del ERP en 200. RBAC: mesero `/app/caja` → 307 y `/app/mozo` 200; cajero `/app/caja` 200 y `/app/productos` 307; superadmin `/saas` 200; cocina `/app/caja` 307.
+- **Base limpia para la demo (2026-11-11):** `pnpm --filter api db:demo:clean` borra lo operativo y los datos de ejemplo y conserva cuentas (1 empresa, 3 sucursales, 6 usuarios), catálogo (4 categorías, 6 platos, 3 listas con 18 precios), 14 mesas y los insumos/recetas. Respaldos previos en `%TEMP%\opencode\backups`; también se eliminaron los 3 tenants de prueba (`Smoke` y dos sin nombre) que quedaban soft-deleted.
 - **Credenciales demo:** `admin@mirestaurante.com`, `caja@mirestaurante.com`, `mesero@mirestaurante.com`, `cocina@mirestaurante.com`, `super@fogoneria.com` — contraseña `Fogoneria123!`.
 - Próximo paso: recorrido de demo por rol; después 24 (20 %) y 27.
 
