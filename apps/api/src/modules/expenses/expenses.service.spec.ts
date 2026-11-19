@@ -4,7 +4,7 @@ import { ExpensesService } from './expenses.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { TenantContextService } from '../../common/context/tenant-context.service.js';
 import type { AuditService } from '../audit/audit.service.js';
-import type { CashService } from '../cash/cash.service.js';
+import type { CashPort } from '../cash/index.js';
 
 const context = {
   userId: 'u1',
@@ -48,7 +48,7 @@ describe('ExpensesService (AYCDS-17)', () => {
     return new ExpensesService(
       prisma as unknown as PrismaService,
       { get: () => tenant } as unknown as TenantContextService,
-      cash as unknown as CashService,
+      cash as unknown as CashPort,
       audit as unknown as AuditService,
     );
   }

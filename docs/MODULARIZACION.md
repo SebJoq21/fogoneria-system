@@ -200,7 +200,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
   Backend: `cash → orders` (markPaid) y `orders → inventory/promotions/realtime`
   permanecen en el baseline (no se tocó lógica de negocio).
 
-#### Ola dinero ✅ (2026-11-19)
+#### Ola dinero ✅ (2026-11-19) — PR #56
 
 - **Contratos:** `packages/contracts/src/{caja,comprobantes,gastos}.ts` (turnos,
   movimientos, arqueo, cobro, comprobantes con `desgloseIgv`, gastos y
@@ -229,7 +229,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `lib/cash-api.ts` y `lib/receipts-api.ts` quedan como clientes legados (solo
   los usan sus tests) y se retiran en la Fase 4.
 
-#### Ola operación ✅ (2026-11-19)
+#### Ola operación ✅ (2026-11-19) — PR #58
 
 - **Contratos:** `packages/contracts/src/inventario.ts` (semáforo, kardex,
   filtros, `ConsumoResultado`, etiquetas y `movimientoCantidadLabel`) y
