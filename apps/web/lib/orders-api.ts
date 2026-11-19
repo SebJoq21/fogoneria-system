@@ -8,6 +8,7 @@
    el `ValidationPipe` global (`forbidNonWhitelisted`) responde 400 si viaja. */
 
 import { apiFetch } from "./api";
+import type { BoardOrden, TableroOrdenes } from "@fogoneria/contracts/ordenes";
 
 export type ApiOrderStatus =
   | "POR_CONFIRMAR"
@@ -142,44 +143,9 @@ export async function updateOrderStatus(
 /* Tablero del KDS (AYCDS-30/41)                                              */
 /* -------------------------------------------------------------------------- */
 
-export type ApiBoardOrder = {
-  id: string;
-  numeroOrden: string;
-  estado: ApiOrderStatus;
-  origen: ApiOrderOrigen | string;
-  sucursalId: string;
-  mesaId: string | null;
-  mesa: { id: string; numero: string } | null;
-  mesero: string | null;
-  total: number;
-  items: number;
-  ingresoAt: string;
-  confirmacionAt: string | null;
-  listoAt: string | null;
-  /** Minutos desde la confirmación (o el ingreso). `null` si ya se entregó. */
-  minutos: number | null;
-  alertaSla: boolean;
-  excedidoPor: number | null;
-};
+export type ApiBoardOrder = BoardOrden;
 
-export type ApiOrdersBoard = {
-  generadoAt: string;
-  slaMinutos: number;
-  ventanaDias: number;
-  limite: number;
-  truncado: boolean;
-  columnas: {
-    estado: ApiOrderStatus;
-    total: number;
-    ordenes: ApiBoardOrder[];
-  }[];
-  metricas: {
-    abiertas: number;
-    fueraDeSla: number;
-    promedioEsperaMin: number | null;
-    promedioPreparacionMin: number | null;
-  };
-};
+export type ApiOrdersBoard = TableroOrdenes;
 
 export type BoardParams = {
   sucursalId?: string;

@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + ola **salón** de la Fase 3 (`tables`, `reservations`, `orders`/KDS).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (24 al inicio) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -168,14 +168,37 @@ Estos son los puntos que las olas deben cortar en ese orden.
 
 ### Fase 3 — Olas (un PR por módulo, backend + frontend)
 
-| Ola | Módulos |
-|---|---|
-| Salón | `tables` → `reservations` → `orders` |
-| Dinero | `receipts` → `cash` → `expenses` |
-| Operación | `inventory` → `promotions` |
-| Personas | `crm` |
-| Lectura | `bi` → `realtime` |
-| Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` |
+| Ola | Módulos | Estado |
+|---|---|---|
+| Salón | `tables` → `reservations` → `orders` | ✅ hecha |
+| Dinero | `receipts` → `cash` → `expenses` | pendiente |
+| Operación | `inventory` → `promotions` | pendiente |
+| Personas | `crm` | pendiente |
+| Lectura | `bi` → `realtime` | pendiente |
+| Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | pendiente |
+
+#### Ola salón ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/{mesas,reservas,ordenes}.ts` (estados, inputs,
+  validadores, etiquetas y helpers de día/hora de Lima) y sus subpath exports.
+- **Backend:** `tables/index.ts`, `reservations/index.ts` y `orders/index.ts` públicos;
+  `app.module.ts` los consume por el `index`. `orders.service.ts` pasó de
+  `../audit/audit.service.js` a `../audit/index.js` (baseline 22 → **21**).
+- **Web:** `features/salon/` (`api.ts` SDK+contratos, `hooks.ts` fachada de
+  `ModulesProvider`, `MesasPage`, `ReservasPage`, `SalonTablesPage` y el
+  `BookingsModule`/`SalonTablesView` movidos) y `features/ordenes/`
+  (`api.ts` de solo lectura del tablero, `hooks.ts`, `OrdersBoardPage` y el KDS movido).
+  Las rutas `/app/mesas`, `/app/mesas/maestro`, `/app/modulos/reservas/agenda`,
+  `/app/ordenes` y `/app/cocina` solo importan su feature; conservan guard,
+  cabecera y el redirect por rol del maestro.
+- **Hooks compartidos:** `lib/orders-realtime.ts`, `lib/orders-board.ts` (ahora
+  recibe el fetcher; por defecto el cliente de la API) y `lib/use-now.ts`, porque
+  salón, KDS y mozo los usan y una feature no puede importar `components/erp/*`.
+- **Acoplamiento restante (consciente):** el estado de negocio sigue en
+  `ModulesProvider` (mesas/cuentas/reservas/comandas) hasta la Fase 4; `mozo` y
+  `caja` siguen viviendo en `components/erp/*` y consumen los hooks de `lib/`.
+  Backend: `cash → orders` (markPaid) y `orders → inventory/promotions/realtime`
+  permanecen en el baseline (no se tocó lógica de negocio).
 
 ### Fase 4 — Desmontar el estado global
 
@@ -213,7 +236,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón).
 - PRs de un solo módulo: **100 %**.
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

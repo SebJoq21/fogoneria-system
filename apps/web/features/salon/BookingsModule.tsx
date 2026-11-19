@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listTables, type ApiTable } from "@/lib/tables-api";
+import type { Mesa } from "@fogoneria/contracts/mesas";
 import {
   type Reservation,
   type ReservationStatus,
@@ -17,12 +17,12 @@ import { Field, Select, Textarea, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
-import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniDonut } from "@/components/dashboard/summaries/charts";
 import { mesasSummary } from "@/components/dashboard/summaries/summary-selectors";
-import { useOrdersRealtime } from "@/components/erp/useOrdersRealtime";
-import { useNow } from "@/components/useNow";
+import { useSalon, useSalonEnVivo } from "./hooks";
+import { salonApi } from "./api";
+import { useNow } from "@/lib/use-now";
 import {
   accountTotals,
   deriveTableStatus,
@@ -34,13 +34,6 @@ import {
   canManageReservations,
   canOpenAccount,
 } from "@/lib/permissions";
-import { ApiError } from "@/lib/api";
-import {
-  createReservation as apiCreateReservation,
-  updateReservation as apiUpdateReservation,
-  updateReservationStatus as apiUpdateReservationStatus,
-} from "@/lib/reservations-api";
-import { updateTableStatus as apiUpdateTableStatus } from "@/lib/tables-api";
 import {
   apiReservationStatusOf,
   limaDateKey,
@@ -125,7 +118,7 @@ function emptyForm(day = limaTodayKey()): ResForm {
 }
 
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError || error instanceof Error ? error.message : fallback;
+  return error instanceof Error ? error.message : fallback;
 }
 
 /** Mapa del salón (estados reales) + agenda de reservas conectada a la API. */
@@ -146,7 +139,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     tablesError,
     reservationsLoading,
     reservationsError,
-  } = useModules();
+  } = useSalon();
   useNow(30000);
   const role = currentUser?.role;
   const canBook = canManageReservations(role);
@@ -161,12 +154,12 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   const [pendingCancel, setPendingCancel] = useState<Reservation | null>(null);
   const [pendingNoShow, setPendingNoShow] = useState<Reservation | null>(null);
   const [dayFilter, setDayFilter] = useState(limaTodayKey);
-  const [apiTables, setApiTables] = useState<ApiTable[]>([]);
+  const [apiTables, setApiTables] = useState<Mesa[]>([]);
 
   const refreshApiTables = useCallback(async () => {
     if (!currentUser?.empresaId) return;
     try {
-      const list = await listTables();
+      const list = await salonApi.listMesas();
       setApiTables(list);
     } catch {
       /* fallback a tablas locales */
@@ -179,7 +172,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   }, [refreshApiTables]);
 
   /* Mesas y mesas/reservas en vivo: cualquier cambio en el salón relee la API. */
-  const { status: liveStatus } = useOrdersRealtime(hasSession, (kind) => {
+  const { status: liveStatus } = useSalonEnVivo(hasSession, (kind) => {
     if (kind === "table" || kind === "order") {
       void refreshTables();
     }
@@ -269,7 +262,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     if (hasSession) {
       void (async () => {
         try {
-          await apiUpdateReservationStatus(r.id, "EJECUTADA");
+          await salonApi.updateReservaEstado(r.id, "EJECUTADA");
           if (table) openAccountFor(table, r.customer);
           await Promise.all([refreshReservations(dayFilter), refreshTables()]);
           notify("Reserva en curso", `${r.customer} · ${r.time}`);
@@ -322,12 +315,12 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
           mesaId: table.apiId,
           clienteNombre: form.customer.trim(),
           telefono: form.phone.trim() || undefined,
-          nroComensales: guests,
+          comensales: guests,
           fechaHora: dateIso,
           notas: form.notes.trim() || undefined,
         };
-        if (form.id) await apiUpdateReservation(form.id, payload);
-        else await apiCreateReservation(payload);
+        if (form.id) await salonApi.updateReserva(form.id, payload);
+        else await salonApi.createReserva(payload);
         await Promise.all([refreshReservations(dayFilter), refreshTables()]);
         notify(
           form.id ? "Reserva actualizada" : "Reserva creada",
@@ -383,7 +376,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
     if (hasSession) {
       void (async () => {
         try {
-          await apiUpdateReservationStatus(r.id, apiReservationStatusOf(status));
+          await salonApi.updateReservaEstado(r.id, apiReservationStatusOf(status));
           await Promise.all([refreshReservations(dayFilter), refreshTables()]);
           notify(title, `${r.customer} · ${r.time}`);
         } catch (error) {
@@ -408,7 +401,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
       if (!table.apiId) return;
       void (async () => {
         try {
-          await apiUpdateTableStatus(table.apiId!, table.blocked ? "LIBRE" : "MANTENIMIENTO");
+          await salonApi.updateMesaEstado(table.apiId!, table.blocked ? "LIBRE" : "MANTENIMIENTO");
           await refreshTables();
           notify(table.blocked ? "Mesa desbloqueada" : "Mesa bloqueada", table.label);
         } catch (error) {

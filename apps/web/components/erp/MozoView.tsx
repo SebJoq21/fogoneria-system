@@ -9,7 +9,7 @@ import { Field, Select, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { AccountPanel } from "./mozo/AccountPanel";
-import { useOrdersRealtime } from "./useOrdersRealtime";
+import { useOrdersRealtime } from "@/lib/orders-realtime";
 import type { RealtimeStatus } from "@/lib/realtime";
 import { accountTotals, elapsedLabel, fmtMoney } from "@/lib/domain";
 import type { Order } from "@/lib/erp";

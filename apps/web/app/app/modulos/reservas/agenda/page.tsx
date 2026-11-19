@@ -1,5 +1,5 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { BookingsModule } from "@/components/erp/BookingsModule";
+import { ReservasPage } from "@/features/salon";
 
 export default function ReservasAgendaPage() {
   return (
@@ -9,7 +9,7 @@ export default function ReservasAgendaPage() {
           <h2 className="text-section font-medium text-ink-900">Agenda</h2>
           <p className="text-sm text-ink-400 mt-1">Reservas por turno con detalle.</p>
         </div>
-        <BookingsModule view="agenda" />
+        <ReservasPage />
       </div>
     </ModuleGuard>
   );

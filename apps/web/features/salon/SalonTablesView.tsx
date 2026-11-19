@@ -8,24 +8,19 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD, RowActions } from "@/components/ui/data-table";
-import { useModules } from "@/components/dashboard/ModulesProvider";
-import type { TableShape } from "@/lib/erp";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { mesasSummary } from "@/components/dashboard/summaries/summary-selectors";
+import type { TableShape } from "@/lib/erp";
 import { deriveTableStatus } from "@/lib/domain";
-import {
-  createTable as apiCreateTable,
-  deleteTable as apiDeleteTable,
-  updateTable as apiUpdateTable,
-} from "@/lib/tables-api";
 import { shapeToApi, tableNumberFromLabel } from "@/lib/table-mapping";
-import { ApiError } from "@/lib/api";
+import { useSalon } from "./hooks";
+import { salonApi } from "./api";
 
 const OTHER_ZONE = "__otra__";
 
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof ApiError || error instanceof Error ? error.message : fallback;
+  return error instanceof Error ? error.message : fallback;
 }
 
 /** Maestro de Mesas: estructura del salón que consume el mapa (API, AYCDS-26). */
@@ -42,7 +37,7 @@ export function SalonTablesView() {
     activeBranchId,
     hasSession,
     refreshTables,
-  } = useModules();
+  } = useSalon();
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
@@ -141,9 +136,9 @@ export function SalonTablesView() {
             zona: zone,
             forma: shapeToApi(form.shape),
           };
-          if (editing?.apiId) await apiUpdateTable(editing.apiId, payload);
+          if (editing?.apiId) await salonApi.updateMesa(editing.apiId, payload);
           else
-            await apiCreateTable({
+            await salonApi.createMesa({
               ...payload,
               /* Solo el admin global (vista agregada) indica la sucursal. */
               ...(isGeneral && form.branchId ? { sucursalId: form.branchId } : {}),
@@ -194,7 +189,7 @@ export function SalonTablesView() {
       }
       void (async () => {
         try {
-          await apiDeleteTable(table.apiId!);
+          await salonApi.deleteMesa(table.apiId!);
           await refreshTables();
           notify("Mesa eliminada", "La mesa se retiró del salón.");
         } catch (error) {

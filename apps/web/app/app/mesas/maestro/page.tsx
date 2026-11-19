@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SalonTablesView } from "@/components/erp/SalonTablesView";
+import { SalonTablesPage } from "@/features/salon";
 import type { AppRole } from "@/lib/auth";
 
 export default async function MesasMaestroPage() {
@@ -13,7 +13,7 @@ export default async function MesasMaestroPage() {
         <h2 className="text-section font-medium text-ink-900">Maestro de mesas</h2>
         <p className="text-sm text-ink-400 mt-1">Estructura del salón: el mapa la refleja al instante.</p>
       </div>
-      <SalonTablesView />
+      <SalonTablesPage />
     </div>
   );
 }

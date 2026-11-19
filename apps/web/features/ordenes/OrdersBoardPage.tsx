@@ -12,9 +12,8 @@ import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { ordenesSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { canConfirmRecepcion, canMarkListo, type OrdersMode } from "@/lib/permissions";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { useNow } from "@/components/useNow";
-import { useOrdersRealtime } from "@/components/erp/useOrdersRealtime";
-import { useOrdersBoard } from "@/components/erp/useOrdersBoard";
+import { useNow } from "@/lib/use-now";
+import { useOrdersRealtime, useTableroOrdenes } from "./hooks";
 import {
   KDS_COLUMNS,
   minutosDeSla,
@@ -51,7 +50,7 @@ function actionOrderOf(item: KdsOrder): Order {
   };
 }
 
-export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
+export function OrdersBoardPage({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
   const {
     orders,
     advanceOrder,
@@ -68,7 +67,7 @@ export function OrdersView({ mode = "ordenes" }: { mode?: OrdersMode } = {}) {
 
   const hasSession = Boolean(currentUser?.empresaId);
   const { board, loading: boardLoading, error: boardError, refresh: refreshBoard } =
-    useOrdersBoard(hasSession);
+    useTableroOrdenes(hasSession);
 
   const canConfirm = canConfirmRecepcion(currentUser?.role, mode);
   const canListo = canMarkListo(currentUser?.role, mode);

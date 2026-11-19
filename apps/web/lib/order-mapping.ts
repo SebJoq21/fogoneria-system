@@ -11,6 +11,12 @@
 import type { AccountItem, TableAccount } from "./domain";
 import { elapsedLabel } from "./domain";
 import type { Order, OrderItem, OrderStatus } from "./erp";
+import {
+  COLUMNAS_KDS,
+  type ColumnaKds,
+  type OrdenKds,
+  type TableroKds,
+} from "@fogoneria/contracts/ordenes";
 import type {
   ApiBoardOrder,
   ApiOrder,
@@ -328,49 +334,15 @@ export function reconcileAccounts(
 /* -------------------------------------------------------------------------- */
 
 /** Columnas del tablero, en el mismo orden que devuelve la API. */
-export const KDS_COLUMNS: { status: OrderStatus; label: string }[] = [
-  { status: "pendiente", label: "Por confirmar" },
-  { status: "cocina", label: "En cocina" },
-  { status: "listo", label: "Listo" },
-  { status: "entregado", label: "Entregado" },
-];
+export const KDS_COLUMNS: { status: OrderStatus; label: string }[] = COLUMNAS_KDS.map(
+  (columna) => ({ status: columna.status, label: columna.label }),
+);
 
-export type KdsOrder = {
-  /** Folio visible (`ORD-000123`). */
-  id: string;
-  apiId: string;
-  status: OrderStatus;
-  customer: string;
-  channel: Order["channel"];
-  waiter?: string;
-  amount: number;
-  items: number;
-  createdAt: string;
-  /** Base del reloj de SLA: confirmación o, si no la hay, ingreso. */
-  slaBaseAt: string;
-  alertaSla: boolean;
-  excedidoPor: number | null;
-  mesa: { id: string; numero: string } | null;
-};
+export type KdsOrder = OrdenKds;
 
-export type KdsColumn = {
-  status: OrderStatus;
-  label: string;
-  orders: KdsOrder[];
-};
+export type KdsColumn = ColumnaKds;
 
-export type KdsBoard = {
-  columns: KdsColumn[];
-  slaMinutos: number;
-  truncado: boolean;
-  generadoAt: string;
-  metricas: {
-    abiertas: number;
-    fueraDeSla: number;
-    promedioEsperaMin: number | null;
-    promedioPreparacionMin: number | null;
-  };
-};
+export type KdsBoard = TableroKds;
 
 /** Minutos desde la base del SLA; se recalcula en la vista cada 30 s. */
 export function minutosDeSla(baseAt: string, now: number = Date.now()): number {
