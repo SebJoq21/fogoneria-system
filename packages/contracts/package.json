@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./caja": "./src/caja.ts",
     "./catalogo": "./src/catalogo.ts",
+    "./comprobantes": "./src/comprobantes.ts",
+    "./gastos": "./src/gastos.ts",
     "./mesas": "./src/mesas.ts",
     "./ordenes": "./src/ordenes.ts",
     "./reservas": "./src/reservas.ts",

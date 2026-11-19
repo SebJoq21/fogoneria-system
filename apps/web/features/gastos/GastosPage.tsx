@@ -12,11 +12,16 @@ import { expenseCategories } from "@/lib/erp";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { gastosSummary } from "@/components/dashboard/summaries/summary-selectors";
-import { HubBlocks } from "@/components/erp/workspace-ui";
+import { HubBlocks } from "@/components/dashboard/workspace-ui";
 import { Tabs } from "@/components/ui/Tabs";
 
-/** Gastos: egresos operativos por categoría y proveedor. */
-export function GastosView() {
+/**
+ * Gastos: egresos operativos por categoría y proveedor.
+ *
+ * El estado sigue en `ModulesProvider` (demo) hasta AYCDS-27; el cliente para
+ * la API vive en `./api` con el contrato de `@fogoneria/contracts/gastos`.
+ */
+export function GastosPage() {
   const { expenses, setExpenses, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ category: expenseCategories[0], supplier: "", amount: "", status: "Pagado" as "Pagado" | "Pendiente" });

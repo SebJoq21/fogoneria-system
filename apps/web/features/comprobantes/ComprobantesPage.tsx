@@ -11,7 +11,7 @@ import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniDonut } from "@/components/dashboard/summaries/charts";
 import { comprobantesSummary } from "@/components/dashboard/summaries/summary-selectors";
-import { HubBlocks } from "@/components/erp/workspace-ui";
+import { HubBlocks } from "@/components/dashboard/workspace-ui";
 import { Tabs } from "@/components/ui/Tabs";
 import {
   fmtDateTime,
@@ -24,11 +24,18 @@ import {
 } from "@/lib/domain";
 import type { Receipt, ReceiptType } from "@/lib/erp";
 import { listOrders, type ApiOrder } from "@/lib/orders-api";
-import { createReceipt, listReceipts, voidReceipt } from "@/lib/receipts-api";
-import { receiptsFromApi } from "@/lib/receipt-mapping";
+import { comprobanteARecibo, comprobantesApi } from "./api";
+import type { Comprobante } from "@fogoneria/contracts/comprobantes";
 
-/** Comprobantes: boletas, facturas y notas de crédito con ciclo de vida SUNAT. */
-export function ComprobantesView() {
+/**
+ * Comprobantes: boletas, facturas y notas de crédito con ciclo de vida SUNAT.
+ *
+ * Con sesión lista/emite/anula contra la API (`features/comprobantes/api.ts`):
+ * la emisión solo acepta una comanda `PAGADA` y el importe lo pone el servidor.
+ * Sin sesión se mantiene el flujo demo de `ModulesProvider` (CDR y resumen
+ * diario simulados). SUNAT real queda «pendiente de OSE».
+ */
+export function ComprobantesPage() {
   const {
     hasSession,
     receipts,
@@ -42,7 +49,7 @@ export function ComprobantesView() {
   } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [cdrTarget, setCdrTarget] = useState<Receipt | null>(null);
-  const [apiRows, setApiRows] = useState<Receipt[]>([]);
+  const [apiRows, setApiRows] = useState<Comprobante[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [paidOrders, setPaidOrders] = useState<ApiOrder[]>([]);
@@ -66,10 +73,10 @@ export function ComprobantesView() {
     setApiError(null);
     try {
       const [lista, pagadas] = await Promise.all([
-        listReceipts({ limit: 100, signal }),
+        comprobantesApi.listar({ limit: 100, signal }),
         listOrders({ estado: "PAGADA", limit: 50, signal }),
       ]);
-      setApiRows(receiptsFromApi(lista.items));
+      setApiRows(lista);
       setPaidOrders(pagadas.items);
     } catch (error) {
       if (signal?.aborted) return;
@@ -85,7 +92,7 @@ export function ComprobantesView() {
     if (!hasSession) return;
     const controller = new AbortController();
     // Diferido al siguiente tick: el efecto no debe disparar renders en
-    // cascada (regla `react-hooks/set-state-in-effect`), igual que CajaView.
+    // cascada (regla `react-hooks/set-state-in-effect`), igual que CajaPage.
     const timer = setTimeout(() => {
       void refresh(controller.signal);
     }, 0);
@@ -95,7 +102,10 @@ export function ComprobantesView() {
     };
   }, [hasSession, refresh]);
 
-  const rows = hasSession ? apiRows : receipts;
+  const rows: Receipt[] = useMemo(
+    () => (hasSession ? apiRows.map(comprobanteARecibo) : receipts),
+    [hasSession, apiRows, receipts],
+  );
   const summary = useMemo(() => comprobantesSummary(rows), [rows]);
 
   const bajasPendientes = rows.filter(
@@ -121,14 +131,14 @@ export function ComprobantesView() {
 
     if (hasSession) {
       try {
-        const { comprobante } = await createReceipt({
+        const { comprobante } = await comprobantesApi.emitir({
           ordenId,
           tipo: form.receiptType === "01" ? "FACTURA" : "BOLETA",
           ...(form.docNumber ? { clienteRef: form.docNumber } : {}),
         });
         notify(
           "Comprobante emitido",
-          `${comprobante.serie_numero} sobre ${comprobante.orden_id.slice(0, 8)}.`,
+          `${comprobante.serieNumero} sobre ${comprobante.ordenNumero ?? comprobante.ordenId.slice(0, 8)}.`,
         );
         setModalOpen(false);
         setOrdenId("");
@@ -178,8 +188,14 @@ export function ComprobantesView() {
     if (!annulTarget || !motivo.trim()) return;
 
     if (hasSession) {
+      // La tabla pinta la serie (`B001-…`); la API anula por UUID.
+      const comprobante = apiRows.find((row) => row.serieNumero === annulTarget.id);
+      if (!comprobante) {
+        notify("No se pudo anular", "El comprobante ya no está en la lista: recarga.");
+        return;
+      }
       try {
-        await voidReceipt(annulTarget.id, motivo.trim());
+        await comprobantesApi.anular(comprobante.id, motivo.trim());
         notify(
           "Comprobante anulado",
           `${annulTarget.id} · la reversión de caja y stock la aplica la base.`,

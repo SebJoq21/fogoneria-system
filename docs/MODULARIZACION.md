@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + ola **salón** de la Fase 3 (`tables`, `reservations`, `orders`/KDS).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón** y **dinero** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -171,7 +171,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
 | Ola | Módulos | Estado |
 |---|---|---|
 | Salón | `tables` → `reservations` → `orders` | ✅ hecha |
-| Dinero | `receipts` → `cash` → `expenses` | pendiente |
+| Dinero | `receipts` → `cash` → `expenses` | ✅ hecha |
 | Operación | `inventory` → `promotions` | pendiente |
 | Personas | `crm` | pendiente |
 | Lectura | `bi` → `realtime` | pendiente |
@@ -199,6 +199,35 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `caja` siguen viviendo en `components/erp/*` y consumen los hooks de `lib/`.
   Backend: `cash → orders` (markPaid) y `orders → inventory/promotions/realtime`
   permanecen en el baseline (no se tocó lógica de negocio).
+
+#### Ola dinero ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/{caja,comprobantes,gastos}.ts` (turnos,
+  movimientos, arqueo, cobro, comprobantes con `desgloseIgv`, gastos y
+  categorías, validadores y etiquetas) + subpath exports `./caja`,
+  `./comprobantes` y `./gastos`.
+- **Backend — puertos:** `ORDERS_PORT`/`OrdersPort` (`markPaid`) lo provee
+  `OrdersModule` con `useExisting` y lo exporta; `CASH_PORT`/`CashPort`
+  (`egresoDeGasto`) lo provee `CashModule`. `cash` ya no importa
+  `orders.service/module` y `expenses` ya no importa `cash.service/module`:
+  dependen del `index` público y del token. `receipts/index.ts`,
+  `cash/index.ts` y `expenses/index.ts` son la API pública; `app.module` los
+  consume por el `index`.
+- **Auditoría:** `cash`, `expenses` y `receipts` pasan a `../audit/index.js`.
+  Baseline **21 → 14** (7 acoplamientos resueltos, 0 excepciones nuevas).
+- **Web:** `HubBlocks`/`ChartCard` se movieron a
+  `components/dashboard/workspace-ui.tsx` (capa compartida: una feature no
+  puede importar `components/erp/*`). Features `caja` (`CajaPage`,
+  `CheckoutModal`, cliente SDK + contratos), `comprobantes`
+  (`ComprobantesPage`, `comprobanteARecibo`, SUNAT «pendiente de OSE») y
+  `gastos` (`GastosPage`, cliente listo para AYCDS-27). Las rutas `/app/caja`,
+  `/app/comprobantes` y `/app/gastos` solo importan su feature y conservan
+  cabecera y guard.
+- **Acoplamiento restante (consciente):** el estado de negocio sigue en
+  `ModulesProvider` hasta la Fase 4; `MozoView` (aún en `components/erp/`)
+  importa `CheckoutModal` desde `@/features/caja` hasta la ola de mozo;
+  `lib/cash-api.ts` y `lib/receipts-api.ts` quedan como clientes legados (solo
+  los usan sus tests) y se retiran en la Fase 4.
 
 ### Fase 4 — Desmontar el estado global
 
@@ -236,7 +265,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero).
 - PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

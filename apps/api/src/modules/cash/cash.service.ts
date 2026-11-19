@@ -1,13 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
-import { AuditService } from '../audit/audit.service.js';
-import { OrdersService } from '../orders/orders.service.js';
+import { AuditService } from '../audit/index.js';
+import { ORDERS_PORT, type OrdersPort } from '../orders/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import type { metodo_pago } from '../../generated/prisma/enums.js';
 import type {
@@ -54,7 +55,7 @@ export class CashService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
-    private readonly orders: OrdersService,
+    @Inject(ORDERS_PORT) private readonly orders: OrdersPort,
     private readonly audit: AuditService,
   ) {}
 

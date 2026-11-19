@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CashModule } from '../cash/cash.module.js';
+import { CashModule } from '../cash/index.js';
 import { ExpensesController } from './expenses.controller.js';
 import { ExpensesService } from './expenses.service.js';
 

@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ChartCard, HubBlocks, type HubLink } from "./workspace-ui";
+import { ChartCard, HubBlocks, type HubLink } from "@/components/dashboard/workspace-ui";
 
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 

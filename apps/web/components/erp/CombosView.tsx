@@ -11,7 +11,7 @@ import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { combosSummary } from "@/components/dashboard/summaries/summary-selectors";
-import { HubBlocks } from "@/components/erp/workspace-ui";
+import { HubBlocks } from "@/components/dashboard/workspace-ui";
 
 /** Combos: paquetes de productos con precio fijo. */
 export function CombosView() {

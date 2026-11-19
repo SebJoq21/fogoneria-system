@@ -1,13 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
-import { AuditService } from '../audit/audit.service.js';
-import { CashService } from '../cash/cash.service.js';
+import { AuditService } from '../audit/index.js';
+import { CASH_PORT, type CashPort } from '../cash/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import { limaDayRange } from '../../common/utils/lima-day.js';
 import type { metodo_pago } from '../../generated/prisma/enums.js';
@@ -37,7 +38,7 @@ export class ExpensesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
-    private readonly cash: CashService,
+    @Inject(CASH_PORT) private readonly cash: CashPort,
     private readonly audit: AuditService,
   ) {}
 

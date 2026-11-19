@@ -15,7 +15,7 @@ import { initialPromos } from "@/lib/erp";
 import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { promosSummary } from "@/components/dashboard/summaries/summary-selectors";
-import { HubBlocks } from "@/components/erp/workspace-ui";
+import { HubBlocks } from "@/components/dashboard/workspace-ui";
 
 /** Promociones: cupones con cupo + promociones programadas con vigencia. */
 export function PromocionesView() {

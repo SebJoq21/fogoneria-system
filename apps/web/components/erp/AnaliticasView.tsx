@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard } from "@/components/erp/workspace-ui";
+import { ChartCard } from "@/components/dashboard/workspace-ui";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { fmtMoney } from "@/lib/domain";
