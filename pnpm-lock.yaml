@@ -162,6 +162,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@fogoneria/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@fogoneria/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fogoneria/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       jose:
         specifier: ^6.2.12
         version: 6.2.12
@@ -215,6 +224,15 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11(@types/node@20.19.43)(@vitest/coverage-v8@4.1.11)(vite@8.2.2(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
+  packages/contracts:
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   packages/eslint-config:
     devDependencies:
       '@babel/core':
@@ -250,6 +268,24 @@ importers:
       globals:
         specifier: 17.12.0
         version: 17.12.0
+
+  packages/kernel:
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
+  packages/sdk:
+    devDependencies:
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   packages/typescript-config: {}
 
