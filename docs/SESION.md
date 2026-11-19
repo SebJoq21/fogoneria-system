@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 4, etapa 2 (`TenantProvider`)
+
+- **Objetivo:** extraer de `ModulesProvider` la empresa, las sucursales y la sucursal activa, sin mover todavía el estado de negocio ni cambiar la API que consumen las ~20 vistas.
+- **Hecho:**
+  - `apps/web/lib/tenant-scope.ts`: `resolveActiveBranch` (usuario → guardada vigente → primera real → `todas`), `matchesBranch` (slug/UUID del dataset demo) y `branchIdsOf`; **8 tests** en `lib/tenant-scope.test.ts`.
+  - `components/dashboard/providers/tenant.tsx`: `TenantProvider` + `useTenant` (`tenant`, `company`, `branches`, `realBranches`, `branchIds`, `activeBranch`, `activeBranchId`, `isGeneral`, `writeBranchId`, `loading`, `error`, `setActiveBranch`, `refreshTenant`). Hidrata `/tenant` + `/tenant/branches` con `Promise.all` + `AbortController`, **una vez por `empresaId`**, con snapshot atado a la empresa; persiste `fogoneria:branch:<empresaId>`; con sesión nunca cae a demo y en error deja `tenant: null` + vista general.
+  - `SessionProvider` expone `ready` (fin de la hidratación) sin quitar campos. `app/layout.tsx`: `Theme > Session > Notifications > Tenant > Modules`.
+  - `ModulesProvider` ya no declara snapshot de tenant, `activeBranchId`, memo de `company`/`branches`, la carga de `/tenant` ni `setActiveBranch`: los consume de `useTenant()` y los reexpone en su `value`. `branchOf` sigue leyendo `state.scopes` y `prepareOps` se dispara al llegar `realBranches`.
+- **Anti-flash:** la demo solo se pinta con `ready && !hasSession`; con sesión y aún hidratando, `loading: true`, `branches: []` y el rol operativo conserva su sucursal para no escribir en `todas`.
+- **Verificado:** web **265** tests (32 archivos), `check-types`, `lint` (estilos OK), build OK; `check:boundaries` OK (baseline 0); api `check-types` OK. Sin dependencias nuevas y sin tocar `lib/session.ts`, `proxy.ts` ni el BFF.
+- **Pendiente (etapa 3):** vaciar el estado de negocio de `ModulesProvider` hacia las features, empezando por catálogo → gastos → inventario; `useModules` sigue como fachada de compatibilidad y las features nuevas usan `useTenant`.
+- **Riesgo conocido:** durante la hidratación del tenant las llamadas con `sucursalId` pueden salir sin filtro (vista agregada) y se repiten al resolverse la sucursal; no hay cambio visual, solo un request extra.
+
 ## 2026-11-19 — Modularización Fase 4, etapa 1 (Session + Notifications)
 
 - **Objetivo:** extraer de `ModulesProvider` la sesión y los avisos sin cambiar la API pública que consumen las ~20 vistas (`useModules().login/logout/currentUser/hasSession/notify/...`).

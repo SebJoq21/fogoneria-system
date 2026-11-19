@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–3 implementadas (fundaciones, RRHH, catálogo/precios y olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3) + **Fase 4 etapa 1** (`SessionProvider` y `NotificationsProvider` extraídos de `ModulesProvider`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–3 implementadas (fundaciones, RRHH, catálogo/precios y olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3) + **Fase 4 etapas 1–2** (`SessionProvider`/`NotificationsProvider` y `TenantProvider` extraídos de `ModulesProvider`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -376,6 +376,46 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `TenantProvider` y las features. Hasta entonces `useModules` sigue siendo la
   fachada de compatibilidad; las features nuevas deben usar `useSession` y
   `useNotifications` directamente.
+
+#### Etapa 2 ✅ (2026-11-19) — `Tenant` (empresa, sucursales y sucursal activa)
+
+- **`lib/tenant-scope.ts`** (helpers puros): `resolveActiveBranch` (sucursal del
+  usuario → guardada vigente → primera real → `todas`), `matchesBranch` (tolera
+  el dataset demo con slugs) y `branchIdsOf`. **8 tests** en
+  `lib/tenant-scope.test.ts` (usuario, guardada vigente, guardada obsoleta,
+  usuario desconocido, sin sucursales, slug/UUID e ids).
+- **`components/dashboard/providers/tenant.tsx`**: `TenantProvider` + `useTenant`
+  con `tenant`, `company`, `branches`, `realBranches`, `branchIds`,
+  `activeBranch`, `activeBranchId`, `isGeneral`, `writeBranchId`, `loading`,
+  `error`, `setActiveBranch` y `refreshTenant`. Hidrata con
+  `Promise.all([fetchTenant, fetchBranches])` + `AbortController` **una vez por
+  `empresaId`**; el snapshot se guarda atado a la empresa para no heredar el
+  tenant anterior. Persiste `fogoneria:branch:<empresaId>` y rechaza ids fuera
+  de `branchIds`. Sin sesión usa `DEMO_COMPANY`/`ALL_BRANCHES`; con sesión
+  **nunca** demo y, si la API falla, `tenant: null` (solo queda la vista general).
+- **Anti-flash:** `SessionProvider` expone `ready` (hidratación terminada). El
+  tenant no pinta demo hasta `ready && !hasSession`; con sesión y aún hidratando,
+  `loading: true`, `branches: []` y la sucursal del rol operativo se conserva para
+  no escribir en la vista agregada. `ModulesProvider` ya no dibuja la demo de
+  empresa/sucursales en el primer render.
+- **`ModulesProvider`** deja de declarar el estado/efectos de tenant (snapshot,
+  `activeBranchId`, memo de `company`/`branches`, carga de `/tenant` y
+  `setActiveBranch`) y los toma de `useTenant()`. Sigue siendo el dueño del
+  estado de negocio; `branchOf` continúa leyendo `state.scopes` y `prepareOps`
+  reacciona a las sucursales reales. El `value` reexpone `tenant`, `company`,
+  `branches`, `activeBranch`, `activeBranchId`, `isGeneral`, `setActiveBranch` y
+  `branchOf` para las ~20 vistas que usan `useModules()`.
+- **Layout:** `Theme > Session > Notifications > Tenant > Modules` en
+  `app/layout.tsx`.
+- **Verificado:** web **265** tests (32 archivos), `check-types`, `lint` (estilos
+  OK), build OK; `check:boundaries` OK (baseline 0); api `check-types` OK. Sin
+  dependencias nuevas y sin tocar `lib/session.ts`, `proxy.ts` ni el BFF.
+- **Queda para la etapa 3:** el estado de negocio de `ModulesProvider` (catálogo,
+  órdenes/cuentas, caja/comprobantes, gastos, inventario, promociones, CRM y
+  maestros demo) hacia sus features. `useModules` sigue siendo la fachada de
+  compatibilidad; las features nuevas deben usar `useTenant` para empresa y
+  sucursal.
+
 
 ### Fase 5 — Extracción opcional
 

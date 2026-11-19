@@ -22,6 +22,8 @@ export type SessionContextValue = {
   currentUser: AppUser | null;
   /** Hay empresa en el token: las vistas operan contra la API. */
   hasSession: boolean;
+  /** La hidratación del usuario desde `localStorage` ya terminó. */
+  ready: boolean;
   login: (email: string, password: string) => Promise<AppUser>;
   logout: () => void;
 };
@@ -36,6 +38,7 @@ const Ctx = createContext<SessionContextValue | null>(null);
  */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [ready, setReady] = useState(false);
 
   /* Hidratación del usuario al montar (solo cliente). */
   useEffect(() => {
@@ -47,12 +50,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {
       /* almacenamiento no disponible */
+    } finally {
+      setReady(true);
     }
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
     const { user } = await createSession(email, password);
     setCurrentUser(user);
+    setReady(true);
     storeSessionUser(user);
     return user;
   }, []);
@@ -68,8 +74,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const hasSession = Boolean(currentUser?.empresaId);
 
   const value = useMemo(
-    () => ({ currentUser, hasSession, login, logout }),
-    [currentUser, hasSession, login, logout],
+    () => ({ currentUser, hasSession, ready, login, logout }),
+    [currentUser, hasSession, ready, login, logout],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
