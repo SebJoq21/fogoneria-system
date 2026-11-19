@@ -99,35 +99,42 @@
 
 ## 3. Propiedad colectiva y reglas de revisión
 
+### 3.0 Modo «avance masivo» (vigente)
+
+El equipo decidió priorizar un **avance grande de módulos** antes de formalizar la revisión obligatoria:
+
+- **Activo ahora:** un PR por módulo (validado en CI), issues por módulo con etiqueta, plantilla de PR y triage.
+- **Diferido:** `CODEOWNERS` y la protección de rama (1 aprobación obligatoria). Se activan **al cerrar el avance masivo**, para no frenar el ritmo.
+- **Mientras dure:** se sigue revisando por otra persona cuando se pueda, pero el merge no se bloquea por ello.
+
 ### 3.1 Principios
 
 - **Todos son code owners.** Cualquiera revisa cualquier módulo; no hay silos.
-- **Nadie aprueba ni mergea su propio PR.** GitHub ya bloquea la auto-aprobación; la protección de rama exige además **1 aprobación** de otra persona.
-- **El autor no mergea su PR.** Mergea el reviewer (o el autor después de la aprobación, si el repo lo permite y el reviewer lo autorizó en el hilo).
+- **Nadie aprueba ni mergea su propio PR** cuando la protección esté activa; GitHub ya bloquea la auto-aprobación y la protección añade **1 aprobación** de otra persona.
 - **Guardia semanal rotativa**: una persona por semana hace el triage inicial de todos los módulos y asigna; no es dueño, es el embudo.
 
-### 3.2 `CODEOWNERS` (ya creado)
+### 3.2 `CODEOWNERS` (diferido)
 
-`.github/CODEOWNERS`:
+Aún **no** se crea `.github/CODEOWNERS`. Cuando termine el avance masivo se añade:
 
 ```gitignore
 * @SebJoq21 @SOoOnny
 ```
 
-Al sumar gente se agrega su handle. Con **«Require review from Code Owners»** activo, cualquier PR necesita la aprobación de alguien de esa lista distinto del autor.
+Al sumar gente se agrega su handle. Con **«Require review from Code Owners»** activo, cualquier PR necesitará la aprobación de alguien de esa lista distinto del autor.
 
-### 3.3 Protección de `development` (configurar una vez en GitHub)
+### 3.3 Protección de `development` (diferida)
 
-Settings → Branches → `development`:
+Se configura **después del avance masivo**. Settings → Branches → `development`:
 
-- [x] Require a pull request before merging
-- [x] Require approvals: **1**
-- [x] Dismiss stale pull request approvals when new commits are pushed
-- [x] **Require review from Code Owners**
-- [x] Require status checks: `Lint, tipos y pruebas` **y** `Un PR por módulo`
-- [x] Require conversation resolution before merging
-- [x] Do not allow bypassing the above settings (admins incluidos, si el equipo lo acepta)
-- [ ] Allow auto-merge (apagado: el merge es una decisión humana)
+- [ ] Require a pull request before merging
+- [ ] Require approvals: **1**
+- [ ] Dismiss stale pull request approvals when new commits are pushed
+- [ ] **Require review from Code Owners**
+- [ ] Require status checks: `Lint, tipos y pruebas` **y** `Un PR por módulo`
+- [ ] Require conversation resolution before merging
+- [ ] Do not allow bypassing the above settings
+- [ ] Allow auto-merge (apagado)
 - [ ] Allow force pushes (apagado)
 
 > Lo ideal es aplicar lo mismo a `main`.
@@ -265,13 +272,12 @@ Nuevo → Triage (guardia, 1 día) → Listo (DoR) → En curso → Revisión (o
 
 ### Semana 1 — Habilitar el proceso (en curso)
 
-- [x] `CODEOWNERS` colectivo (`@SebJoq21 @SOoOnny`).
 - [x] Plantilla de PR con módulo, checklist y revisión cruzada.
 - [x] Chequeo `Un PR por módulo` en CI + etiqueta `multi-modulo`.
-- [ ] Activar la protección de `development` en GitHub (§3.3).
-- [ ] Crear los 15 componentes en Jira + etiqueta `modulo:*` y la plantilla de issue.
-- [ ] Convertir las observaciones 1–8 en issues con componente y severidad.
+- [ ] Crear los 15 componentes en Jira + etiqueta `modulo:*` y la plantilla de issue (los componentes son manuales en la UI).
+- [ ] Convertir las observaciones 1–8 en issues con etiqueta de módulo y severidad.
 - [ ] Publicar la rotación de guardias semanales.
+- [ ] **Diferido:** `CODEOWNERS` y protección de rama, al cerrar el avance masivo (§3.2 y §3.3).
 
 ### Semana 2 — Operar
 
@@ -280,14 +286,15 @@ Nuevo → Triage (guardia, 1 día) → Listo (DoR) → En curso → Revisión (o
 - [ ] README corto por módulo: contrato, endpoints, tests y cómo correrlo.
 - [ ] Tablero Jira por componente con filtros guardados.
 
-### Semana 3 — Medir y ajustar
+### Semana 3 — Medir, ajustar y formalizar
 
 - [ ] Revisión de salud con las métricas de §4.5.
 - [ ] Decidir pantallas heredadas (7).
 - [ ] Planificar inventario maestro (1) y E2E (12).
 - [ ] Retro de 30 min: PRs que se trabaron por revisión o por alcance.
+- [ ] **Al cerrar el avance masivo:** crear `CODEOWNERS`, activar la protección de `development` (1 aprobación + Code Owners + checks) y pasar a revisión obligatoria.
 
-**Criterio de éxito a 3 semanas:** 100 % de PRs revisados por otra persona · ≥ 90 % de PRs de un solo módulo · 0 issues sin componente · triage < 1 día · S1/S2 con SLA ≥ 80 % · observaciones 1–4 cerradas o en curso.
+**Criterio de éxito del avance masivo:** ≥ 90 % de PRs de un solo módulo · 0 issues sin etiqueta de módulo · triage < 1 día · observaciones 1–4 cerradas o en curso. (La revisión obligatoria por otra persona se mide recién al activar la protección.)
 
 ---
 

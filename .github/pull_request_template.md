@@ -33,7 +33,7 @@
 
 ## Revisión
 
-- [ ] Revisado por **otra persona** (el autor no aprueba su PR).
+- [ ] Revisado por otra persona cuando sea posible (obligatorio al activar CODEOWNERS).
 - [ ] El reviewer verificó el alcance del módulo y la evidencia.
 
 ## Issue / tarea
