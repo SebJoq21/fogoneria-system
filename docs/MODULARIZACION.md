@@ -177,7 +177,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
 | Lectura | `bi` → `realtime` | pendiente |
 | Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | pendiente |
 
-#### Ola salón ✅ (2026-11-19)
+#### Ola salón ✅ (2026-11-19) — PR #54
 
 - **Contratos:** `packages/contracts/src/{mesas,reservas,ordenes}.ts` (estados, inputs,
   validadores, etiquetas y helpers de día/hora de Lima) y sus subpath exports.
@@ -237,6 +237,6 @@ Un módulo está “independiente” cuando:
 
 - Violaciones nuevas de fronteras: **0**.
 - Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón).
-- PRs de un solo módulo: **100 %**.
+- PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

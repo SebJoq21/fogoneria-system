@@ -1,6 +1,6 @@
 # SESION — estado entre sesiones
 
-## 2026-11-19 — Modularización Fase 3, ola salón (mesas + reservas + órdenes/KDS)
+## 2026-11-19 — Modularización Fase 3, ola salón (PR #54, mergeado)
 
 - **Contratos:** `packages/contracts/src/mesas.ts`, `reservas.ts` y `ordenes.ts` (estados, inputs, validadores, etiquetas, SLA y helpers de Lima) + subpaths `./mesas|./reservas|./ordenes`.
 - **Backend:** `tables/index.ts`, `reservations/index.ts` y `orders/index.ts` públicos; `app.module.ts` importa por el `index`. `orders.service.ts` usa `../audit/index.js`. Sin cambios de lógica. Baseline de fronteras **22 → 21** (`--write-baseline`).
