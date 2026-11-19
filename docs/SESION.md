@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-18 — Auditoría por módulos y plan de propiedad
+
+- **Auditoría completa** (API + web + datos + infra): 20 módulos backend (17 con controlador, 106 endpoints), 33 rutas de app, 302 unit / 112 e2e / 109 DB / 148 web, lint/types/build en verde. Sin hallazgos nuevos de código.
+- **Estado por módulo:** catálogo, precios, órdenes/KDS, mesas/reservas, caja, comprobantes, CRM, BI, SaaS y onboarding al 90–100 %; inventario 80 %, RRHH 80 %, gastos 50 %, promociones 40 %; pagos/soporte/configuración/carta son mock sin tarea.
+- **Entregable:** `docs/PLAN-MODULOS-Y-PROPIEDAD.md` con inventario, mapa dueño/backup por módulo, modelo de issues por componente de Jira (plantilla, SLA S1–S4, DoR/DoD, cross-módulo), snippet de `CODEOWNERS`, 14 observaciones priorizadas y plan de implantación de 3 semanas.
+- **Pendiente de decisión del equipo:** validar dueños/backups y completar los handles reales del `CODEOWNERS`; luego crear componentes/labels en Jira.
+
 ## 2026-11-11 — Demo levantada y seed idempotente
 
 - **Stack de demo corriendo:** PostgreSQL 16 (`localhost:5433`, contenedor `fogoneria-postgres`), API en `http://localhost:3001` (Swagger `/api/docs`) y web en `http://localhost:3000`.
