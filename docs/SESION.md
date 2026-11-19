@@ -13,7 +13,7 @@
 - **Pendiente (etapa 2):** `TenantProvider` + vaciar el estado de negocio de `ModulesProvider` hacia las features. `useModules` sigue siendo la fachada de compatibilidad.
 - **Nota:** los toasts ya no se persisten ni se sincronizan entre pestañas (decisión de la etapa: estado en memoria).
 
-## 2026-11-19 — Modularización Fase 3, ola plataforma
+## 2026-11-19 — Modularización Fase 3, ola plataforma (PR #64, mergeado)
 
 - **Contratos:** `packages/contracts/src/plataforma.ts` (`RolWeb`, `UsuarioSesion`, `Empresa`, `Sucursal`, `EstadoEmpresa`, `PlanEmpresa`, `EmpresaSaas`, `MetricasSaas`, `OnboardingInput`, `OnboardingResultado`, `RespuestaLogin`, etiquetas, `estadoEmpresaTone`, `rolDesdeApi`, `isValidRuc`, `validarOnboarding`, `toOnboardingPayload`) + subpath `./plataforma`. El login **no** se movió: `/api/session` y `lib/session.ts` siguen siendo la autoridad de la cookie HttpOnly.
 - **Backend:** `auth`, `tenant`, `saas`, `billing` y `onboarding` exponen `index.ts` público; `app.module.ts` los importa por el `index.js`, `realtime.module.ts` toma `AuthModule` de `../auth/index.js`, y `billing`/`onboarding`/`saas` pasan a `../audit/index.js`. Sin cambios de reglas (JWT/Passport, bcrypt, rate limit, cron de morosidad, RLS, transacciones).
@@ -29,6 +29,7 @@
 - **Web:** `features/bi/` (`api.ts` SDK+contratos, `hooks.ts` con `useBi` y rango de 7 días de Lima, `AnaliticasPage`, `index.ts`, `bi.test.ts`); `/app/analiticas` solo importa la feature; se retiraron `lib/bi-api.ts` y su test. `lib/realtime.ts` importa tipos/constantes de `@fogoneria/contracts/tiempo-real` y sigue siendo transporte compartido (sin feature web).
 - Baseline **6 → 4** (`--write-baseline`): salen `orders → realtime` ×2; queda `realtime → auth` para plataforma.
 - Verificado: web **230** tests (28 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); api **305** unit + **112** e2e + `check-types` + build; `check:boundaries` OK (4 históricas, 0 nuevas).
+- **Auditoría (11/12 PASS, 1 doc):** la tabla de olas ya marca lectura ✅; specs de órdenes tipan contra `realtime/index.js`; el barrel de contratos queda prohibido en la API (Node type stripping) y `websockets.md` describe la paridad de eventos.
 - Próximo: ola **plataforma** (`realtime → auth` y auditoría directa en billing/onboarding/saas), después Fase 4 (vaciar `ModulesProvider`).
 
 ## 2026-11-19 — Modularización Fase 3, ola personas (PR #60, mergeado)

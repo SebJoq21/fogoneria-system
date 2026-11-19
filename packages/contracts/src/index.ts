@@ -1,3 +1,10 @@
+/**
+ * Barrel de contratos para bundlers y type-checking de la web.
+ *
+ * **La API no importa este barrel**: Node 24 carga los `.ts` por subpath
+ * (`@fogoneria/contracts/tiempo-real`) con type stripping, y los reexports sin
+ * extensión de este archivo no resuelven en runtime. Usa siempre el subpath.
+ */
 export * from './bi';
 export * from './caja';
 export * from './catalogo';

@@ -153,7 +153,7 @@ badge *En vivo / Reconectando… / Sin canal en vivo* y la última novedad.
 | `src/modules/auth/auth.service.spec.ts` | `ws-ticket` de 60 s con `scope: 'ws'` y rechazo sin empresa |
 | `test/realtime.e2e-spec.ts` | Socket.io real: handshake sin ticket, access token como ticket, evento solo a la sucursal del tenant, `ADMIN_GLOBAL` sin duplicados, A no recibe de B |
 | `app/api/session/ws-ticket/route.test.ts` (web) | BFF: 401 sin sesión, Bearer de la cookie, 502 upstream, propagación de 401 |
-| `lib/realtime.test.ts` (web) | Base URL y deduplicador |
+| `lib/realtime.test.ts` (web) | Base URL, deduplicador y paridad de eventos/namespace/salas |
 
 ## 6. Límites conocidos
 

@@ -314,7 +314,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
   ola de plataforma. La API ejecuta el contrato `.ts` del workspace en runtime
   (Node 24 type stripping), y el Dockerfile copia `packages/contracts`.
 
-#### Ola plataforma ✅ (2026-11-19)
+#### Ola plataforma ✅ (2026-11-19) — PR #64
 
 - **Contratos:** `packages/contracts/src/plataforma.ts` (`RolWeb`,
   `UsuarioSesion`, `Empresa`, `Sucursal`, `EstadoEmpresa`, `PlanEmpresa`,

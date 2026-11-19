@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import type { PrismaService } from '../../src/prisma/prisma.service.js';
-import type { RealtimeService } from '../../src/modules/realtime/realtime.service.js';
+import type { RealtimeService } from '../../src/modules/realtime/index.js';
 import { OrdersSlaCron } from '../../src/modules/orders/orders.sla.cron.js';
 import {
   createDb,
