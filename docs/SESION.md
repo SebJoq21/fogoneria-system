@@ -1,6 +1,6 @@
 # SESION — estado entre sesiones
 
-## 2026-11-19 — Modularización Fase 3, ola personas (PR abierto)
+## 2026-11-19 — Modularización Fase 3, ola personas (PR #60, mergeado)
 
 - **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle, movimientos de puntos, config de lealtad, inputs, etiquetas y `validarAjustePuntos`) + subpath `./crm`. El segmento lo calcula el servidor; la web solo lo pinta.
 - **Backend:** `crm/index.ts` público (`CrmModule`, `CrmService`, `ConfigLealtad`); `app.module.ts` importa por el `index` y `crm.service.ts` usa `../audit/index.js`. Sin cambios de reglas, worker de consumos ni triggers. Baseline **7 → 6** (`--write-baseline`).
@@ -17,6 +17,7 @@
 - **Web:** `features/inventario/` (`api.ts` SDK+contratos, `InventoryPage` con el maestro demo de AYCDS-24, `MovementsPage` con semáforo y kardex de la API, `InventoryHubPage`) y `features/promociones/` (`api.ts` SDK para combos/cupones/validación/schedule, `CombosPage`, `PromocionesPage`). `ModuleGate` importa el hub desde la feature; las rutas de stock, movimientos, combos y promociones solo importan su feature. Se retiraron `lib/inventory-api.ts` y su test (los cubre la feature).
 - **Acoplamiento restante:** insumos, combos y cupones siguen en `ModulesProvider` (Fase 4); `CombosPage`/`PromocionesPage` aún no consumen `promocionesApi` (cliente listo). El kardex y el semáforo ya leen la API con sesión. Backend en baseline: `orders → realtime` ×2, `realtime → auth` y `audit` directo en billing/crm/onboarding/saas.
 - Verificado: **217** web tests (28 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (baseline **14 → 7**, 0 nuevas).
+- **Auditoría (12/12 PASS):** `MovementsPage` usa `semaforoDeStock` (un solo camino para el resumen) y `horaDeApi` documenta que Prisma serializa `time` como ISO con `Z` sin convertir la hora de pared de Lima; su test lo fija.
 - Próximo: ola **personas** (`crm`), después Fase 4 (vaciar `ModulesProvider`).
 
 ## 2026-11-19 — Modularización Fase 3, ola dinero (PR #56, mergeado)
