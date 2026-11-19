@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffService } from './staff.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { TenantContextService } from '../../common/context/tenant-context.service.js';
-import type { AuditService } from '../audit/audit.service.js';
+import type { AuditService } from '../audit/index.js';
 
 const context = {
   userId: 'u1',

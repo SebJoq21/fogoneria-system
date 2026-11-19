@@ -21,6 +21,5 @@
   "apps/api/src/modules/promotions/promotions.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/realtime/realtime.module.ts|../auth/auth.module.js",
   "apps/api/src/modules/receipts/receipts.service.ts|../audit/audit.service.js",
-  "apps/api/src/modules/saas/saas.service.ts|../audit/audit.service.js",
-  "apps/api/src/modules/staff/staff.service.ts|../audit/audit.service.js"
+  "apps/api/src/modules/saas/saas.service.ts|../audit/audit.service.js"
 ]

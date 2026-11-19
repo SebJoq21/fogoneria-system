@@ -4,7 +4,7 @@ import {
   etiquetaBloque,
   validarMarcacion,
 } from '@fogoneria/contracts/rrhh';
-import { toAsistencia, toEmpleado, toPozo } from './api';
+import { toAsistencia, toEmpleado, toPozo, toTurno } from './api';
 
 describe('contratos de RRHH', () => {
   it('valida la marcación', () => {
@@ -54,6 +54,17 @@ describe('mapeo API → contrato', () => {
       estado: 'TARDANZA',
       fuente: 'PIN',
     });
+  });
+
+  it('normaliza el turno con su empleado', () => {
+    const turno = toTurno({
+      id: 't1',
+      fecha: '2026-11-19',
+      bloque: 'TARDE',
+      empleados: { id: 'e1', nombre: 'Ana' },
+    });
+
+    expect(turno).toMatchObject({ empleadoId: 'e1', empleado: 'Ana', bloque: 'TARDE' });
   });
 
   it('convierte el total del pozo (Decimal) a número', () => {
