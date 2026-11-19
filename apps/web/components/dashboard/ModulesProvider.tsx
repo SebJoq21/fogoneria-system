@@ -39,9 +39,6 @@ import {
   type Table,
 } from "@/lib/erp";
 import {
-  ALL_BRANCHES,
-  BRANCH_IDS,
-  DEMO_COMPANY,
   DEMO_EMPRESA_ID,
   GENERAL_BRANCH,
   SEED_BRANCH_SLUGS,
@@ -53,7 +50,7 @@ import {
   type Branch,
   type BranchScope,
 } from "@/lib/tenancy";
-import { fetchBranches, fetchTenant, type Tenant } from "@/lib/tenant-api";
+import type { Tenant } from "@/lib/tenant-api";
 import type { AppUser } from "@/lib/auth";
 import {
   accountTotals,
@@ -83,9 +80,11 @@ import {
   type ProductCategory,
 } from "@/lib/erp-catalog";
 import { ApiError } from "@/lib/api";
-import { branchStorageKey, tenantKeyOf } from "@/lib/session-state";
+import { tenantKeyOf } from "@/lib/session-state";
+import { matchesBranch } from "@/lib/tenant-scope";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
+import { useTenant } from "./providers/tenant";
 import * as catalogApi from "@/lib/catalog-api";
 import * as ordersApi from "@/lib/orders-api";
 import {
@@ -408,25 +407,6 @@ function buildInitialState(empresaId: string | null): ErpState {
   };
 }
 
-function matchesBranch(branchA?: string | null, branchB?: string | null): boolean {
-  if (!branchA || !branchB) return false;
-  if (branchA === branchB) return true;
-  const slugA = SEED_BRANCH_SLUGS[branchA] ?? branchA;
-  const slugB = SEED_BRANCH_SLUGS[branchB] ?? branchB;
-  return slugA === slugB;
-}
-
-/**
- * Empresa y sucursales de la API atadas a su `empresaId`. Guardar la empresa
- * junto al dato evita que un login nuevo herede el tenant del anterior
- * mientras llega la respuesta.
- */
-type TenantSnapshot = {
-  empresaId: string | null;
-  tenant: Tenant | null;
-  branches: Branch[] | null;
-};
-
 export function ModulesProvider({
   children,
   initialPayments,
@@ -436,61 +416,44 @@ export function ModulesProvider({
 }) {
   const { currentUser, hasSession, login, logout } = useSession();
   const { notifications, hasUnread, notify, clearUnread } = useNotifications();
+  /* Tenant (empresa/sucursales) desde la Fase 4 etapa 2; se reexpone abajo. */
+  const {
+    tenant,
+    company,
+    branches,
+    realBranches,
+    branchIds,
+    activeBranch,
+    activeBranchId,
+    isGeneral,
+    setActiveBranch,
+    loading: tenantLoading,
+    error: tenantError,
+  } = useTenant();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
-  const [activeBranchId, setActiveBranchId] = useState<string>("todas");
-  const [tenantSnapshot, setTenantSnapshot] = useState<TenantSnapshot | null>(null);
   const applyingRemote = useRef(false);
   /** Namespace de persistencia: una empresa no comparte estado con otra. */
   const tenantKey = tenantKeyOf(currentUser);
   const empresaId = currentUser?.empresaId ?? null;
-  const tenant = tenantSnapshot?.empresaId === empresaId ? tenantSnapshot.tenant : null;
-  /** `null` = aún no se consultó la API (modo demo/offline). */
-  const tenantBranches =
-    tenantSnapshot?.empresaId === empresaId ? tenantSnapshot.branches : null;
-
-  const branchIds = useMemo(
-    () =>
-      tenantBranches
-        ? tenantBranches.map((branch) => branch.id)
-        : currentUser
-          ? []
-          : BRANCH_IDS,
-    [tenantBranches, currentUser],
-  );
-  const branches = useMemo<Branch[]>(
-    () =>
-      tenantBranches
-        ? [GENERAL_BRANCH, ...tenantBranches]
-        : currentUser
-          ? [GENERAL_BRANCH]
-          : ALL_BRANCHES,
-    [tenantBranches, currentUser],
-  );
-  const company = useMemo(
-    () =>
-      tenant
-        ? { legalName: tenant.legalName, ruc: tenant.ruc }
-        : currentUser
-          ? { legalName: "—", ruc: "—" }
-          : DEMO_COMPANY,
-    [tenant, currentUser],
-  );
 
   /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
     const saved = loadErpState(tenantKey);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
     setState(saved ?? buildInitialState(currentUser?.empresaId ?? null));
-    setActiveBranchId(() => {
-      if (currentUser?.branchId) return currentUser.branchId;
-      try {
-        return localStorage.getItem(branchStorageKey(tenantKey)) ?? "todas";
-      } catch {
-        return "todas";
-      }
-    });
   }, [tenantKey, currentUser]);
+
+  /* Alinea la operación demo con las sucursales reales cuando llegan de la API. */
+  const preparedBranches = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    const ids = realBranches.map((branch) => branch.id);
+    const signature = `${empresaId}:${ids.join(",")}`;
+    if (preparedBranches.current === signature) return;
+    preparedBranches.current = signature;
+    setState((prev) => prepareOps(prev, ids));
+  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches]);
 
   /* Persistir + difundir a otras pestañas de la misma empresa */
   useEffect(() => {
@@ -509,19 +472,6 @@ export function ModulesProvider({
       setState(msg.type === "state" ? msg.state : buildInitialState(currentUser?.empresaId ?? null));
     });
   }, [tenantKey, currentUser]);
-
-  const setActiveBranch = useCallback(
-    (id: string) => {
-      if (id !== GENERAL_BRANCH.id && !branchIds.includes(id)) return;
-      setActiveBranchId(id);
-      try {
-        localStorage.setItem(branchStorageKey(tenantKey), id);
-      } catch {
-        /* almacenamiento no disponible */
-      }
-    },
-    [branchIds, tenantKey],
-  );
 
   /* ---------- Catálogo desde la API (tarea 63) ---------- */
 
@@ -747,40 +697,6 @@ export function ModulesProvider({
     return () => controller.abort();
   }, [currentUser, refreshTables, refreshReservations]);
 
-  /* Empresa y sucursales reales del token (tarea 57). */
-  useEffect(() => {
-    if (!currentUser) return;
-    const controller = new AbortController();
-
-    void (async () => {
-      try {
-        const [tenantData, branchData] = await Promise.all([
-          fetchTenant(controller.signal),
-          fetchBranches(controller.signal),
-        ]);
-        if (controller.signal.aborted) return;
-        setTenantSnapshot({
-          empresaId: currentUser.empresaId,
-          tenant: tenantData,
-          branches: branchData,
-        });
-        setState((prev) => prepareOps(prev, branchData.map((branch) => branch.id)));
-        setActiveBranchId((prev) => {
-          const ids = branchData.map((branch) => branch.id);
-          if (currentUser.branchId && ids.includes(currentUser.branchId)) return currentUser.branchId;
-          if (ids.includes(prev)) return prev;
-          return branchData.length > 0 ? branchData[0].id : GENERAL_BRANCH.id;
-        });
-      } catch {
-        // Sin datos reales no se cae a la empresa/sucursales demo: el shell
-        // queda sin sucursal operativa hasta que la API responda.
-        setTenantSnapshot({ empresaId: currentUser.empresaId, tenant: null, branches: [] });
-      }
-    })();
-
-    return () => controller.abort();
-  }, [currentUser]);
-
   const saveProduct = useCallback(
     async (input: ProductInput) => {
       const payload = {
@@ -916,7 +832,6 @@ export function ModulesProvider({
     [refreshCatalog],
   );
 
-  const isGeneral = activeBranchId === GENERAL_BRANCH.id;
   const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
 
   const activeScope: BranchScope = useMemo(() => {
@@ -1675,7 +1590,7 @@ export function ModulesProvider({
       company,
       tenant,
       branches,
-      activeBranch: branches.find((b) => b.id === activeBranchId) ?? branches[0],
+      activeBranch,
       activeBranchId,
       isGeneral,
       setActiveBranch,
@@ -1766,6 +1681,7 @@ export function ModulesProvider({
       company,
       tenant,
       branches,
+      activeBranch,
       activeBranchId,
       isGeneral,
       setActiveBranch,
