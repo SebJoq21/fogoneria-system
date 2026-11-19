@@ -14,7 +14,7 @@ import { combosSummary } from "@/components/dashboard/summaries/summary-selector
 import { HubBlocks } from "@/components/dashboard/workspace-ui";
 
 /** Combos: paquetes de productos con precio fijo. */
-export function CombosView() {
+export function CombosPage() {
   const { combos, setCombos, products, notify } = useModules();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);

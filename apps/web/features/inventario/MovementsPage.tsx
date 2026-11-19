@@ -7,19 +7,13 @@ import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { kardexSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { fmtDateTime } from "@/lib/domain";
 import type { StockMovement } from "@/lib/erp";
-import {
-  getStockStatus,
-  listMovements,
-  movementQtyLabel,
-  movementTypeLabel,
-} from "@/lib/inventory-api";
+import { inventarioApi, kardexRowFromApi } from "./api";
 
 const typeTone = { Entrada: "success", Salida: "neutral", Ajuste: "warning" } as const;
 
 /** Inventarios · Movimientos: kardex de entradas, salidas y ajustes. */
-export function InventoryMovementsView() {
+export function MovementsPage() {
   const { hasSession, movements } = useModules();
   const [filter, setFilter] = useState<"Todos" | "Entrada" | "Salida" | "Ajuste">(() => {
     try {
@@ -43,8 +37,8 @@ export function InventoryMovementsView() {
     // Diferido al siguiente tick: el efecto no debe disparar renders en cascada.
     const timer = setTimeout(() => {
       Promise.all([
-        listMovements({ limit: 200, signal: controller.signal }),
-        getStockStatus({ signal: controller.signal }),
+        inventarioApi.movimientos({ limit: 200, signal: controller.signal }),
+        inventarioApi.stock({ signal: controller.signal }),
       ])
         .then(([kardex, stock]) => {
           setSemaforo({
@@ -52,21 +46,7 @@ export function InventoryMovementsView() {
             bajos: stock.resumen.bajos,
             optimos: stock.resumen.optimos,
           });
-          setApiRows(
-            kardex.items.map((movimiento, indice) => {
-              const etiqueta = movementTypeLabel(movimiento.tipo);
-              return {
-                id: indice + 1,
-                datetime: fmtDateTime(movimiento.fecha),
-                type: etiqueta === "Merma" ? "Ajuste" : etiqueta,
-                ingredient: movimiento.insumo,
-                qty: movementQtyLabel(movimiento),
-                reason:
-                  movimiento.motivo ??
-                  (movimiento.orden ? `Comanda ${movimiento.orden}` : "Sin motivo"),
-              };
-            }),
-          );
+          setApiRows(kardex.items.map((movimiento, indice) => kardexRowFromApi(movimiento, indice)));
         })
         .catch((error: unknown) => {
           if (controller.signal.aborted) return;

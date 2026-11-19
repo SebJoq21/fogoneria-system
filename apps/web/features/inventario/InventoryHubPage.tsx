@@ -8,7 +8,7 @@ import { ChartCard, HubBlocks, type HubLink } from "@/components/dashboard/works
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
 /** Workspace Inventarios: KPIs + gráfico + columnas. */
-export function InventoryWorkspace() {
+export function InventoryHubPage() {
   const { ingredients, movements } = useModules();
   const critical = ingredients.filter((i) => i.state !== "Óptimo").length;
 

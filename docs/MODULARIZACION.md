@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón** y **dinero** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero** y **operación** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -172,7 +172,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
 |---|---|---|
 | Salón | `tables` → `reservations` → `orders` | ✅ hecha |
 | Dinero | `receipts` → `cash` → `expenses` | ✅ hecha |
-| Operación | `inventory` → `promotions` | pendiente |
+| Operación | `inventory` → `promotions` | ✅ hecha |
 | Personas | `crm` | pendiente |
 | Lectura | `bi` → `realtime` | pendiente |
 | Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | pendiente |
@@ -229,6 +229,40 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `lib/cash-api.ts` y `lib/receipts-api.ts` quedan como clientes legados (solo
   los usan sus tests) y se retiran en la Fase 4.
 
+#### Ola operación ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/inventario.ts` (semáforo, kardex,
+  filtros, `ConsumoResultado`, etiquetas y `movimientoCantidadLabel`) y
+  `packages/contracts/src/promociones.ts` (combos, cupones, cupón resuelto,
+  reglas horarias, `estadoCupon` y `etiquetaDescuento`) + subpaths
+  `./inventario` y `./promociones`. `caja` e `inventario` comparten el nombre
+  `etiquetaTipoMovimiento`: el root conserva el de caja por compatibilidad y el
+  inventario se consume por su subpath (export explícito en `src/index.ts`).
+- **Backend:** `inventory/index.ts` y `promotions/index.ts` son la API pública;
+  `app.module` registra **ambos** módulos (antes `PromotionsModule` solo se
+  montaba porque lo importaba órdenes, así que su controller dependía de ese
+  import). `orders.module`/`orders.service` consumen los `index.js`.
+  `inventory.service`, `stock-alerts.service` y `promotions.service` pasan a
+  `../audit/index.js`.
+- **`PRICING_PORT` en promociones:** `PromotionsService` inyecta el puerto y
+  `PromotionsModule` importa `PricingModule`; el precio de referencia de un
+  combo y el bloqueo anti-inflación salen de `resolvePrices`, así que el módulo
+  ya no lee `precios_platos` ni `listas_precios`. Sin cambios de reglas.
+- **Baseline 14 → 7** (audit de inventory ×2 y promotions ×1; imports de
+  órdenes a inventory/promotions ×4). Sin excepciones nuevas.
+- **Web:** `features/inventario/` (`InventoryPage` con el maestro demo de
+  AYCDS-24, `MovementsPage` con semáforo+kardex de la API, `InventoryHubPage`
+  con el workspace, `api.ts` SDK+contratos y su test) y
+  `features/promociones/` (`CombosPage`, `PromocionesPage`, `api.ts` SDK para
+  combos/cupones/validación/schedule y su test). `ModuleGate` importa el hub
+  desde la feature; las rutas de stock, movimientos, combos y promociones solo
+  importan su feature. `lib/inventory-api.ts` y su test se retiraron: los cubre
+  la feature.
+- **Acoplamiento restante (consciente):** el estado de insumos, combos y
+  cupones sigue en `ModulesProvider` hasta la Fase 4; las vistas de combos y
+  promociones aún no consumen `promocionesApi` (el cliente queda listo). El
+  kardex ya lee la API cuando hay sesión.
+
 ### Fase 4 — Desmontar el estado global
 
 `ModulesProvider` → contextos de plataforma (`Session`, `Tenant`, `Notifications`); cada feature con su estado.
@@ -265,7 +299,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación).
 - PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

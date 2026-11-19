@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PromotionsService } from './promotions.service.js';
 import type { PrismaService } from '../../prisma/prisma.service.js';
 import type { TenantContextService } from '../../common/context/tenant-context.service.js';
-import type { AuditService } from '../audit/audit.service.js';
+import type { AuditService } from '../audit/index.js';
+import type { PricingPort } from '../pricing/index.js';
 
 const context = {
   userId: 'u1',
@@ -33,8 +34,6 @@ function buildPrisma() {
       },
       combos_platos: { findMany: vi.fn().mockResolvedValue([]) },
       platos: { count: vi.fn().mockResolvedValue(2) },
-      listas_precios: { findFirst: vi.fn().mockResolvedValue({ id: 'lista-1' }) },
-      precios_platos: { findMany: vi.fn().mockResolvedValue([]) },
       cupones: {
         findFirst: vi.fn(),
         findMany: vi.fn().mockResolvedValue([]),
@@ -52,22 +51,25 @@ function buildPrisma() {
 describe('PromotionsService (AYCDS-19)', () => {
   let prisma: ReturnType<typeof buildPrisma>;
   let audit: { record: ReturnType<typeof vi.fn> };
+  let pricing: { resolvePrices: ReturnType<typeof vi.fn> };
 
   function buildService() {
     return new PromotionsService(
       prisma as unknown as PrismaService,
       { get: () => context } as unknown as TenantContextService,
       audit as unknown as AuditService,
+      pricing as unknown as PricingPort,
     );
   }
 
   beforeEach(() => {
     prisma = buildPrisma();
     audit = { record: vi.fn().mockResolvedValue(undefined) };
+    pricing = {
+      resolvePrices: vi.fn().mockResolvedValue({ listaId: 'lista-1', precios: new Map() }),
+    };
     vi.clearAllMocks();
     prisma.scoped.platos.count.mockResolvedValue(2);
-    prisma.scoped.listas_precios.findFirst.mockResolvedValue({ id: 'lista-1' });
-    prisma.scoped.precios_platos.findMany.mockResolvedValue([]);
     prisma.scoped.combos.findMany.mockResolvedValue([]);
     prisma.scoped.combos_platos.findMany.mockResolvedValue([]);
     prisma.scoped.cupones.findMany.mockResolvedValue([]);
@@ -86,23 +88,30 @@ describe('PromotionsService (AYCDS-19)', () => {
     };
 
     it('rechaza un combo más caro que sus partes (anti-inflación)', async () => {
-      prisma.scoped.precios_platos.findMany.mockResolvedValue([
-        { plato_id: PLATO, precio: '20' },
-        { plato_id: PLATO_B, precio: '10' },
-      ]);
+      pricing.resolvePrices.mockResolvedValue({
+        listaId: 'lista-1',
+        precios: new Map([
+          [PLATO, 20],
+          [PLATO_B, 10],
+        ]),
+      });
       const service = buildService();
 
       await expect(
         service.createCombo({ ...comboDto, precioFijo: 40 }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.scoped.combos.create).not.toHaveBeenCalled();
+      expect(pricing.resolvePrices).toHaveBeenCalledWith([PLATO, PLATO_B]);
     });
 
     it('acepta un combo más barato que sus partes', async () => {
-      prisma.scoped.precios_platos.findMany.mockResolvedValue([
-        { plato_id: PLATO, precio: '20' },
-        { plato_id: PLATO_B, precio: '15' },
-      ]);
+      pricing.resolvePrices.mockResolvedValue({
+        listaId: 'lista-1',
+        precios: new Map([
+          [PLATO, 20],
+          [PLATO_B, 15],
+        ]),
+      });
       prisma.scoped.combos.create.mockResolvedValue({ id: COMBO });
       const service = buildService();
 
@@ -124,9 +133,10 @@ describe('PromotionsService (AYCDS-19)', () => {
     });
 
     it('no valida el precio si la lista no tiene precios de los platos', async () => {
-      prisma.scoped.precios_platos.findMany.mockResolvedValue([
-        { plato_id: PLATO, precio: '20' },
-      ]);
+      pricing.resolvePrices.mockResolvedValue({
+        listaId: 'lista-1',
+        precios: new Map([[PLATO, 20]]),
+      });
       prisma.scoped.combos.create.mockResolvedValue({ id: COMBO });
       const service = buildService();
 
@@ -164,9 +174,10 @@ describe('PromotionsService (AYCDS-19)', () => {
           ],
         },
       ]);
-      prisma.scoped.precios_platos.findMany.mockResolvedValue([
-        { plato_id: PLATO, precio: '45' },
-      ]);
+      pricing.resolvePrices.mockResolvedValue({
+        listaId: 'lista-1',
+        precios: new Map([[PLATO, 45]]),
+      });
       const service = buildService();
 
       const [combo] = await service.listCombos();

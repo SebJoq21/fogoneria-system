@@ -5,7 +5,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
 import type { StockStatusQueryDto } from './dto/stock-alerts.dto.js';
 
 const SCHEMA_PATTERN = /^[a-z_][a-z0-9_]*$/;

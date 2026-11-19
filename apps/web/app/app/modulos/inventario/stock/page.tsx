@@ -1,5 +1,5 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { InventoryModule } from "@/components/erp/InventoryModule";
+import { InventoryPage } from "@/features/inventario";
 
 export default function InventarioStockPage() {
   return (
@@ -9,7 +9,7 @@ export default function InventarioStockPage() {
           <h2 className="text-section font-medium text-ink-900">Stock</h2>
           <p className="text-sm text-ink-400 mt-1">Insumos, mínimos y escandallos.</p>
         </div>
-        <InventoryModule />
+        <InventoryPage />
       </div>
     </ModuleGuard>
   );

@@ -1,12 +1,14 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
+import { PRICING_PORT, type PricingPort } from '../pricing/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   descuentoDe,
@@ -60,6 +62,7 @@ export class PromotionsService {
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
     private readonly audit: AuditService,
+    @Inject(PRICING_PORT) private readonly pricing: PricingPort,
   ) {}
 
   /* ------------------------------- combos ------------------------------- */
@@ -473,7 +476,10 @@ export class PromotionsService {
     }
   }
 
-  /** Suma de los platos a la lista activa, por combo. `null` si falta algún precio. */
+  /**
+   * Suma de los platos a la lista activa, por combo. `null` si falta algún precio.
+   * Los precios salen de `PRICING_PORT`: este módulo no lee `precios_platos`.
+   */
   private async preciosReferencia(
     combos: { id: string; platos: ComboPlateDto[] }[],
   ): Promise<Map<string, number | null>> {
@@ -483,28 +489,17 @@ export class PromotionsService {
     ];
     if (platoIds.length === 0) return resultado;
 
-    const lista = await this.prisma.scoped.listas_precios.findFirst({
-      where: { activa: true, deleted_at: null },
-      select: { id: true },
-    });
-    if (!lista) {
+    const { listaId, precios } = await this.pricing.resolvePrices(platoIds);
+    if (!listaId) {
       for (const combo of combos) resultado.set(combo.id, null);
       return resultado;
     }
-
-    const precios = await this.prisma.scoped.precios_platos.findMany({
-      where: { lista_id: lista.id, plato_id: { in: platoIds } },
-      select: { plato_id: true, precio: true },
-    });
-    const porPlato = new Map(
-      precios.map((precio) => [precio.plato_id, Number(precio.precio)]),
-    );
 
     for (const combo of combos) {
       let suma = 0;
       let completo = true;
       for (const plato of combo.platos) {
-        const precio = porPlato.get(plato.platoId);
+        const precio = precios.get(plato.platoId);
         if (precio === undefined) {
           completo = false;
           break;

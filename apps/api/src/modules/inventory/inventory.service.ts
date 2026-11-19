@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
 import type { MovementsQueryDto } from './dto/movements-query.dto.js';
 
 /** Los insumos se mueven con 3 decimales (`Decimal(12,3)`). */
