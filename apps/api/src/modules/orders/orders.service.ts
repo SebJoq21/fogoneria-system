@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
 import { InventoryService } from '../inventory/inventory.service.js';
 import { PromotionsService } from '../promotions/promotions.service.js';
+import { PRICING_PORT, type PricingPort } from '../pricing/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   ACTIVE_RESERVATION_STATES,
@@ -66,6 +68,7 @@ export class OrdersService {
     private readonly realtime: RealtimeService,
     private readonly inventory: InventoryService,
     private readonly promotions: PromotionsService,
+    @Inject(PRICING_PORT) private readonly pricing: PricingPort,
   ) {}
 
   async list(query: ListOrdersQueryDto) {
@@ -211,7 +214,7 @@ export class OrdersService {
   /**
    * Captura una comanda (AYCDS-20).
    *
-   * El precio lo pone el servidor (`PricingService.resolvePrice` para platos y
+   * El precio lo pone el servidor (`PricingPort` para platos y
    * `combos.precio_fijo` para combos): el body ya no acepta `precioUnitario`,
    * así que un cliente no puede inyectar importes. El número de orden sale de
    * una secuencia por empresa y el `mesero_id` del JWT, no del body.
@@ -228,8 +231,7 @@ export class OrdersService {
       throw new ConflictException('La mesa está en mantenimiento');
     }
 
-    const listaId = await this.resolveList(dto.listaPrecioId);
-    const items = await this.priceItems(dto.items, listaId);
+    const { listaId, items } = await this.priceItems(dto.items, dto.listaPrecioId ?? null);
 
     const subtotal = round2(
       items.reduce((sum, item) => sum + item.subtotal, 0),
@@ -435,10 +437,13 @@ export class OrdersService {
    * ítem). En el pico de comandas eso era un N+1 que la base no justificaba
    * (AYCDS-22): ahora se traen todos los platos, combos y precios en tres
    * consultas, sin importar cuántas líneas tenga la orden.
+   *
+   * Los precios se piden al `PricingPort` (módulo Precios): esta comanda no
+   * lee `precios_platos` ni conoce cómo se elige la lista activa.
    */
   private async priceItems(
     items: OrderItemDto[],
-    listaId: string | null,
+    listaIdSolicitada: string | null,
   ) {
     for (const item of items) {
       if (item.tipo === 'PLATO' && !item.platoId) {
@@ -485,24 +490,18 @@ export class OrdersService {
     const platoPorId = new Map(platos.map((plato) => [plato.id, plato]));
     const comboPorId = new Map(combos.map((combo) => [combo.id, combo]));
 
+    const { listaId, precios: precioPorPlato } = await this.pricing.resolvePrices(
+      platoIds,
+      listaIdSolicitada,
+    );
+
     if (platoIds.length > 0 && !listaId) {
       throw new BadRequestException(
         'No hay lista de precios activa: indica listaPrecioId',
       );
     }
 
-    const precios =
-      listaId && platoIds.length > 0
-        ? await this.prisma.scoped.precios_platos.findMany({
-            where: { lista_id: listaId, plato_id: { in: platoIds } },
-            select: { plato_id: true, precio: true },
-          })
-        : [];
-    const precioPorPlato = new Map(
-      precios.map((precio) => [precio.plato_id, Number(precio.precio)]),
-    );
-
-    return items.map((item) => {
+    const priced = items.map((item) => {
       if (item.tipo === 'PLATO') {
         const plato = platoPorId.get(item.platoId as string);
         if (!plato) throw new NotFoundException('Plato no encontrado');
@@ -545,6 +544,8 @@ export class OrdersService {
         notas: item.notas ?? null,
       };
     });
+
+    return { listaId, items: priced };
   }
 
   /**
@@ -592,23 +593,6 @@ export class OrdersService {
     });
     if (!mesa) throw new NotFoundException('Mesa no encontrada');
     return mesa;
-  }
-
-  private async resolveList(solicitada?: string): Promise<string | null> {
-    if (solicitada) {
-      const lista = await this.prisma.scoped.listas_precios.findFirst({
-        where: { id: solicitada, deleted_at: null },
-        select: { id: true },
-      });
-      if (!lista) throw new NotFoundException('Lista de precios no encontrada');
-      return lista.id;
-    }
-
-    const activa = await this.prisma.scoped.listas_precios.findFirst({
-      where: { activa: true, deleted_at: null },
-      select: { id: true },
-    });
-    return activa?.id ?? null;
   }
 
   /**

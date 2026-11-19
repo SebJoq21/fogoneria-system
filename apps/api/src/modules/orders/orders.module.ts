@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { SequencesModule } from '../../common/sequences/sequences.module.js';
-import { PricingModule } from '../pricing/pricing.module.js';
+import { PricingModule } from '../pricing/index.js';
 import { InventoryModule } from '../inventory/inventory.module.js';
 import { PromotionsModule } from '../promotions/promotions.module.js';
 import { OrdersController } from './orders.controller.js';

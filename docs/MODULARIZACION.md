@@ -164,7 +164,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
 - Feature `catalogo` con productos, categorías, modificadores y precios; cliente SDK de solo lectura y fachada sobre el provider.
 - `catalog/index.ts` y `pricing/index.ts` públicos; rutas de productos importan la feature.
 - `summaries` se movió a `components/dashboard` para que una feature pueda usarlo sin importar `components/erp`.
-- **Pendiente para la ola de órdenes:** `PricingPort` público y que `orders` deje de leer `precios_platos`/`PricingService` (hoy está en el baseline histórico).
+- **`PricingPort` implementado:** `orders` inyecta `PRICING_PORT` y pide los precios en lote; ya no lee `precios_platos`, `listas_precios` ni `PricingService`. La lista activa y las validaciones viven en Precios.
 
 ### Fase 3 — Olas (un PR por módulo, backend + frontend)
 
@@ -213,7 +213,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2).
 - PRs de un solo módulo: **100 %**.
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.
