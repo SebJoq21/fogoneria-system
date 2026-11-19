@@ -285,7 +285,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `crmApi.config()` (el cliente queda listo). El ajuste de puntos manda
   `sucursalId` para `ADMIN_GLOBAL` y el segmento lo calcula el servidor.
 
-#### Ola lectura ✅ (2026-11-19)
+#### Ola lectura ✅ (2026-11-19) — PR #62
 
 - **Contratos:** `packages/contracts/src/bi.ts` (`RangoBi`, `Pnl`, `PnlDia`,
   `PlatoTop`, `CobroMetodo`, `ReporteBi`, `calcularMargen`,

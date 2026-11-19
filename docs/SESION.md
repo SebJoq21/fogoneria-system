@@ -1,6 +1,6 @@
 # SESION — estado entre sesiones
 
-## 2026-11-19 — Modularización Fase 3, ola lectura (bi + contrato de realtime)
+## 2026-11-19 — Modularización Fase 3, ola lectura (PR #62, mergeado)
 
 - **Contratos:** `packages/contracts/src/bi.ts` (`RangoBi`, `Pnl`, `PnlDia`, `PlatoTop`, `CobroMetodo`, `ReporteBi`, `calcularMargen`, `etiquetaMetodoPago`) y `tiempo-real.ts` (`EventoTiempoReal`, `SobreEvento<T>`, payloads de orden/mesa, `REALTIME_EVENT`, `salaEmpresa`/`salaSucursal`/`salaOrden`) + subpaths `./bi` y `./tiempo-real`. La API agrega `@fogoneria/contracts` como dependencia de workspace y el Dockerfile copia `packages/contracts` (Node 24 ejecuta el `.ts` del contrato en runtime).
 - **Backend:** `bi/index.ts` y `realtime/index.ts` públicos (`BiModule`/`BiService`, `RealtimeModule`/`RealtimeService` + contrato; `OrdersGateway` no se exporta). `app.module.ts` importa ambos por el `index`; `orders.service.ts` y `orders.sla.cron.ts` usan `../realtime/index.js`. `realtime.types.ts` reexporta el contrato con alias históricos. Sin cambios de rooms, eventos ni SQL de BI.
@@ -13,9 +13,10 @@
 
 - **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle, movimientos de puntos, config de lealtad, inputs, etiquetas y `validarAjustePuntos`) + subpath `./crm`. El segmento lo calcula el servidor; la web solo lo pinta.
 - **Backend:** `crm/index.ts` público (`CrmModule`, `CrmService`, `ConfigLealtad`); `app.module.ts` importa por el `index` y `crm.service.ts` usa `../audit/index.js`. Sin cambios de reglas, worker de consumos ni triggers. Baseline **7 → 6** (`--write-baseline`).
-- **Web:** `features/crm/` (`api.ts` SDK+contratos, `ClientesPage` con búsqueda/filtro/ficha/ajuste, `LoyaltyPage` demo, `LoyaltyHubPage`, `index.ts`) y `crm.test.ts` (11). `ModuleGate` y las rutas `/app/clientes` y `/app/modulos/fidelizacion/regla` importan la feature. Retirados `lib/crm-api.ts` y su test (los reemplaza la feature).
+- **Web:** `features/crm/` (`api.ts` SDK+contratos, `ClientesPage` con búsqueda/filtro/ficha/ajuste, `LoyaltyPage` demo, `LoyaltyHubPage`, `index.ts`) y `crm.test.ts` (12). `ModuleGate` y las rutas `/app/clientes` y `/app/modulos/fidelizacion/regla` importan la feature. Retirados `lib/crm-api.ts` y su test (los reemplaza la feature).
 - **Acoplamiento restante:** `customers`/`coupons` demo siguen en `ModulesProvider` (Fase 4); `LoyaltyPage` aún no consume `crmApi.config()` (cliente listo); el ajuste manda `sucursalId` para `ADMIN_GLOBAL`. Backend en baseline: `orders → realtime` ×2, `realtime → auth` y `audit` directo en billing/onboarding/saas.
 - Verificado: **224** web tests (28 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (baseline **6**, 0 nuevas).
+- **Auditoría (12/12 PASS):** sin hallazgos funcionales; solo se ajustó el conteo de tests de `crm.test.ts` (12).
 - Próximo: ola **lectura** (`bi` + `realtime`), después Fase 4 (vaciar `ModulesProvider`).
 
 ## 2026-11-19 — Modularización Fase 3, ola operación (PR #58, mergeado)
