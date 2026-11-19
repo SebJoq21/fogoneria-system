@@ -8,7 +8,13 @@
    el `ValidationPipe` global (`forbidNonWhitelisted`) responde 400 si viaja. */
 
 import { apiFetch } from "./api";
-import type { BoardOrden, TableroOrdenes } from "@fogoneria/contracts/ordenes";
+import type {
+  BoardOrden,
+  OrdenInput,
+  OrdenItemInput,
+  OrigenOrden,
+  TableroOrdenes,
+} from "@fogoneria/contracts/ordenes";
 
 export type ApiOrderStatus =
   | "POR_CONFIRMAR"
@@ -19,9 +25,9 @@ export type ApiOrderStatus =
   | "CERRADA"
   | "ANULADA";
 
-export type ApiOrderItemType = "PLATO" | "COMBO";
+export type ApiOrderItemType = OrdenItemInput["tipo"];
 
-export type ApiOrderOrigen = "MESA" | "BARRA" | "DELIVERY" | "MOSTRADOR" | "WEB";
+export type ApiOrderOrigen = OrigenOrden;
 
 /** Los `Decimal` de Prisma viajan como string en el JSON. */
 export type DecimalLike = string | number;
@@ -75,25 +81,9 @@ export type ListOrdersParams = {
   signal?: AbortSignal;
 };
 
-export type CreateOrderItemInput = {
-  tipo: ApiOrderItemType;
-  platoId?: string;
-  comboId?: string;
-  cantidad: number;
-  notas?: string;
-};
+export type CreateOrderItemInput = OrdenItemInput;
 
-export type CreateOrderInput = {
-  /** Solo `ADMIN_GLOBAL` para una orden sin mesa. */
-  sucursalId?: string;
-  mesaId?: string;
-  clienteId?: string;
-  origen?: ApiOrderOrigen;
-  listaPrecioId?: string;
-  /** Código de cupón; el descuento lo calcula el servidor (AYCDS-19). */
-  cuponCodigo?: string;
-  items: CreateOrderItemInput[];
-};
+export type CreateOrderInput = OrdenInput;
 
 function queryOf(params: ListOrdersParams): string {
   const search = new URLSearchParams();

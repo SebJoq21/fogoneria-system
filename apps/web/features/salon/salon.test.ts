@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   etiquetaEstadoMesa,
+  isEstadoMesa,
+  isFormaMesa,
   mesaBloqueada,
   validarMesa,
 } from '@fogoneria/contracts/mesas';
@@ -8,6 +10,7 @@ import {
   etiquetaEstadoReserva,
   fechaReservaLima,
   horaReservaLima,
+  isEstadoReserva,
   reservaActiva,
   reservaEditable,
   reservaFechaHoraIso,
@@ -144,5 +147,14 @@ describe('mapeo API → contrato (salón)', () => {
   it('una reserva con estado inválido queda por confirmar', () => {
     expect(toReserva({ ...reservaApi, estado: 'PERDIDA' }).estado).toBe('POR_CONFIRMAR');
     expect(toReserva({ ...reservaApi, mesas: null }).mesaNumero).toBeNull();
+  });
+
+  it('rechaza estados y formas desconocidos', () => {
+    expect(isEstadoMesa('VOLTEADA')).toBe(false);
+    expect(isEstadoMesa('OCUPADA')).toBe(true);
+    expect(isFormaMesa('OVALADA')).toBe(false);
+    expect(isFormaMesa('REDONDA')).toBe(true);
+    expect(isEstadoReserva('PERDIDA')).toBe(false);
+    expect(isEstadoReserva('POR_CONFIRMAR')).toBe(true);
   });
 });

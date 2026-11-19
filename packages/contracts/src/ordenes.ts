@@ -106,6 +106,54 @@ export type TableroKds = {
 
 export type ModoKds = 'ordenes' | 'cocina';
 
+export type TipoItemOrden = 'PLATO' | 'COMBO';
+
+/** Línea de una comanda (alta). El precio lo resuelve el servidor. */
+export type OrdenItemInput = {
+  tipo: TipoItemOrden;
+  platoId?: string;
+  comboId?: string;
+  cantidad: number;
+  notas?: string;
+};
+
+/** Alta de comanda. `sucursalId` solo lo usa `ADMIN_GLOBAL` sin mesa. */
+export type OrdenInput = {
+  sucursalId?: string;
+  mesaId?: string;
+  clienteId?: string;
+  origen?: OrigenOrden;
+  listaPrecioId?: string;
+  /** Código de cupón; el descuento lo calcula el servidor (AYCDS-19). */
+  cuponCodigo?: string;
+  items: OrdenItemInput[];
+};
+
+/**
+ * Validación mínima del alta antes de llamar a la API. Devuelve el mensaje de
+ * error o `null`. El servidor sigue siendo la autoridad (precio, stock, cupón).
+ */
+export function validarOrden(input: OrdenInput): string | null {
+  if (!input.mesaId && !input.sucursalId) {
+    return 'La orden requiere mesa o sucursal';
+  }
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return 'La orden requiere al menos un ítem';
+  }
+  for (const item of input.items) {
+    if (item.tipo === 'PLATO' && !item.platoId) {
+      return 'Un ítem PLATO requiere platoId';
+    }
+    if (item.tipo === 'COMBO' && !item.comboId) {
+      return 'Un ítem COMBO requiere comboId';
+    }
+    if (!Number.isFinite(item.cantidad) || item.cantidad < 1) {
+      return 'La cantidad debe ser al menos 1';
+    }
+  }
+  return null;
+}
+
 export const ESTADOS_ORDEN: readonly EstadoOrden[] = [
   'POR_CONFIRMAR',
   'EN_COCINA',

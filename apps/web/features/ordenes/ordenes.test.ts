@@ -7,6 +7,7 @@ import {
   etiquetaEstadoKds,
   isEstadoOrden,
   slaBaseDe,
+  validarOrden,
   type TableroOrdenes,
 } from '@fogoneria/contracts/ordenes';
 import { tableroDesdeApi } from './api';
@@ -127,5 +128,24 @@ describe('tablero del KDS', () => {
     ]);
     expect(etiquetaEstadoKds('cocina')).toBe('En cocina');
     expect(etiquetaEstadoKds('anulado')).toBe('Anulada');
+  });
+
+  it('valida el alta de comanda antes de llamar a la API', () => {
+    const base = {
+      mesaId: 'mesa-1',
+      items: [{ tipo: 'PLATO' as const, platoId: 'p1', cantidad: 2 }],
+    };
+    expect(validarOrden(base)).toBeNull();
+    expect(validarOrden({ ...base, items: [] })).toMatch(/ítem/i);
+    expect(validarOrden({ ...base, mesaId: undefined })).toMatch(/mesa o sucursal/i);
+    expect(
+      validarOrden({ ...base, items: [{ tipo: 'PLATO', cantidad: 1 }] }),
+    ).toMatch(/platoId/i);
+    expect(
+      validarOrden({ ...base, items: [{ tipo: 'COMBO', cantidad: 1 }] }),
+    ).toMatch(/comboId/i);
+    expect(
+      validarOrden({ ...base, items: [{ tipo: 'COMBO', comboId: 'c1', cantidad: 0 }] }),
+    ).toMatch(/cantidad/i);
   });
 });

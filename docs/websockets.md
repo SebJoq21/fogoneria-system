@@ -137,7 +137,7 @@ Solo en el handshake, antes de desconectar:
 
 Estados que consume la UI: `connecting`, `connected`, `reconnecting`, `offline`.
 
-Hook: `components/erp/useOrdersRealtime.ts` — el KDS (`OrdersView`) muestra el
+Hook: `lib/orders-realtime.ts` — el KDS (`features/ordenes/OrdersBoardPage`) muestra el
 badge *En vivo / Reconectando… / Sin canal en vivo* y la última novedad.
 
 ## 5. Pruebas
