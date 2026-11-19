@@ -25,6 +25,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 
 - Imports internos SIEMPRE con sufijo `.js` (ej: `./app.module.js`). Sin eso rompe `nodenext`.
 - Un módulo solo importa el **`index.js` público** de otro (`../audit/index.js`, `../orders/index.js`); los internals (`orders.service.js`, DTOs) están prohibidos y `pnpm check:boundaries` los bloquea. El baseline es decreciente: no agregar excepciones.
+- La API importa **subpaths** de contratos (`@fogoneria/contracts/tiempo-real`, `.../plataforma`), **nunca el barrel** `@fogoneria/contracts`: Node 24 ejecuta el `.ts` por type stripping y los reexports sin extensión del barrel no resuelven en runtime. El barrel es solo para la web/bundler.
 - Estructura por dominio: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts,*.spec.ts}`. No acumular en `app.*`.
 - Todo endpoint con body/query usa DTO + `class-validator`; el `ValidationPipe` es global (`whitelist`, `forbidNonWhitelisted`, `transform`).
 - Toda ruta privada usa `@Roles(...)` si no es para cualquier autenticado; `@Public()` solo para login, health e info.
