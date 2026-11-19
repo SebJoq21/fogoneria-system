@@ -65,8 +65,8 @@
 | `/app/analiticas` | `AnaliticasView` | **API** (BI) |
 | `/app/modulos/inventario/movimientos` | `InventoryMovementsView` | **API** (kardex + semáforo) |
 | `/app/modulos/inventario/stock` | `InventoryModule` | **Mock** (maestro/ajustes) |
-| `/app/modulos/personal/asistencia` | `StaffAttendanceView` | **API** |
-| `/app/modulos/personal/turnos` | `StaffTurnosView` | **API** |
+| `/app/modulos/personal/asistencia` | `StaffAttendancePage` (`features/rrhh`) | **API** |
+| `/app/modulos/personal/turnos` | `StaffShiftsPage` (`features/rrhh`) | **API** |
 | `/app/modulos/personal/directorio`, `roles`, `propinas` | `StaffModule`, `RolesView` | **Mock** |
 | `/app/gastos` | `GastosView` | **Mock** |
 | `/app/combos`, `/app/promociones` | `CombosView`, `PromocionesView` | **Mock** |

@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fase 0 (fundaciones) implementada.
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -153,16 +153,18 @@ Estos son los puntos que las olas deben cortar en ese orden.
 ### Fase 1 — Piloto RRHH ✅ (PR `refactor/rrhh-modulo`)
 
 - `apps/web/features/rrhh/`: `api.ts` (SDK + contratos), `hooks.ts` (`useAttendance`, `useShifts`), `AttendancePage`, `ShiftsPage`, demo aislado.
-- Las rutas de asistencia y turnos quedan en 3 líneas importando `@/features/rrhh`.
+- Las rutas de asistencia y turnos solo importan `@/features/rrhh` (la página conserva guard y cabecera).
 - `apps/api/src/modules/staff/index.ts` como API pública; `app.module` importa el `index`.
 - La feature no importa `components/erp/*` ni otras features; usa `@fogoneria/sdk`, `@fogoneria/contracts` y `@fogoneria/kernel`.
 - Criterio: avanzar RRHH toca `features/rrhh/**` + sus rutas + `staff/**`; hecho.
 
-### Fase 2 — Piloto catálogo + precios
+### Fase 2 — Piloto catálogo + precios ✅ (PR #50)
 
-- `PricingPort` público; `orders` deja de importar `PricingService` ni leer `precios_platos`.
-- Feature `catalogo` con productos, categorías, modificadores y precios.
-- Criterio: un cambio de precio no toca órdenes.
+- `packages/contracts/src/catalogo.ts` con tipos, inputs, validadores y helpers.
+- Feature `catalogo` con productos, categorías, modificadores y precios; cliente SDK de solo lectura y fachada sobre el provider.
+- `catalog/index.ts` y `pricing/index.ts` públicos; rutas de productos importan la feature.
+- `summaries` se movió a `components/dashboard` para que una feature pueda usarlo sin importar `components/erp`.
+- **Pendiente para la ola de órdenes:** `PricingPort` público y que `orders` deje de leer `precios_platos`/`PricingService` (hoy está en el baseline histórico).
 
 ### Fase 3 — Olas (un PR por módulo, backend + frontend)
 

@@ -1,12 +1,15 @@
 # SESION — estado entre sesiones
 
-## 2026-11-19 — Modularización: fundaciones + piloto RRHH
+## 2026-11-19 — Modularización: Fases 0–2 + auditoría de la Fase 1
 
 - **Fase 0 (PR #48, mergeado):** `@fogoneria/kernel` (money/fechas Lima), `@fogoneria/sdk` (cliente BFF) y `@fogoneria/contracts` (RRHH). `scripts/check-module-boundaries.mjs` con baseline de 24 acoplamientos históricos y job CI **Fronteras de módulos**. `pr-scope` reconoce `features/<m>` y `contracts/src/<m>.ts`. Documento `docs/MODULARIZACION.md` con el diagnóstico (5 acoplamientos backend + 5 frontend).
-- **Fase 1 (rama `refactor/rrhh-modulo`):** `apps/web/features/rrhh/` con `api.ts` (SDK + contratos), `hooks.ts` (`useAttendance`, `useShifts`), `AttendancePage`, `ShiftsPage` y demo aislado. Las rutas de asistencia y turnos quedan en 3 líneas. `apps/api/src/modules/staff/index.ts` como API pública.
-- **Independencia lograda:** la feature RRHH no importa `components/erp/*` ni otras features; usa kernel/sdk/contracts y el contexto de plataforma. Avanzar RRHH toca solo `features/rrhh/**` + sus rutas + `staff/**`.
-- Verificado: 153 web tests (+5), `lint` 3/3, `check-types` 6/6, `check:boundaries` OK, build web OK.
-- Próximo: Fase 2 (catálogo/precios con `PricingPort`) y después las olas por módulo.
+- **Fase 1 (PR #49, mergeado):** `apps/web/features/rrhh/` con `api.ts` (SDK + contratos), `hooks.ts` (`useAttendance`, `useShifts`), `AttendancePage`, `ShiftsPage` y demo aislado. Las rutas de asistencia y turnos solo importan la feature. `apps/api/src/modules/staff/index.ts` como API pública.
+- **Fase 2 (PR #50, mergeado, etiqueta `multi-modulo`):** `packages/contracts/src/catalogo.ts`; `apps/web/features/catalogo/` con `api.ts` (SDK, lectura), `hooks.ts` (`useCatalogo` sobre el provider) y las 4 vistas de catálogo movidas; `catalog/index.ts` y `pricing/index.ts` públicos; `summaries` movido a `components/dashboard` para que la feature no importe `components/erp`.
+- **Auditoría de la Fase 1 (10/10 PASS) y correcciones aplicadas:** borrado `lib/staff-api.ts` (código muerto) y `bi-staff-api.test.ts` → `bi-api.test.ts`; `audit/index.ts` público (staff lo importa sin violar frontera); baseline 24 → **23**; test de `toTurno`; docs sincronizados (`AGENTS.md`, `PLAN-MODULOS-Y-PROPIEDAD.md`, `MODULARIZACION.md`, este archivo).
+- **Independencia lograda:** RRHH toca solo `features/rrhh/**` + rutas + `staff/**`; catálogo, `features/catalogo/**` + rutas de productos + `catalog|pricing/**`. Ninguna feature importa `components/erp/*` ni otra feature.
+- Verificado: **163** web tests (22 archivos), **302** API unit, `lint` 3/3, `check-types` 6/6, `check:boundaries` OK (23 históricas, 0 nuevas), build web OK.
+- **Deuda conocida:** el estado del catálogo sigue en `ModulesProvider` hasta la ola de órdenes (`PricingPort`); `CartaVirtualView` sigue en `components/erp/catalog`; `orders.module` mantiene el import histórico de `pricing` (baseline).
+- Próximo: Fase 3, ola salón (`tables → reservations → orders`) con el `PricingPort` público.
 
 ## 2026-11-18 — Auditoría por módulos + reglas de revisión y alcance
 
