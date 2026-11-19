@@ -19,6 +19,7 @@
 - **Hooks compartidos:** `lib/orders-realtime.ts`, `lib/orders-board.ts` (fetcher inyectable; default cliente de la API) y `lib/use-now.ts`; `MozoView`/`AccountPanel` solo cambian el import.
 - **Acoplamiento restante:** el estado sigue en `ModulesProvider` (Fase 4); mozo/caja permanecen en `components/erp/*`; backend conserva en baseline `cash → orders` y `orders → inventory/promotions/realtime`.
 - Verificado: **179** web tests (24 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (21 históricas, 0 nuevas).
+- **Auditoría (10/10 tras correcciones):** `contracts/ordenes.ts` gana `OrdenInput`/`OrdenItemInput` + `validarOrden` (el alias queda en `lib/orders-api.ts`); `salon.test.ts` cubre estados/formas desconocidos; `docs/websockets.md` apunta a `lib/orders-realtime.ts`.
 - Próximo: ola **dinero** (`receipts → cash → expenses`) con el mismo patrón; después Fase 4 (vaciar `ModulesProvider`).
 
 ## 2026-11-19 — Modularización: Fases 0–2 + auditoría de la Fase 1
