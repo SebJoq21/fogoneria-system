@@ -1,23 +1,23 @@
-# Plan de módulos, propiedad y flujo de issues
+# Plan de módulos, revisión y flujo de issues
 
-**Fecha:** 2026-11-18 · **Base:** `development` (`ce8493c`) · **Alcance:** todo el sistema (API + web + datos + infraestructura).
+**Fecha:** 2026-11-18 · **Base:** `development` · **Alcance:** todo el sistema (API + web + datos + infraestructura).
 
-Este documento responde a tres preguntas:
+**Modelo vigente:** propiedad **colectiva**. Todos trabajamos en todos los módulos; lo que se formaliza no es «quién es dueño» sino **cómo se revisa y cómo se reporta**:
 
-1. ¿Cómo está el sistema **módulo por módulo** (backend y frontend)?
-2. ¿Quién es **dueño** de cada módulo y quién lo respalda?
-3. ¿Cómo se **reporta y resuelve** una observación sin que se pierda en el chat?
+1. **Nadie aprueba su propio PR**: se exige la aprobación de otra persona (CODEOWNERS + branch protection).
+2. **Un PR = un módulo**: el alcance se valida en CI (`pr-scope`).
+3. **Toda observación entra like issue** con su componente de Jira y su severidad.
 
 ---
 
 ## 1. Resumen ejecutivo
 
-- **Backend:** 20 módulos, **106 endpoints**, `ValidationPipe` global, RLS por empresa/sucursal y contratos documentados en Swagger. **Completo** para las tareas del plan.
-- **Frontend:** 33 rutas bajo `/app` + `/saas`, `/onboarding` y `/demo`. **La mayoría ya consume la API**; quedan 4 pantallas de negocio en mock (gastos, combos, promociones y el maestro de inventario) y 4 pantallas heredadas sin tarea asignada (pagos, soporte, configuración, carta virtual).
+- **Backend:** 20 módulos, **106 endpoints**, `ValidationPipe` global, RLS por empresa/sucursal y Swagger. **Completo** para el plan.
+- **Frontend:** 33 rutas de app. La mayoría consume la API; quedan 4 pantallas de negocio en mock (gastos, combos, promociones y el maestro de inventario) y 4 heredadas sin tarea (pagos, soporte, configuración, carta).
 - **Calidad:** API **302 unit · 112 e2e · 109 DB**; web **148**; `lint`, `check-types` y `build` en verde; CI con Postgres real.
-- **Riesgo principal:** no existe **propiedad formal por módulo** ni un canal único para observaciones. Hoy una observación se pierde entre el chat, el PR y el tablero. Este plan lo corrige con componentes de Jira + `CODEOWNERS` + SLA por severidad.
+- **Proceso:** antes no había propiedad formal ni canal único para observaciones. Desde hoy: `CODEOWNERS` (revisión cruzada), plantilla de PR, chequeo de alcance por módulo y plantilla de issue.
 
-**Estado global ponderado por módulo: ~88 %.** Lo que falta es UI específica y dos flujos heredados; el backend que la necesita ya existe salvo inventario maestro.
+**Estado global ponderado por módulo: ~88 %.** Lo que falta es UI específica y dos flujos heredados.
 
 ---
 
@@ -79,7 +79,7 @@ Este documento responde a tres preguntas:
 
 ### 2.3 Estado por módulo de negocio
 
-| Módulo de negocio | Backend | UI | Estado | Qué falta |
+| Módulo | Backend | UI | Estado | Qué falta |
 |---|---|---|---|---|
 | Catálogo y precios | ✅ | ✅ | **100 %** | — |
 | Órdenes, KDS y mozo | ✅ | ✅ | **95 %** | UX: «cerrar cuenta» intenta `PAGADA` por `PATCH` y recibe 400 |
@@ -93,56 +93,94 @@ Este documento responde a tres preguntas:
 | RRHH y propinas | ✅ | 🟡 | **80 %** | Directorio, roles y propinas en demo |
 | BI / analíticas | ✅ | ✅ | **100 %** | — |
 | SaaS, onboarding, sesión | ✅ | ✅ | **100 %** | — |
-| Pantallas heredadas (pagos, soporte, configuración, carta) | — | ❌ | **0 %** | Decidir retirar o convertir en módulo con tarea |
+| Heredadas (pagos, soporte, configuración, carta) | — | ❌ | **0 %** | Decidir retirar o convertir en módulo con tarea |
 
 ---
 
-## 3. Mapa de propiedad propuesto
+## 3. Propiedad colectiva y reglas de revisión
 
-> **Regla:** cada módulo tiene **un dueño** (decide y responde) y **un backup** (revisa cuando el dueño no está). El dueño no es «quien escribe todo»: es quien **triaga, revisa PRs y mantiene el módulo sano**.
+### 3.1 Principios
 
-| Módulo | Dueño | Backup | Artefactos que posee |
-|---|---|---|---|
-| **Catálogo y precios** | Diego Arévalo | David Piñarreta | `modules/catalog`, `modules/pricing`, `components/erp/catalog/*`, `lib/catalog-api.ts` |
-| **Promociones y combos** | Joshua Chávez | David Piñarreta | `modules/promotions`, `CombosView`, `PromocionesView`, `lib/promotions-api.ts` (crear) |
-| **Órdenes, KDS y mozo** | David Piñarreta | Joshua Chávez | `modules/orders`, `modules/realtime`, `OrdersView`, `MozoView`, `lib/orders-api.ts`, `lib/realtime.ts` |
-| **Mesas y reservas** | David Piñarreta | Diego Arévalo | `modules/tables`, `modules/reservations`, `BookingsModule`, `SalonTablesView` |
-| **Caja** | Diego Arévalo | David Piñarreta | `modules/cash`, `CajaView`, `lib/cash-api.ts` |
-| **Comprobantes y fiscal** | David Piñarreta | Sebastián Chicata | `modules/receipts`, `ComprobantesView`, `lib/receipts-api.ts`, `docs/errores-db.md` |
-| **Inventario y kardex** | Sonny De La Cruz | Diego Arévalo | `modules/inventory`, `InventoryModule`, `InventoryMovementsView`, `lib/inventory-api.ts`, `db/scripts/perf/*` |
-| **Gastos** | Joshua Chávez | Sonny De La Cruz | `modules/expenses`, `GastosView`, `lib/expenses-api.ts` (crear) |
-| **CRM y fidelización** | Diego Arévalo | Joshua Chávez | `modules/crm`, `ClientesView`, `LoyaltyModule`, `lib/crm-api.ts` |
-| **RRHH y propinas** | Joshua Chávez | David Piñarreta | `modules/staff`, `StaffAttendanceView`, `StaffTurnosView`, `lib/staff-api.ts` |
-| **BI y analíticas** | Sonny De La Cruz | David Piñarreta | `modules/bi`, migración `vistas_bi`, `AnaliticasView`, `lib/bi-api.ts` |
-| **Plataforma** (auth, tenant, sesión, SaaS, billing, onboarding, auditoría) | David Piñarreta | Sebastián Chicata | `modules/{auth,tenant,saas,billing,onboarding,audit}`, `lib/{session,auth,saas,onboarding,tenant}-api.ts`, `proxy.ts` |
-| **Datos e infraestructura** | Sonny De La Cruz | Sebastián Chicata | `prisma/`, migraciones, RLS, scripts de respaldo/perf |
-| **CI, Docker y QA** | Sebastián Chicata | Sonny De La Cruz | `.github/`, `docker-compose.yml`, Dockerfiles, `docs/acta-*` |
-| **Design system y shell** | Diego Arévalo | Joshua Chávez | `components/ui/*`, `app/globals.css`, `scripts/check-styles.mjs`, `DashboardShell` |
+- **Todos son code owners.** Cualquiera revisa cualquier módulo; no hay silos.
+- **Nadie aprueba ni mergea su propio PR.** GitHub ya bloquea la auto-aprobación; la protección de rama exige además **1 aprobación** de otra persona.
+- **El autor no mergea su PR.** Mergea el reviewer (o el autor después de la aprobación, si el repo lo permite y el reviewer lo autorizó en el hilo).
+- **Guardia semanal rotativa**: una persona por semana hace el triage inicial de todos los módulos y asigna; no es dueño, es el embudo.
 
-**Células sugeridas** si el equipo crece (hoy se cubre con dueños + backups):
+### 3.2 `CODEOWNERS` (ya creado)
 
-- **Salón** (mesas, reservas, órdenes, KDS, mozo, tiempo real) → David + Joshua.
-- **Caja y fiscal** (caja, comprobantes, gastos) → Diego + Sebastián.
-- **Catálogo y demanda** (catálogo, precios, promociones, CRM) → Diego + Joshua.
-- **Inventario y datos** (inventario, BI, RLS, performance, respaldos) → Sonny + David.
-- **Plataforma y entrega** (auth, SaaS, onboarding, CI/Docker, QA) → Sebastián + David.
+`.github/CODEOWNERS`:
+
+```gitignore
+* @SebJoq21 @SOoOnny
+```
+
+Al sumar gente se agrega su handle. Con **«Require review from Code Owners»** activo, cualquier PR necesita la aprobación de alguien de esa lista distinto del autor.
+
+### 3.3 Protección de `development` (configurar una vez en GitHub)
+
+Settings → Branches → `development`:
+
+- [x] Require a pull request before merging
+- [x] Require approvals: **1**
+- [x] Dismiss stale pull request approvals when new commits are pushed
+- [x] **Require review from Code Owners**
+- [x] Require status checks: `Lint, tipos y pruebas` **y** `Un PR por módulo`
+- [x] Require conversation resolution before merging
+- [x] Do not allow bypassing the above settings (admins incluidos, si el equipo lo acepta)
+- [ ] Allow auto-merge (apagado: el merge es una decisión humana)
+- [ ] Allow force pushes (apagado)
+
+> Lo ideal es aplicar lo mismo a `main`.
+
+### 3.4 Regla: **un PR = un módulo**
+
+**Definición.** Un PR puede tocar **un solo módulo de negocio** (backend + su UI + su cliente API). Los archivos compartidos no cuentan como módulo: docs, CI, tests, migraciones, design system, configuración raíz.
+
+**Cómo se valida.** `scripts/check-pr-scope.mjs` clasifica el diff y el job **`Un PR por módulo`** de CI falla si detecta más de un módulo:
+
+```
+❌ Un PR = un módulo. Este toca 2: rrhh, bi.
+...
+Separa el trabajo en un PR por módulo.
+```
+
+- Se ejecuta solo en `pull_request` contra `development`/`main`.
+- Clasificación: `apps/api/src/modules/<módulo>`, `apps/web/lib/<módulo>-api.ts`, vistas conocidas (`CajaView`, `OrdersView`, …) y rutas (`/app/caja`, `/app/analiticas`, …).
+- **Excepción controlada:** etiqueta **`multi-modulo`** en el PR (refactor de contrato que cruza módulos de verdad). Debe justificarse en la descripción y aprobarla el equipo.
+
+**Ejemplos:**
+
+| PR | Archivos | Resultado |
+|---|---|---|
+| Caja: `cash` + `CajaView` + `cash-api` | un módulo | ✅ |
+| Turnos y analíticas en el mismo PR | `rrhh` + `bi` | ❌ (ya pasó en #43; la regla rige desde hoy) |
+| Migración + módulo de inventario | `inventario` + `shared` (prisma) | ✅ |
+| Docs + CI | solo compartidos | ✅ |
+
+### 3.5 Guardia semanal y triage
+
+- El **guardia** revisa los issues nuevos cada día (15 min), asigna componente/severidad y busca reviewer.
+- Cualquiera puede tomar un issue; el guardia solo garantiza que **ninguno quede sin respuesta**.
+- Rotación semanal. La tabla de guardias vive en el tablero de Jira (o en el canal del equipo).
 
 ---
 
-## 4. Modelo operativo: issues por módulo
+## 4. Issues por módulo
 
 ### 4.1 Dónde vive un issue
 
-Todo issue se abre en **Jira (AYCDS)** con:
+En **Jira (AYCDS)** con:
 
-- **Componente** = módulo (`catalogo`, `promociones`, `ordenes-kds`, `mesas-reservas`, `caja`, `comprobantes`, `inventario`, `gastos`, `crm`, `rrhh`, `bi`, `plataforma`, `datos-infra`, `ci-qa`, `design-system`).
-- **Etiqueta** `modulo:<nombre>` (sirve para filtros cruzados y automatizaciones).
-- **Assignee** = dueño del módulo (automation: componente → assignee).
-- **Reviewer** = backup.
+- **Componente** = módulo (lista en §4.2).
+- **Etiqueta** `modulo:<nombre>` para filtros cruzados.
+- **Assignee**: quien lo toma en el triage (no un dueño fijo).
+- **Reviewer**: otra persona (nunca el autor).
 
-> Un issue **no** se abre en el módulo si es una duda o una idea sin impacto: eso va al chat del equipo. Si requiere trabajo, se abre.
+### 4.2 Componentes de Jira
 
-### 4.2 Plantilla de issue (obligatoria)
+`catalogo` · `promociones` · `ordenes-kds` · `mesas-reservas` · `caja` · `comprobantes` · `inventario` · `gastos` · `crm` · `rrhh` · `bi` · `plataforma` · `datos-infra` · `ci-qa` · `design-system`.
+
+### 4.3 Plantilla de issue (obligatoria)
 
 ```
 ## Módulo
@@ -152,10 +190,10 @@ Todo issue se abre en **Jira (AYCDS)** con:
 Defecto | Mejora | Deuda técnica | Decisión
 
 ## Severidad
-S1 (bloquea demo/operación) | S2 (afecta a un flujo) | S3 (molesto) | S4 (idea)
+S1 (bloquea demo/operación) | S2 (afecta un flujo) | S3 (molesto) | S4 (idea)
 
 ## Qué pasa
-[1–3 líneas, con el resultado observado y el esperado]
+[resultado observado vs esperado, 1–3 líneas]
 
 ## Pasos para reproducir
 1. …
@@ -174,118 +212,82 @@ S1 (bloquea demo/operación) | S2 (afecta a un flujo) | S3 (molesto) | S4 (idea)
 [local / Docker / demo] · [rol] · [sucursal]
 ```
 
-### 4.3 SLA y flujo
+### 4.4 SLA y flujo
 
-| Severidad | Triage | Resolución objetivo | Quién |
-|---|---|---|---|
-| **S1** | 4 h hábiles | 24 h | Dueño + backup (avisa al líder) |
-| **S2** | 1 día | 3 días | Dueño |
-| **S3** | 3 días | 10 días | Dueño (entra al sprint) |
-| **S4** | 1 semana | Backlog priorizado | Dueño |
+| Severidad | Triage | Resolución objetivo |
+|---|---|---|
+| **S1** | 4 h hábiles | 24 h |
+| **S2** | 1 día | 3 días |
+| **S3** | 3 días | 10 días |
+| **S4** | 1 semana | Backlog priorizado |
 
 ```
-Nuevo → Triage (dueño, 1 día) → Listo (DoR) → En curso → Revisión (backup) → Hecho (DoD)
+Nuevo → Triage (guardia, 1 día) → Listo (DoR) → En curso → Revisión (otra persona) → Hecho (DoD)
                                                               ↘ Bloqueado (dependencia cross-módulo)
 ```
 
-- **DoR:** módulo identificado, pasos reproducibles, criterio de aceptación, severidad.
-- **DoD:** tests verdes, `lint`/`types`, docs del módulo si cambia el contrato, PR revisado por el backup, evidencia en el issue.
-- **Cross-módulo:** se abre en el módulo **dueño del contrato** (ej. una comanda que falla al cobrar → `caja`) y se enlaza el issue del módulo afectado. Un cambio de contrato exige RFC corto (1 página) aprobado por ambos dueños.
-
-### 4.4 `CODEOWNERS` (revisión automática en GitHub)
-
-```gitignore
-# .github/CODEOWNERS — completar con los handles reales del equipo
-*                                   @SebJoq21
-
-/apps/api/src/modules/catalog/      @diego
-/apps/api/src/modules/pricing/      @diego
-/apps/api/src/modules/promotions/   @joshua
-/apps/api/src/modules/orders/       @david
-/apps/api/src/modules/realtime/     @david
-/apps/api/src/modules/tables/       @david
-/apps/api/src/modules/reservations/ @david
-/apps/api/src/modules/cash/         @diego
-/apps/api/src/modules/receipts/     @david @SebJoq21
-/apps/api/src/modules/inventory/    @SOoOnny
-/apps/api/src/modules/expenses/     @joshua
-/apps/api/src/modules/crm/          @diego
-/apps/api/src/modules/staff/        @joshua
-/apps/api/src/modules/bi/           @SOoOnny
-/apps/api/src/modules/{auth,tenant,saas,billing,onboarding,audit}/ @david
-/apps/api/src/prisma/               @SOoOnny
-/apps/api/prisma/migrations/        @SOoOnny @david
-/apps/web/components/erp/catalog/   @diego
-/apps/web/components/erp/{OrdersView,MozoView}.tsx @david @joshua
-/apps/web/components/erp/{CajaView,ComprobantesView}.tsx @diego @SebJoq21
-/apps/web/components/erp/{InventoryModule,InventoryMovementsView}.tsx @SOoOnny @diego
-/apps/web/components/erp/{GastosView,CombosView,PromocionesView}.tsx @joshua
-/apps/web/components/erp/{ClientesView,LoyaltyModule}.tsx @diego
-/apps/web/components/erp/{StaffAttendanceView,StaffTurnosView}.tsx @joshua
-/apps/web/components/erp/AnaliticasView.tsx @SOoOnny
-/apps/web/components/ui/            @diego
-/.github/                           @SebJoq21
-/docker-compose.yml                 @SebJoq21
-```
+- **DoR:** módulo, pasos reproducibles, criterio de aceptación y severidad.
+- **DoD:** tests verdes, `lint`/`types`, docs si cambia el contrato, **PR revisado por otra persona** y evidencia en el issue.
+- **Cross-módulo:** el issue se abre en el **módulo dueño del contrato** (ej. una comanda que falla al cobrar → `caja`) y se enlaza el del módulo afectado. Si el cambio cruza módulos, el PR lleva `multi-modulo` y lo aprueban ambos revisores.
 
 ### 4.5 Ritual semanal (30 min)
 
-1. **Salud por módulo** (15 min): issues abiertos por severidad, S1/S2 del sprint, bloqueados.
-2. **Dueños** (10 min): qué PRs necesitan review, qué deuda entra.
-3. **Cross-módulo** (5 min): RFCs pendientes y contratos que cambian.
+1. **Salud por módulo** (15 min): S1/S2 abiertos, bloqueados, PRs sin reviewer.
+2. **PRs** (10 min): quién revisa qué (nadie revisa lo suyo).
+3. **Cross-módulo** (5 min): etiquetas `multi-modulo` pendientes y contratos que cambian.
 
-**Métricas del mes:** % de módulos con dueño activo · issues abiertos/cerrados por módulo · tiempo de triage · lead time por severidad · defectos escapados a demo · cobertura de tests del módulo.
+**Métricas del mes:** PRs con review de otra persona **100 %** · PRs de un solo módulo ≥ 90 % · triage < 1 día · lead time por severidad · defectos escapados a demo · cobertura por módulo.
 
 ---
 
 ## 5. Observaciones detectadas (backlog inicial de issues)
 
-> Estas son las observaciones reales de la auditoría, listas para convertirse en issues con su componente.
-
 | # | Módulo | Sev. | Observación | Acción propuesta |
 |---|---|---|---|---|
 | 1 | `inventario` | S2 | El maestro de insumos y el ajuste con motivo siguen en demo: no hay `GET/POST/PATCH /inventory/items` ni `POST /inventory/items/:id/adjust`. | Crear endpoints + conectar `InventoryModule`; cierra el 20 % de AYCDS-24. |
-| 2 | `gastos` | S2 | `GastosView` no consume `/expenses` (5 endpoints listos). | Crear `lib/expenses-api.ts` y conectar la vista (AYCDS-27). |
+| 2 | `gastos` | S2 | `GastosView` no consume `/expenses` (5 endpoints listos). | Crear `lib/expenses-api.ts` y conectar (AYCDS-27). |
 | 3 | `promociones` | S2 | `CombosView`/`PromocionesView` no consumen `/promotions` (10 endpoints listos). | Crear `lib/promotions-api.ts` y conectar (AYCDS-27). |
-| 4 | `ordenes-kds` | S2 | «Cerrar cuenta» intenta `PATCH /orders/:id/status` con `PAGADA` y recibe **400** («el cobro va por caja»); el usuario ve un error aunque la comanda sí avanzó. | Derivar a Caja o mostrar guía «cobra en Caja»; agregar test de regresión. |
-| 5 | `comprobantes` | S3 | SUNAT está «pendiente de OSE»; no hay CDR real. | Mantener explícito en UI y planificar integración OSE (fuera del piloto). |
-| 6 | `rrhh` | S2 | Directorio, roles y propinas siguen en demo. | Conectar `StaffModule`/`RolesView` o retirarlos del menú. |
-| 7 | `heredadas` | S3 | Pagos, soporte, configuración y carta virtual son mock y no tienen tarea Jira. | Decisión: retirar del menú o crear módulo con dueño. |
-| 8 | `plataforma` | S2 | No hay `CODEOWNERS`, ni componentes/labels de Jira, ni plantilla de issue. | Implantar este plan (semana 1). |
-| 9 | `datos-infra` | S3 | `tenant` no tiene unit test; `billing`, `audit` y `realtime` no tienen e2e propio. | Agregar cobertura mínima por módulo. |
+| 4 | `ordenes-kds` | S2 | «Cerrar cuenta» intenta `PATCH /orders/:id/status` con `PAGADA` y recibe **400**; el usuario ve error aunque la comanda avanzó. | Derivar a Caja o mostrar guía; test de regresión. |
+| 5 | `comprobantes` | S3 | SUNAT «pendiente de OSE»; no hay CDR real. | Mantener explícito y planificar integración OSE. |
+| 6 | `rrhh` | S2 | Directorio, roles y propinas siguen en demo. | Conectar o retirar del menú. |
+| 7 | `heredadas` | S3 | Pagos, soporte, configuración y carta son mock sin tarea Jira. | Decisión: retirar o crear módulo con tarea. |
+| 8 | `plataforma` | S2 | Faltaba protección de rama y revisión cruzada. | **Implementado**: CODEOWNERS, plantilla y CI `pr-scope`; falta activar la protección en GitHub (§3.3). |
+| 9 | `datos-infra` | S3 | `tenant` sin unit test; `billing`, `audit` y `realtime` sin e2e propio. | Cobertura mínima por módulo. |
 | 10 | `datos-infra` | S3 | KDS bajo RLS no ve estadísticas y recorre la tabla (deuda documentada). | Medir y decidir vista `SECURITY DEFINER` o contadores. |
-| 11 | `design-system` | S4 | Recharts avisa `width(0) height(0)` en varias vistas (contenedor sin alto). | Revisar `ChartCard`/contenedores y fijar alto mínimo. |
-| 12 | `ci-qa` | S3 | No hay E2E full-stack (Playwright); la cobertura es RTL + API. | AYCDS-49: flujo crítico mesa → cocina → caja → comprobante. |
-| 13 | `plataforma` | S3 | Rate limit de onboarding en memoria (no multi-instancia). | Migrar a Redis cuando haya más de una instancia. |
-| 14 | `comprobantes` | S4 | Listado sin paginación en UI (API soporta `page`/`limit`). | Añadir paginación cuando el volumen crezca. |
+| 11 | `design-system` | S4 | Recharts avisa `width(0) height(0)` en varias vistas. | Revisar contenedores y fijar alto mínimo. |
+| 12 | `ci-qa` | S3 | No hay E2E full-stack (Playwright). | AYCDS-49: flujo mesa → cocina → caja → comprobante. |
+| 13 | `plataforma` | S3 | Rate limit de onboarding en memoria (no multi-instancia). | Migrar a Redis con más de una instancia. |
+| 14 | `comprobantes` | S4 | Listado sin paginación en UI (API sí soporta). | Añadir paginación cuando crezca el volumen. |
 
 ---
 
-## 6. Plan de implantación (3 semanas)
+## 6. Plan de implantación
 
-### Semana 1 — Acordar y habilitar
+### Semana 1 — Habilitar el proceso (en curso)
 
-- [ ] Validar dueños/backups en reunión de equipo (30 min) y firmar la tabla.
-- [ ] Crear los **14 componentes** en Jira y la etiqueta `modulo:*`; automation componente → assignee.
-- [ ] Añadir `.github/CODEOWNERS` con handles reales y activar «Require review from Code Owners».
-- [ ] Publicar la plantilla de issue (Jira) y el enlace a este documento.
-- [ ] Convertir las observaciones 1–8 en issues con su componente y severidad.
+- [x] `CODEOWNERS` colectivo (`@SebJoq21 @SOoOnny`).
+- [x] Plantilla de PR con módulo, checklist y revisión cruzada.
+- [x] Chequeo `Un PR por módulo` en CI + etiqueta `multi-modulo`.
+- [ ] Activar la protección de `development` en GitHub (§3.3).
+- [ ] Crear los 15 componentes en Jira + etiqueta `modulo:*` y la plantilla de issue.
+- [ ] Convertir las observaciones 1–8 en issues con componente y severidad.
+- [ ] Publicar la rotación de guardias semanales.
 
 ### Semana 2 — Operar
 
-- [ ] Triage de todo el backlog por dueño (1 día por módulo).
-- [ ] Primer sprint por módulos: cerrar `gastos` y `promociones` (observaciones 2 y 3) y el flujo de «cerrar cuenta» (4).
-- [ ] README corto por módulo: contrato, endpoints, dueño, backup, tests.
+- [ ] Triage completo del backlog por el guardia; cada issue con componente y reviewer.
+- [ ] Sprint por módulos: cerrar `gastos` (2), `promociones` (3) y `cerrar cuenta` (4) en **tres PRs separados**.
+- [ ] README corto por módulo: contrato, endpoints, tests y cómo correrlo.
 - [ ] Tablero Jira por componente con filtros guardados.
 
 ### Semana 3 — Medir y ajustar
 
-- [ ] Primera revisión de salud (métricas de §4.5).
-- [ ] Decidir pantallas heredadas (7): retirar o módulo nuevo.
+- [ ] Revisión de salud con las métricas de §4.5.
+- [ ] Decidir pantallas heredadas (7).
 - [ ] Planificar inventario maestro (1) y E2E (12).
-- [ ] Retro de 30 min: qué issue se atascó y por qué.
+- [ ] Retro de 30 min: PRs que se trabaron por revisión o por alcance.
 
-**Criterio de éxito a 3 semanas:** 100 % de módulos con dueño y backup · 0 issues sin componente · triage < 1 día · S1/S2 con SLA cumplido ≥ 80 % · observaciones 1–4 cerradas o en curso.
+**Criterio de éxito a 3 semanas:** 100 % de PRs revisados por otra persona · ≥ 90 % de PRs de un solo módulo · 0 issues sin componente · triage < 1 día · S1/S2 con SLA ≥ 80 % · observaciones 1–4 cerradas o en curso.
 
 ---
 
@@ -313,18 +315,36 @@ saas          8   tenants, suspender, reactivar, plan, historial, métricas
 onboarding    1   POST /onboarding (público, rate limit)
 ```
 
-### 7.2 Cómo abrir un issue (checklist de 30 segundos)
+### 7.2 Clasificación del chequeo `pr-scope`
 
-1. ¿Es un defecto, una mejora o deuda? → tipo.
-2. ¿A qué módulo pertenece? → componente + etiqueta.
-3. ¿Severidad? → S1–S4 según impacto.
+| Ruta | Módulo |
+|---|---|
+| `apps/api/src/modules/<m>/` | según mapa (`catalog`→catalogo, `cash`→caja, …) |
+| `apps/web/lib/<m>-api.ts` | según mapa |
+| `apps/web/components/erp/catalog/**` | catalogo |
+| `OrdersView`, `MozoView`, `AccountPanel`, `useOrdersRealtime` | ordenes |
+| `BookingsModule`, `SalonTablesView` | mesas |
+| `CajaView` / `ComprobantesView` | caja / comprobantes |
+| `InventoryModule`, `InventoryMovementsView` | inventario |
+| `GastosView` / `CombosView`, `PromocionesView` | gastos / promociones |
+| `ClientesView`, `LoyaltyModule` | crm |
+| `Staff*View`, `StaffModule`, `RolesView` | rrhh |
+| `AnaliticasView` | bi |
+| `app/app/{caja,analiticas,…}/page.tsx` | por ruta |
+| docs, tests, prisma, `.github`, `scripts`, `components/ui`, `dashboard` | compartido (no cuenta) |
+
+### 7.3 Cómo abrir un issue (30 segundos)
+
+1. ¿Defecto, mejora o deuda? → tipo.
+2. ¿Módulo? → componente + etiqueta.
+3. ¿Severidad? → S1–S4.
 4. ¿Se reproduce? → pasos + evidencia.
-5. ¿Cómo sabremos que está cerrado? → criterio de aceptación.
-6. Asignar al dueño; backup como reviewer.
+5. ¿Cuándo se cierra? → criterio de aceptación.
+6. Asignar; reviewer = otra persona.
 
-### 7.3 Reglas de convivencia entre módulos
+### 7.4 Reglas de convivencia
 
-- Nadie mergea en un módulo sin review del dueño o su backup.
-- Un cambio de contrato (endpoint, payload, evento) exige RFC de 1 página y aviso en el canal.
-- El dueño puede rechazar un issue mal formado y pedir la plantilla.
-- La deuda del módulo se registra como issue S3/S4, no como comentario en el código.
+- Nadie aprueba ni mergea su propio PR.
+- Un PR toca un módulo (o lleva `multi-modulo` justificado).
+- Un cambio de contrato exige RFC de 1 página y aviso al equipo.
+- La deuda se registra como issue S3/S4, no como comentario en el código.

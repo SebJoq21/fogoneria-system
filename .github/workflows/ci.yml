@@ -82,3 +82,21 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  pr-scope:
+    name: Un PR por módulo
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verificar alcance del PR
+        env:
+          ALLOW_MULTI: ${{ contains(github.event.pull_request.labels.*.name, 'multi-modulo') }}
+        run: node scripts/check-pr-scope.mjs "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"

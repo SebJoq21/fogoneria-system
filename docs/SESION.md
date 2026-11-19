@@ -1,11 +1,13 @@
 # SESION — estado entre sesiones
 
-## 2026-11-18 — Auditoría por módulos y plan de propiedad
+## 2026-11-18 — Auditoría por módulos + reglas de revisión y alcance
 
 - **Auditoría completa** (API + web + datos + infra): 20 módulos backend (17 con controlador, 106 endpoints), 33 rutas de app, 302 unit / 112 e2e / 109 DB / 148 web, lint/types/build en verde. Sin hallazgos nuevos de código.
 - **Estado por módulo:** catálogo, precios, órdenes/KDS, mesas/reservas, caja, comprobantes, CRM, BI, SaaS y onboarding al 90–100 %; inventario 80 %, RRHH 80 %, gastos 50 %, promociones 40 %; pagos/soporte/configuración/carta son mock sin tarea.
-- **Entregable:** `docs/PLAN-MODULOS-Y-PROPIEDAD.md` con inventario, mapa dueño/backup por módulo, modelo de issues por componente de Jira (plantilla, SLA S1–S4, DoR/DoD, cross-módulo), snippet de `CODEOWNERS`, 14 observaciones priorizadas y plan de implantación de 3 semanas.
-- **Pendiente de decisión del equipo:** validar dueños/backups y completar los handles reales del `CODEOWNERS`; luego crear componentes/labels en Jira.
+- **Modelo acordado:** propiedad **colectiva** (todos trabajan en todo), con dos reglas duras: **nadie aprueba su propio PR** y **un PR = un módulo**.
+- **Implementado:** `.github/CODEOWNERS` (`@SebJoq21 @SOoOnny`), `.github/pull_request_template.md` (módulo + checklist de revisión cruzada), `scripts/check-pr-scope.mjs` y job de CI **`Un PR por módulo`** (excepción con etiqueta `multi-modulo`).
+- **Entregable:** `docs/PLAN-MODULOS-Y-PROPIEDAD.md` actualizado: inventario, reglas de revisión/protección de rama, regla de alcance con ejemplos, guardia semanal, modelo de issues por componente, 14 observaciones y plan de 3 semanas.
+- **Pendiente:** activar la protección de `development` en GitHub (1 approval + Code Owners + checks), crear los 15 componentes en Jira y convertir las observaciones 1–8 en issues.
 
 ## 2026-11-11 — Demo levantada y seed idempotente
 
