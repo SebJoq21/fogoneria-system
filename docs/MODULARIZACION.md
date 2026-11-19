@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`; `bi` + contrato de `realtime`; `auth`, `tenant`, `saas`, `billing`, `onboarding` y `audit`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–3 implementadas (fundaciones, RRHH, catálogo/precios y olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3) + **Fase 4 etapa 1** (`SessionProvider` y `NotificationsProvider` extraídos de `ModulesProvider`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -338,14 +338,44 @@ Estos son los puntos que las olas deben cortar en ese orden.
   y el layout raíz. Se retiraron `lib/onboarding-api.ts` y `lib/saas-api.ts`.
   `lib/session.ts`, `lib/backend.ts`, `proxy.ts`, `app/api/session/**` y
   `app/api/backend/**` **no se tocaron**.
-- **Acoplamiento restante (consciente):** `ModulesProvider` sigue siendo el
-  dueño del estado (incluido el login) hasta la Fase 4; `lib/tenant-api.ts` y
+- **Acoplamiento restante (consciente):** en esa ola `ModulesProvider` seguía
+  siendo el dueño del estado (incluido el login); `lib/tenant-api.ts` y
   `lib/auth-api.ts` se quedan porque los usa el BFF/`ModulesProvider`. La feature
-  no crea `SessionProvider`/`TenantProvider` todavía.
+  no creó `SessionProvider`/`TenantProvider`: eso llega en la Fase 4 (etapa 1
+  para sesión y avisos; etapa 2 para tenant y negocio).
 
 ### Fase 4 — Desmontar el estado global
 
 `ModulesProvider` → contextos de plataforma (`Session`, `Tenant`, `Notifications`); cada feature con su estado.
+
+#### Etapa 1 ✅ (2026-11-19) — `Session` y `Notifications`
+
+- **`components/dashboard/providers/session.tsx`**: `SessionProvider` + `useSession`
+  (`currentUser`, `hasSession`, `login`, `logout`). El login sigue canjeando en
+  `/api/session` y el logout navega a `/api/session/logout`; la cookie HttpOnly,
+  `proxy.ts`, `lib/session.ts` y el BFF **no se tocaron**. La persistencia del
+  usuario conserva la clave `fogoneria:user` y el namespace de sucursal por
+  empresa (`fogoneria:branch:<empresaId>`), ahora en `lib/session-state.ts`.
+- **`components/dashboard/providers/notifications.tsx`**: `NotificationsProvider`
+  + `useNotifications` (`notifications`, `hasUnread`, `notify`, `clearUnread`).
+  Estado **en memoria** (sin `localStorage` ni `BroadcastChannel`); el helper
+  `lib/notifications.ts` garantiza ids únicos y colapsa el doble disparo idéntico
+  del mismo milisegundo. `components/ui/Toast.tsx` consume `useNotifications`.
+- **`ModulesProvider`** ya no declara sesión ni avisos: los toma de los dos
+  providers y los reexpone en su `value` para no romper las ~20 vistas que usan
+  `useModules().login/logout/currentUser/hasSession/notify/...`. El resto del
+  estado (tenant, catálogo, órdenes, cuentas, caja, gastos, clientes) sigue igual. Los
+  datos de empresa/sucursales se guardan atados a su `empresaId` para que un
+  login nuevo no herede el tenant anterior.
+- **Layout:** `SessionProvider > NotificationsProvider > ModulesProvider` en
+  `app/layout.tsx`; `/`, `/onboarding`, `/saas` y `/app/*` siguen funcionando.
+- **Tests:** 244 → **255** web (nuevos `lib/notifications.test.ts` y
+  `lib/session-state.test.ts`); sin dependencias nuevas y sin RTL.
+- **Queda para la etapa 2:** vaciar `ModulesProvider` (tenant, catálogo, órdenes,
+  cuentas, caja, clientes, gastos, inventario, promociones y RRHH demo) hacia
+  `TenantProvider` y las features. Hasta entonces `useModules` sigue siendo la
+  fachada de compatibilidad; las features nuevas deben usar `useSession` y
+  `useNotifications` directamente.
 
 ### Fase 5 — Extracción opcional
 

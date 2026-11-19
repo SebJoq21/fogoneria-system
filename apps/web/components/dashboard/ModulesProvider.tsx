@@ -83,7 +83,9 @@ import {
   type ProductCategory,
 } from "@/lib/erp-catalog";
 import { ApiError } from "@/lib/api";
-import { createSession, logoutUrl } from "@/lib/session-api";
+import { branchStorageKey, tenantKeyOf } from "@/lib/session-state";
+import { useNotifications } from "./providers/notifications";
+import { useSession } from "./providers/session";
 import * as catalogApi from "@/lib/catalog-api";
 import * as ordersApi from "@/lib/orders-api";
 import {
@@ -101,7 +103,6 @@ import {
   getFacturacionPort,
 } from "@/lib/facturacion";
 import {
-  ANON_TENANT_KEY,
   loadErpState,
   saveErpState,
   resetErpState,
@@ -378,8 +379,6 @@ function buildEmptyState(): ErpState {
     expenses: [],
     combos: [],
     tickets: [],
-    notifications: [],
-    hasUnread: false,
     scopes: {},
     accounts: [],
     cashShifts: [],
@@ -402,17 +401,11 @@ function buildInitialState(empresaId: string | null): ErpState {
     expenses: initialExpenses,
     combos: initialCombos,
     tickets: initialTickets,
-    notifications: [],
-    hasUnread: false,
     scopes: initialScopes,
     accounts: initialAccounts,
     cashShifts: initialCashShifts,
     sunatContingencia: false,
   };
-}
-
-function branchStorageKey(tenantKey: string): string {
-  return `fogoneria:branch:${tenantKey}`;
 }
 
 function matchesBranch(branchA?: string | null, branchB?: string | null): boolean {
@@ -423,6 +416,17 @@ function matchesBranch(branchA?: string | null, branchB?: string | null): boolea
   return slugA === slugB;
 }
 
+/**
+ * Empresa y sucursales de la API atadas a su `empresaId`. Guardar la empresa
+ * junto al dato evita que un login nuevo herede el tenant del anterior
+ * mientras llega la respuesta.
+ */
+type TenantSnapshot = {
+  empresaId: string | null;
+  tenant: Tenant | null;
+  branches: Branch[] | null;
+};
+
 export function ModulesProvider({
   children,
   initialPayments,
@@ -430,16 +434,20 @@ export function ModulesProvider({
   children: React.ReactNode;
   initialPayments: PlanPayment[];
 }) {
+  const { currentUser, hasSession, login, logout } = useSession();
+  const { notifications, hasUnread, notify, clearUnread } = useNotifications();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const [activeBranchId, setActiveBranchId] = useState<string>("todas");
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [tenant, setTenant] = useState<Tenant | null>(null);
-  /** `null` = aún no se consultó la API (modo demo/offline). */
-  const [tenantBranches, setTenantBranches] = useState<Branch[] | null>(null);
+  const [tenantSnapshot, setTenantSnapshot] = useState<TenantSnapshot | null>(null);
   const applyingRemote = useRef(false);
   /** Namespace de persistencia: una empresa no comparte estado con otra. */
-  const tenantKey = currentUser?.empresaId ?? ANON_TENANT_KEY;
+  const tenantKey = tenantKeyOf(currentUser);
+  const empresaId = currentUser?.empresaId ?? null;
+  const tenant = tenantSnapshot?.empresaId === empresaId ? tenantSnapshot.tenant : null;
+  /** `null` = aún no se consultó la API (modo demo/offline). */
+  const tenantBranches =
+    tenantSnapshot?.empresaId === empresaId ? tenantSnapshot.branches : null;
 
   const branchIds = useMemo(
     () =>
@@ -468,20 +476,6 @@ export function ModulesProvider({
           : DEMO_COMPANY,
     [tenant, currentUser],
   );
-
-  /* Hidratación del usuario al montar (solo cliente). */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("fogoneria:user");
-      const found = raw ? (JSON.parse(raw) as AppUser) : null;
-      if (found?.id && found.role) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación de sesión (solo cliente)
-        setCurrentUser(found);
-      }
-    } catch {
-      /* almacenamiento no disponible */
-    }
-  }, []);
 
   /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
@@ -667,8 +661,6 @@ export function ModulesProvider({
 
   /* ---------- Mesas y reservas reales de la API (AYCDS-26) ---------- */
 
-  const hasSession = Boolean(currentUser?.empresaId);
-
   const [liveTables, setLiveTables] = useState<Table[] | null>(null);
   const [tablesLoading, setTablesLoading] = useState(false);
   const [tablesError, setTablesError] = useState<string | null>(null);
@@ -767,8 +759,11 @@ export function ModulesProvider({
           fetchBranches(controller.signal),
         ]);
         if (controller.signal.aborted) return;
-        setTenant(tenantData);
-        setTenantBranches(branchData);
+        setTenantSnapshot({
+          empresaId: currentUser.empresaId,
+          tenant: tenantData,
+          branches: branchData,
+        });
         setState((prev) => prepareOps(prev, branchData.map((branch) => branch.id)));
         setActiveBranchId((prev) => {
           const ids = branchData.map((branch) => branch.id);
@@ -779,8 +774,7 @@ export function ModulesProvider({
       } catch {
         // Sin datos reales no se cae a la empresa/sucursales demo: el shell
         // queda sin sucursal operativa hasta que la API responda.
-        setTenant(null);
-        setTenantBranches([]);
+        setTenantSnapshot({ empresaId: currentUser.empresaId, tenant: null, branches: [] });
       }
     })();
 
@@ -922,39 +916,6 @@ export function ModulesProvider({
     [refreshCatalog],
   );
 
-  /* ---------- Sesión (JWT) ---------- */
-
-  const login = useCallback(async (email: string, password: string): Promise<AppUser> => {
-    const { user } = await createSession(email, password);
-    // Un login nuevo no hereda la sucursal del usuario anterior.
-    setActiveBranchId("todas");
-    setTenant(null);
-    setTenantBranches(null);
-    setCurrentUser(user);
-    try {
-      localStorage.setItem("fogoneria:user", JSON.stringify(user));
-    } catch {
-      /* almacenamiento no disponible */
-    }
-    if (user.branchId) setActiveBranchId(user.branchId);
-    return user;
-  }, []);
-
-  const logout = useCallback(() => {
-    // Limpia la sesión del usuario actual y navega al logout del servidor,
-    // que borra las cookies HttpOnly y redirige. El estado operativo del restaurante
-    // (cuentas y caja) se conserva.
-    try {
-      localStorage.removeItem("fogoneria:user");
-      localStorage.removeItem(branchStorageKey(tenantKey));
-      document.cookie = "fogoneria.role=; path=/; max-age=0";
-      document.cookie = "fogoneria.branch=; path=/; max-age=0";
-    } catch {
-      /* almacenamiento no disponible */
-    }
-    window.location.assign(logoutUrl());
-  }, [tenantKey]);
-
   const isGeneral = activeBranchId === GENERAL_BRANCH.id;
   const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
 
@@ -1033,42 +994,19 @@ export function ModulesProvider({
     [catalog.categories],
   );
 
-  const notify = useCallback((title: string, message: string) => {
-    setState((s) => ({
-      ...s,
-      notifications: [{ id: Date.now(), title, message, timestamp: Date.now() }, ...s.notifications],
-      hasUnread: true,
-    }));
-  }, []);
-
-  const clearUnread = useCallback(() => {
-    setState((s) => ({ ...s, hasUnread: false }));
-  }, []);
-
-  const addTicket = useCallback((subject: string) => {
-    setState((s) => {
+  const addTicket = useCallback(
+    (subject: string) => {
       const ticket: Ticket = {
         id: `#TK-${Math.floor(Math.random() * 9000) + 1000}`,
         subject,
         status: "Enviado",
         updated: "Justo ahora",
       };
-      return {
-        ...s,
-        tickets: [ticket, ...s.tickets],
-        notifications: [
-          {
-            id: Date.now(),
-            title: "Ticket enviado",
-            message: `Tu solicitud "${subject}" ha sido enviada a soporte.`,
-            timestamp: Date.now(),
-          },
-          ...s.notifications,
-        ],
-        hasUnread: true,
-      };
-    });
-  }, []);
+      setState((s) => ({ ...s, tickets: [ticket, ...s.tickets] }));
+      notify("Ticket enviado", `Tu solicitud "${subject}" ha sido enviada a soporte.`);
+    },
+    [notify],
+  );
 
   const resetDemoData = useCallback(() => {
     resetErpState(tenantKey);
@@ -1795,8 +1733,8 @@ export function ModulesProvider({
       openCashShift,
       startCashShift,
       closeCashShift,
-      notifications: state.notifications,
-      hasUnread: state.hasUnread,
+      notifications,
+      hasUnread,
       notify,
       clearUnread,
       resetDemoData,
@@ -1876,6 +1814,8 @@ export function ModulesProvider({
       openCashShift,
       startCashShift,
       closeCashShift,
+      notifications,
+      hasUnread,
       notify,
       clearUnread,
       resetDemoData,
