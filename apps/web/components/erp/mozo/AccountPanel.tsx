@@ -7,7 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { AddItemModal } from "./AddItemModal";
-import { useNow } from "@/components/useNow";
+import { useNow } from "@/lib/use-now";
 import {
   accountTotals,
   elapsedLabel,

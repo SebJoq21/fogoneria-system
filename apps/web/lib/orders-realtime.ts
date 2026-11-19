@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   connectOrdersRealtime,
   type RealtimeStatus,
-} from "@/lib/realtime";
+} from "./realtime";
 
 export type LiveOrderEvent = {
   id: string;

@@ -10,9 +10,9 @@
    es lo que se quiere en una pantalla siempre encendida. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError } from "@/lib/api";
-import { kdsBoardFromApi, type KdsBoard } from "@/lib/order-mapping";
-import { getOrdersBoard } from "@/lib/orders-api";
+import { ApiError } from "./api";
+import { kdsBoardFromApi, type KdsBoard } from "./order-mapping";
+import { getOrdersBoard } from "./orders-api";
 
 export type OrdersBoardState = {
   board: KdsBoard | null;
@@ -21,7 +21,17 @@ export type OrdersBoardState = {
   refresh: (signal?: AbortSignal) => Promise<void>;
 };
 
-export function useOrdersBoard(enabled: boolean): OrdersBoardState {
+/** Fuente del tablero: por defecto el cliente de la API; la feature inyecta el suyo. */
+export type BoardFetcher = (signal?: AbortSignal) => Promise<KdsBoard>;
+
+/** Estable entre renders: si cambia la identidad, el efecto vuelve a pedir el tablero. */
+const defaultBoardFetcher: BoardFetcher = async (signal) =>
+  kdsBoardFromApi(await getOrdersBoard({ signal }));
+
+export function useOrdersBoard(
+  enabled: boolean,
+  fetchBoard: BoardFetcher = defaultBoardFetcher,
+): OrdersBoardState {
   const [board, setBoard] = useState<KdsBoard | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Descarta respuestas viejas si se disparan dos refrescos seguidos. */
@@ -34,9 +44,9 @@ export function useOrdersBoard(enabled: boolean): OrdersBoardState {
       requestId.current = id;
 
       try {
-        const payload = await getOrdersBoard({ signal });
+        const next = await fetchBoard(signal);
         if (id !== requestId.current) return;
-        setBoard(kdsBoardFromApi(payload));
+        setBoard(next);
         setError(null);
       } catch (cause) {
         if (signal?.aborted || id !== requestId.current) return;
@@ -47,7 +57,7 @@ export function useOrdersBoard(enabled: boolean): OrdersBoardState {
         );
       }
     },
-    [enabled],
+    [enabled, fetchBoard],
   );
 
   useEffect(() => {

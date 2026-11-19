@@ -1,7 +1,7 @@
 "use client";
 
-import { OrdersView } from "@/components/erp/OrdersView";
+import { OrdersBoardPage } from "@/features/ordenes";
 
 export default function PedidosPage() {
-  return <OrdersView mode="ordenes" />;
+  return <OrdersBoardPage mode="ordenes" />;
 }

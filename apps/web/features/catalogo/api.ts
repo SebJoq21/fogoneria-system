@@ -6,12 +6,12 @@
  * mutaciones pasan por las acciones de `ModulesProvider` (`saveProduct`,
  * `setPrice`…) porque el ERP entero comparte ese estado (carta, mesero, caja) y
  * escribir desde aquí dejaría dos fuentes de verdad. La escritura propia llega
- * con la ola de órdenes (`PricingPort`).
+ * cuando el estado salga del provider (Fase 4 de la modularización).
  *
  * La API responde snake_case; aquí se traduce al contrato (`@fogoneria/contracts/catalogo`).
  */
 
-import { createClient } from '@fogoneria/sdk';
+import { createClient, queryString } from '@fogoneria/sdk';
 import type {
   Categoria,
   Catalogo,
@@ -132,14 +132,14 @@ export function toPrecioPlato(raw: ApiPrecio): PrecioPlato {
 
 async function listarTodosLosPlatos(signal?: AbortSignal): Promise<ApiPlato[]> {
   const primera = await catalogoClient.get<ApiPaginaPlatos>(
-    `/catalog/dishes?limit=${TAMANO_PAGINA}&page=1`,
+    `/catalog/dishes${queryString({ limit: TAMANO_PAGINA, page: 1 })}`,
     { signal },
   );
   const platos = [...primera.items];
   const paginas = Math.ceil(primera.total / TAMANO_PAGINA);
   for (let pagina = 2; pagina <= paginas; pagina += 1) {
     const siguiente = await catalogoClient.get<ApiPaginaPlatos>(
-      `/catalog/dishes?limit=${TAMANO_PAGINA}&page=${pagina}`,
+      `/catalog/dishes${queryString({ limit: TAMANO_PAGINA, page: pagina })}`,
       { signal },
     );
     platos.push(...siguiente.items);

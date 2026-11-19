@@ -9,7 +9,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 - `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`, `DATABASE_POOL_MAX` (conexiones por cliente de Prisma; default 10).
 - `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
 - `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.
-- `src/modules/` — `auth`, `tenant`, `tables` (mesas por sucursal), `reservations` (reservas con aforo y solapamiento), `orders`, `realtime` (gateway Socket.io), `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto.
+- `src/modules/` — `auth`, `tenant`, `tables` (mesas por sucursal), `reservations` (reservas con aforo y solapamiento), `orders` (POS + tablero del KDS), `realtime` (gateway Socket.io), `catalog`, `pricing`, `saas`, `billing`, `onboarding` (alta pública de tenant), `audit`. Cada uno con controller/service/dto. `tables`, `reservations`, `orders`, `catalog`, `pricing`, `staff` y `audit` exponen un `index.ts` como **API pública**: los demás módulos importan ese `index.js`, nunca el service/DTO.
 - `src/modules/realtime/` — `@Global` con `OrdersGateway` (namespace `/orders`), `RealtimeService` (fachada que usan los servicios) y el contrato en `realtime.types.ts`. Rooms `empresa:<id>` (roles sin sucursal) y `empresa:<id>:sucursal:<id>` (operativos); `order:<id>` vía `order:subscribe`. Sobre `{ eventId, at, data }`. Contrato completo en `docs/websockets.md`.
 - `src/common/sequences` — folios por empresa (`ORD`, `RSV`) sobre la tabla `secuencias`; el SQL crudo se califica con `DATABASE_SCHEMA` porque no pasa por Prisma. **El upsert corre en autocommit sobre `prisma.raw`, fuera de la transacción del request** (AYCDS-22): dentro de ella el lock de la fila se retiene hasta el commit y serializa las altas de la empresa. Si la creación falla después, el folio queda con hueco (aceptado). No volver a moverlo a la transacción.
 - `src/main.ts` — body parser acotado (`bodyParser: false` + `json/urlencoded`): 4 MB solo en `/api/v1/onboarding` (logo en data URL) y 100 KB en el resto. No subir el límite global.
@@ -19,6 +19,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 ## Reglas api
 
 - Imports internos SIEMPRE con sufijo `.js` (ej: `./app.module.js`). Sin eso rompe `nodenext`.
+- Un módulo solo importa el **`index.js` público** de otro (`../audit/index.js`, `../orders/index.js`); los internals (`orders.service.js`, DTOs) están prohibidos y `pnpm check:boundaries` los bloquea. El baseline es decreciente: no agregar excepciones.
 - Estructura por dominio: `src/modules/<dominio>/{*.controller.ts,*.service.ts,*.dto.ts,*.spec.ts}`. No acumular en `app.*`.
 - Todo endpoint con body/query usa DTO + `class-validator`; el `ValidationPipe` es global (`whitelist`, `forbidNonWhitelisted`, `transform`).
 - Toda ruta privada usa `@Roles(...)` si no es para cualquier autenticado; `@Public()` solo para login, health e info.

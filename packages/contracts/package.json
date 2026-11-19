@@ -6,6 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalogo": "./src/catalogo.ts",
+    "./mesas": "./src/mesas.ts",
+    "./ordenes": "./src/ordenes.ts",
+    "./reservas": "./src/reservas.ts",
     "./rrhh": "./src/rrhh.ts"
   },
   "scripts": {

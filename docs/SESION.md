@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola salón (mesas + reservas + órdenes/KDS)
+
+- **Contratos:** `packages/contracts/src/mesas.ts`, `reservas.ts` y `ordenes.ts` (estados, inputs, validadores, etiquetas, SLA y helpers de Lima) + subpaths `./mesas|./reservas|./ordenes`.
+- **Backend:** `tables/index.ts`, `reservations/index.ts` y `orders/index.ts` públicos; `app.module.ts` importa por el `index`. `orders.service.ts` usa `../audit/index.js`. Sin cambios de lógica. Baseline de fronteras **22 → 21** (`--write-baseline`).
+- **Web:** `features/salon/` (`api.ts` SDK+contratos, `hooks.ts` sobre `ModulesProvider`, `MesasPage`, `ReservasPage`, `SalonTablesPage`, `BookingsModule` y `SalonTablesView` movidos) y `features/ordenes/` (`api.ts` solo lectura de `/orders/board`, `hooks.ts`, `OrdersBoardPage` y KDS movido). Rutas de mesas/reservas/órdenes/cocina solo importan la feature; guard, cabecera y redirect del maestro intactos.
+- **Hooks compartidos:** `lib/orders-realtime.ts`, `lib/orders-board.ts` (fetcher inyectable; default cliente de la API) y `lib/use-now.ts`; `MozoView`/`AccountPanel` solo cambian el import.
+- **Acoplamiento restante:** el estado sigue en `ModulesProvider` (Fase 4); mozo/caja permanecen en `components/erp/*`; backend conserva en baseline `cash → orders` y `orders → inventory/promotions/realtime`.
+- Verificado: **179** web tests (24 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (21 históricas, 0 nuevas).
+- Próximo: ola **dinero** (`receipts → cash → expenses`) con el mismo patrón; después Fase 4 (vaciar `ModulesProvider`).
+
 ## 2026-11-19 — Modularización: Fases 0–2 + auditoría de la Fase 1
 
 - **Fase 0 (PR #48, mergeado):** `@fogoneria/kernel` (money/fechas Lima), `@fogoneria/sdk` (cliente BFF) y `@fogoneria/contracts` (RRHH). `scripts/check-module-boundaries.mjs` con baseline de 24 acoplamientos históricos y job CI **Fronteras de módulos**. `pr-scope` reconoce `features/<m>` y `contracts/src/<m>.ts`. Documento `docs/MODULARIZACION.md` con el diagnóstico (5 acoplamientos backend + 5 frontend).
@@ -8,8 +18,8 @@
 - **Auditoría de la Fase 1 (10/10 PASS) y correcciones aplicadas:** borrado `lib/staff-api.ts` (código muerto) y `bi-staff-api.test.ts` → `bi-api.test.ts`; `audit/index.ts` público (staff lo importa sin violar frontera); baseline 24 → **23**; test de `toTurno`; docs sincronizados (`AGENTS.md`, `PLAN-MODULOS-Y-PROPIEDAD.md`, `MODULARIZACION.md`, este archivo).
 - **Independencia lograda:** RRHH toca solo `features/rrhh/**` + rutas + `staff/**`; catálogo, `features/catalogo/**` + rutas de productos + `catalog|pricing/**`. Ninguna feature importa `components/erp/*` ni otra feature.
 - Verificado: **163** web tests (22 archivos), **305** API unit, **112** e2e, `lint` 3/3, `check-types` 6/6, `check:boundaries` OK (22 históricas, 0 nuevas), build web OK.
-- **PricingPort cerrado:** `OrdersService` inyecta `PRICING_PORT` (token de Nest del módulo Precios) y recibe `{ listaId, precios }` en lote; ya no toca `precios_platos`, `listas_precios` ni `PricingService`. 3 tests nuevos del puerto y baseline **22**.
-- **Deuda conocida:** el estado del catálogo sigue en `ModulesProvider` hasta la ola de órdenes; `CartaVirtualView` sigue en `components/erp/catalog`; `orders.module` mantiene imports históricos de inventory/promotions (baseline).
+- **PricingPort cerrado (PR #52):** `OrdersService` inyecta `PRICING_PORT` (token de Nest del módulo Precios) y recibe `{ listaId, precios }` en lote; ya no toca `precios_platos`, `listas_precios` ni `PricingService`. 3 tests nuevos del puerto y baseline **22**.
+- **Deuda conocida:** el estado del catálogo sigue en `ModulesProvider` hasta la Fase 4; `CartaVirtualView` sigue en `components/erp/catalog`; `orders.module` mantiene imports históricos de inventory/promotions (baseline).
 - Próximo: Fase 3, ola salón (`tables → reservations → orders`).
 
 ## 2026-11-18 — Auditoría por módulos + reglas de revisión y alcance
