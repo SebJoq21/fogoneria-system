@@ -3,7 +3,7 @@
 import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
 import { initialAttendance, initialEmployees } from "@/lib/erp";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard, HubBlocks, type HubLink } from "./workspace-ui";
+import { ChartCard, HubBlocks, type HubLink } from "@/components/dashboard/workspace-ui";
 
 const attendanceByDay = [
   { name: "Lun", v: 4 }, { name: "Mar", v: 3 }, { name: "Mié", v: 4 },

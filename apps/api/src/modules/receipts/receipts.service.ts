@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { SequencesService } from '../../common/sequences/sequences.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
 import { isValidRuc } from '../../common/utils/ruc.js';
 import { limaDayKey, limaDayRange } from '../../common/utils/lima-day.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';

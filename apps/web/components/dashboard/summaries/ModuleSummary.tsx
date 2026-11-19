@@ -1,7 +1,7 @@
 "use client";
 
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard } from "@/components/erp/workspace-ui";
+import { ChartCard } from "@/components/dashboard/workspace-ui";
 
 export type SummaryKpi = { label: string; value: string; hint?: string };
 

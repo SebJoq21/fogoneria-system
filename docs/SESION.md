@@ -1,5 +1,16 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola dinero (receipts + cash + expenses)
+
+- **Contratos:** `packages/contracts/src/caja.ts`, `comprobantes.ts` y `gastos.ts` (turnos/movimientos/arqueo/cobro, comprobantes con `desgloseIgv` y SUNAT «pendiente de OSE», gastos con categorías y pago en efectivo) + subpaths `./caja|./comprobantes|./gastos`. Los re-exporta `src/index.ts`.
+- **Backend — puertos:** `ORDERS_PORT`/`OrdersPort` (`markPaid`) provisto por `OrdersModule` con `useExisting`; `CASH_PORT`/`CashPort` (`egresoDeGasto`) por `CashModule`. `cash` y `expenses` ya no importan services/módulos internos: consumen el `index` público y el token. `receipts|cash|expenses/index.ts` públicos; `app.module.ts` importa por el `index`. Auditoría de los tres por `../audit/index.js`. Sin cambios de reglas, triggers ni tablas. Baseline **21 → 14** (`--write-baseline`).
+- **Web:** `HubBlocks`/`ChartCard` movidos a `components/dashboard/workspace-ui.tsx` (9 imports actualizados). Features `caja` (`CajaPage`, `CheckoutModal`, `api.ts` SDK+contratos), `comprobantes` (`ComprobantesPage`, `comprobanteARecibo`) y `gastos` (`GastosPage`, cliente `gastosApi` listo para AYCDS-27). Rutas `/app/caja`, `/app/comprobantes` y `/app/gastos` solo importan la feature; guard y cabecera intactos.
+- **Bug corregido en el camino:** la anulación de comprobantes con sesión mandaba la serie (`B001-…`) a `POST /receipts/:id/void`; ahora la página resuelve el UUID desde la fila (la tabla sigue mostrando la serie).
+- **Acoplamiento restante:** el estado de negocio sigue en `ModulesProvider` (Fase 4); `MozoView` (aún en `components/erp/`) sigue cobrando con `checkoutAccount` del provider y el `CheckoutModal` queda en `features/caja` para que la ola de mozo lo importe desde ahí; `lib/cash-api.ts` y `lib/receipts-api.ts` quedan como clientes legados (solo los usan sus tests). Backend conserva en baseline `orders → inventory/promotions/realtime` y `→ audit` en billing/crm/inventory/onboarding/promotions/saas.
+- **Caja sin `hooks.ts`:** `CajaPage` consume `useModules()` directamente porque el provider sigue siendo el dueño del estado (mismo criterio que `features/ordenes`); no se duplica estado.
+- Verificado: **199** web tests (27 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (14 históricas, 0 nuevas, 0 resueltas pendientes).
+- Próximo: ola **operación** (`inventory → promotions`) con el mismo patrón; después Fase 4 (vaciar `ModulesProvider`).
+
 ## 2026-11-19 — Modularización Fase 3, ola salón (PR #54, mergeado)
 
 - **Contratos:** `packages/contracts/src/mesas.ts`, `reservas.ts` y `ordenes.ts` (estados, inputs, validadores, etiquetas, SLA y helpers de Lima) + subpaths `./mesas|./reservas|./ordenes`.

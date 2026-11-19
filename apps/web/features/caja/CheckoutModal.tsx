@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Cobro de una cuenta del demo (cuenta abierta del mesero).
+ *
+ * Vive en `features/caja/` porque la caja es la que cobra. Acoplamiento
+ * temporal y consciente: `MozoView` (aún en `components/erp/`) todavía cobra
+ * con `checkoutAccount` del provider y no usa este modal; si lo necesita, lo
+ * importa desde `@/features/caja` (nunca al revés) hasta que la ola de mozo
+ * mueva esa vista.
+ */
+
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";

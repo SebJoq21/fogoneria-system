@@ -12,26 +12,22 @@ import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { CheckoutModal } from "@/components/erp/CheckoutModal";
+import { CheckoutModal } from "./CheckoutModal";
 import { elapsedLabel, fmtDateTime, fmtMoney, type TableAccount } from "@/lib/domain";
 import { canOperateCash } from "@/lib/permissions";
+import { listOrders, type ApiOrder } from "@/lib/orders-api";
 import {
-  chargeOrder,
-  closeShift,
-  createMovement,
-  getCurrentShift,
-  listMovements,
-  listShifts,
+  cajaApi,
   metodoFromUi,
   metodoToUi,
-  openShift,
   tipoToUi,
-  type ApiCashMethod,
-  type ApiCashMovement,
-  type ApiShift,
-  type ApiShiftState,
-} from "@/lib/cash-api";
-import { listOrders, type ApiOrder } from "@/lib/orders-api";
+} from "./api";
+import type {
+  MetodoPago,
+  MovimientoCaja,
+  TurnoCaja,
+  TurnoCajaActual,
+} from "@fogoneria/contracts/caja";
 
 /** Fila de movimiento tal como la pinta la tabla. */
 type MovimientoVM = {
@@ -79,8 +75,11 @@ type TurnoCerradoVM = {
  * Con sesión real todo pasa por la API (AYCDS-34): el turno, los movimientos,
  * el arqueo y el cobro de comandas `ENTREGADO` con `POST /cash/charges`. Sin
  * sesión (demo) se mantiene el estado local de `ModulesProvider`.
+ *
+ * El estado de negocio sigue en el provider (Fase 4): esta página solo lee y
+ * pinta; las mutaciones de la demo se delegan en sus acciones.
  */
-export function CajaView() {
+export function CajaPage() {
   const {
     cashMovements,
     setCashMovements,
@@ -113,16 +112,16 @@ export function CajaView() {
   });
 
   // --- estado de la API (solo con sesión) ---
-  const [shiftState, setShiftState] = useState<ApiShiftState>(null);
-  const [movements, setMovements] = useState<ApiCashMovement[]>([]);
+  const [shiftState, setShiftState] = useState<TurnoCajaActual>(null);
+  const [movements, setMovements] = useState<MovimientoCaja[]>([]);
   const [payables, setPayables] = useState<ApiOrder[]>([]);
-  const [history, setHistory] = useState<ApiShift[]>([]);
+  const [history, setHistory] = useState<TurnoCaja[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ApiOrder | null>(null);
   const [chargeForm, setChargeForm] = useState({
-    metodo: "EFECTIVO" as ApiCashMethod,
+    metodo: "EFECTIVO" as MetodoPago,
     monto: "",
     propina: "",
   });
@@ -133,17 +132,17 @@ export function CajaView() {
       setLoading(true);
       try {
         const [current, ordenes, turnos] = await Promise.all([
-          getCurrentShift(signal),
+          cajaApi.getTurnoActual(signal),
           listOrders({ estado: "ENTREGADO", limit: 50, signal }),
-          listShifts({ limit: 20, signal }),
+          cajaApi.listarTurnos({ limit: 20, signal }),
         ]);
         setShiftState(current);
         setPayables(ordenes.items ?? []);
         setHistory((turnos.items ?? []).filter((turno) => turno.estado === "CERRADO"));
 
-        const turnoId = current?.turno?.id;
+        const turnoId = current?.turno.id;
         if (turnoId) {
-          const lista = await listMovements({ turnoId, signal });
+          const lista = await cajaApi.listarMovimientos({ turnoId, signal });
           setMovements(lista.items ?? []);
         } else {
           setMovements([]);
@@ -180,9 +179,9 @@ export function CajaView() {
     ? shiftState
       ? {
           id: shiftState.turno.id,
-          fondo: Number(shiftState.turno.fondo_apertura),
-          abiertoPor: shiftState.turno.usuarios?.nombre ?? "Cajero",
-          abiertoAt: shiftState.turno.apertura_at,
+          fondo: shiftState.turno.fondoApertura,
+          abiertoPor: shiftState.turno.cajero ?? "Cajero",
+          abiertoAt: shiftState.turno.aperturaAt,
           esperado: shiftState.arqueo.esperadoEfectivo,
           ingresos: shiftState.arqueo.ingresos,
           egresos: shiftState.arqueo.egresos,
@@ -218,10 +217,10 @@ export function CajaView() {
   const filas: MovimientoVM[] = hasSession
     ? movements.map((movimiento) => ({
         id: movimiento.id,
-        datetime: fmtDateTime(movimiento.created_at),
+        datetime: fmtDateTime(movimiento.createdAt),
         concept: movimiento.concepto,
         kind: tipoToUi(movimiento.tipo),
-        amount: Number(movimiento.monto),
+        amount: movimiento.monto,
         method: metodoToUi(movimiento.metodo),
       }))
     : cashMovements.map((movimiento) => ({
@@ -262,13 +261,12 @@ export function CajaView() {
   const cerrados: TurnoCerradoVM[] = hasSession
     ? history.map((shift) => ({
         id: shift.id,
-        rango: `${fmtDateTime(shift.apertura_at)} → ${shift.cierre_at ? fmtDateTime(shift.cierre_at) : ""}`,
-        responsable: shift.usuarios?.nombre ?? "Cajero",
-        fondo: Number(shift.fondo_apertura),
+        rango: `${fmtDateTime(shift.aperturaAt)} → ${shift.cierreAt ? fmtDateTime(shift.cierreAt) : ""}`,
+        responsable: shift.cajero ?? "Cajero",
+        fondo: shift.fondoApertura,
         // El esperado en efectivo no se guarda aparte: `diferencia = contado - esperado`.
-        esperado:
-          Number(shift.efectivo_contado ?? 0) - Number(shift.diferencia ?? 0),
-        contado: Number(shift.efectivo_contado ?? 0),
+        esperado: Number(shift.efectivoContado ?? 0) - Number(shift.diferencia ?? 0),
+        contado: Number(shift.efectivoContado ?? 0),
         diferencia: Number(shift.diferencia ?? 0),
       }))
     : cashShifts
@@ -294,9 +292,9 @@ export function CajaView() {
     setBusy(true);
     try {
       if (hasSession) {
-        await getCurrentShift().then(async (current) => {
+        await cajaApi.getTurnoActual().then(async (current) => {
           if (current) throw new Error("Ya hay un turno abierto");
-          await openShift(Number(fund));
+          await cajaApi.abrirTurno({ fondoApertura: Number(fund) });
         });
         await refreshCash();
       } else {
@@ -319,7 +317,7 @@ export function CajaView() {
     setBusy(true);
     try {
       if (hasSession) {
-        await createMovement({
+        await cajaApi.crearMovimiento({
           tipo: form.kind === "Ingreso" ? "INGRESO" : "EGRESO",
           concepto: form.concept.trim(),
           monto: Number(form.amount),
@@ -358,7 +356,7 @@ export function CajaView() {
     setBusy(true);
     try {
       if (hasSession) {
-        const { arqueo } = await closeShift(turno.id, {
+        const { arqueo } = await cajaApi.cerrarTurno(turno.id, {
           efectivoContado: countedNum,
           ...(obs.trim() ? { observaciones: obs.trim() } : {}),
         });
@@ -395,7 +393,7 @@ export function CajaView() {
     if (!chargeTarget) return;
     setBusy(true);
     try {
-      const result = await chargeOrder({
+      const result = await cajaApi.cobrar({
         ordenId: chargeTarget.id,
         metodo: chargeForm.metodo,
         ...(chargeForm.monto ? { monto: Number(chargeForm.monto) } : {}),
@@ -826,7 +824,7 @@ export function CajaView() {
               <Select
                 value={chargeForm.metodo}
                 onChange={(e) =>
-                  setChargeForm({ ...chargeForm, metodo: e.target.value as ApiCashMethod })
+                  setChargeForm({ ...chargeForm, metodo: e.target.value as MetodoPago })
                 }
               >
                 <option value="EFECTIVO">Efectivo</option>
