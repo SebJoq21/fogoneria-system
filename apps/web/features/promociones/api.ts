@@ -131,7 +131,14 @@ export function toCupon(raw: ApiCupon): Cupon {
   };
 }
 
-/** `hora_inicio`/`hora_fin` llegan como `Time` de Postgres (`1970-01-01T18:00:00Z`). */
+/**
+ * `hora_inicio`/`hora_fin` llegan como `Time` de Postgres (`1970-01-01T18:00:00Z`).
+ *
+ * Prisma serializa el `time` (sin zona) como ISO con `Z`, pero los componentes
+ * HH:MM son la hora de pared guardada (Lima): se extraen tal cual, sin restar
+ * 5 horas. El test de `horaDeApi` fija esa suposición; si el driver cambia la
+ * serialización, se verá ahí antes que en la agenda.
+ */
 export function horaDeApi(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(value);
   if (match) return `${match[4]}:${match[5]}`;

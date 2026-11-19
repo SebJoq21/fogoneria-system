@@ -263,7 +263,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
   promociones aún no consumen `promocionesApi` (el cliente queda listo). El
   kardex ya lee la API cuando hay sesión.
 
-#### Ola personas ✅ (2026-11-19)
+#### Ola personas ✅ (2026-11-19) — PR #60
 
 - **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle,
   movimientos de puntos, configuración de lealtad, inputs, etiquetas y

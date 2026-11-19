@@ -8,7 +8,7 @@ import { MiniBars } from "@/components/dashboard/summaries/charts";
 import { kardexSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import type { StockMovement } from "@/lib/erp";
-import { inventarioApi, kardexRowFromApi } from "./api";
+import { inventarioApi, kardexRowFromApi, semaforoDeStock } from "./api";
 
 const typeTone = { Entrada: "success", Salida: "neutral", Ajuste: "warning" } as const;
 
@@ -41,11 +41,7 @@ export function MovementsPage() {
         inventarioApi.stock({ signal: controller.signal }),
       ])
         .then(([kardex, stock]) => {
-          setSemaforo({
-            agotados: stock.resumen.agotados,
-            bajos: stock.resumen.bajos,
-            optimos: stock.resumen.optimos,
-          });
+          setSemaforo(semaforoDeStock(stock));
           setApiRows(kardex.items.map((movimiento, indice) => kardexRowFromApi(movimiento, indice)));
         })
         .catch((error: unknown) => {
