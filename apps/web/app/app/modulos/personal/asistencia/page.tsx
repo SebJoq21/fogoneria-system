@@ -1,5 +1,5 @@
-import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { StaffAttendanceView } from "@/components/erp/StaffAttendanceView";
+import { ModuleGuard } from '@/components/dashboard/ModuleGate';
+import { StaffAttendancePage } from '@/features/rrhh';
 
 export default function PersonalAsistenciaPage() {
   return (
@@ -7,9 +7,9 @@ export default function PersonalAsistenciaPage() {
       <div>
         <div className="mb-6">
           <h2 className="text-section font-medium text-ink-900">Asistencia</h2>
-          <p className="text-sm text-ink-400 mt-1">Control semanal de presentes.</p>
+          <p className="text-sm text-ink-400 mt-1">Control diario del personal y propinas.</p>
         </div>
-        <StaffAttendanceView />
+        <StaffAttendancePage />
       </div>
     </ModuleGuard>
   );

@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización: fundaciones + piloto RRHH
+
+- **Fase 0 (PR #48, mergeado):** `@fogoneria/kernel` (money/fechas Lima), `@fogoneria/sdk` (cliente BFF) y `@fogoneria/contracts` (RRHH). `scripts/check-module-boundaries.mjs` con baseline de 24 acoplamientos históricos y job CI **Fronteras de módulos**. `pr-scope` reconoce `features/<m>` y `contracts/src/<m>.ts`. Documento `docs/MODULARIZACION.md` con el diagnóstico (5 acoplamientos backend + 5 frontend).
+- **Fase 1 (rama `refactor/rrhh-modulo`):** `apps/web/features/rrhh/` con `api.ts` (SDK + contratos), `hooks.ts` (`useAttendance`, `useShifts`), `AttendancePage`, `ShiftsPage` y demo aislado. Las rutas de asistencia y turnos quedan en 3 líneas. `apps/api/src/modules/staff/index.ts` como API pública.
+- **Independencia lograda:** la feature RRHH no importa `components/erp/*` ni otras features; usa kernel/sdk/contracts y el contexto de plataforma. Avanzar RRHH toca solo `features/rrhh/**` + sus rutas + `staff/**`.
+- Verificado: 153 web tests (+5), `lint` 3/3, `check-types` 6/6, `check:boundaries` OK, build web OK.
+- Próximo: Fase 2 (catálogo/precios con `PricingPort`) y después las olas por módulo.
+
 ## 2026-11-18 — Auditoría por módulos + reglas de revisión y alcance
 
 - **Auditoría completa** (API + web + datos + infra): 20 módulos backend (17 con controlador, 106 endpoints), 33 rutas de app, 302 unit / 112 e2e / 109 DB / 148 web, lint/types/build en verde. Sin hallazgos nuevos de código.

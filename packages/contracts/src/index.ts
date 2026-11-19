@@ -1,1 +1,1 @@
-export * from './rrhh.js';
+export * from './rrhh';
