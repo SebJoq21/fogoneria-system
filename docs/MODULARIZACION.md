@@ -150,13 +150,13 @@ Estos son los puntos que las olas deben cortar en ese orden.
 - `pr-scope` reconoce `apps/web/features/<m>/**` y `packages/contracts/src/<m>.ts`.
 - `transpilePackages` en Next.
 
-### Fase 1 — Piloto RRHH (siguiente PR)
+### Fase 1 — Piloto RRHH ✅ (PR `refactor/rrhh-modulo`)
 
-- `apps/web/features/rrhh/` con vistas de asistencia y turnos, hooks y cliente `sdk`.
-- `packages/contracts/src/rrhh.ts` como única fuente de tipos.
-- `apps/api/src/modules/staff/index.ts` como API pública; `AuditPort`.
-- Rutas de personal en 3 líneas; `StaffModule` demo se queda solo en directorio/propinas.
-- Criterio: avanzar RRHH toca `features/rrhh/**` + sus rutas; baseline de `staff` reducido.
+- `apps/web/features/rrhh/`: `api.ts` (SDK + contratos), `hooks.ts` (`useAttendance`, `useShifts`), `AttendancePage`, `ShiftsPage`, demo aislado.
+- Las rutas de asistencia y turnos quedan en 3 líneas importando `@/features/rrhh`.
+- `apps/api/src/modules/staff/index.ts` como API pública; `app.module` importa el `index`.
+- La feature no importa `components/erp/*` ni otras features; usa `@fogoneria/sdk`, `@fogoneria/contracts` y `@fogoneria/kernel`.
+- Criterio: avanzar RRHH toca `features/rrhh/**` + sus rutas + `staff/**`; hecho.
 
 ### Fase 2 — Piloto catálogo + precios
 
