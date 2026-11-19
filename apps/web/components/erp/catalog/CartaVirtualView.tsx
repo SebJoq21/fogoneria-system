@@ -4,9 +4,9 @@ import { useMemo } from "react";
 import type { MenuItem } from "@/lib/dashboard";
 import { MenuPreview } from "@/components/dashboard/MenuPreview";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { cartaSummary } from "@/components/dashboard/summaries/summary-selectors";
 
 /**
  * Carta Virtual (solo lectura): deriva los platos del maestro

@@ -1,4 +1,4 @@
-import { PriceListsView } from "@/components/erp/catalog/PriceListsView";
+import { PriceListsView } from "@/features/catalogo";
 
 export default function PreciosPage() {
   return (

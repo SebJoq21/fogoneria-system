@@ -12,9 +12,9 @@ import { Toggle } from "@/components/ui/Toggle";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { initialPromos } from "@/lib/erp";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { promosSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { promosSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { HubBlocks } from "@/components/erp/workspace-ui";
 
 /** Promociones: cupones con cupo + promociones programadas con vigencia. */

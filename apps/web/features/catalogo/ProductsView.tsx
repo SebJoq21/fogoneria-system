@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
-import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { cartaSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { validarPlato, type PlatoInput } from "@fogoneria/contracts/catalogo";
+import { useCatalogo } from "./hooks";
 
 type Form = {
   id: string | null;
@@ -45,74 +45,76 @@ export function ProductsView({
   createSignal?: number;
 }) {
   const {
-    products,
-    categories,
-    modifierGroups,
-    priceLists,
-    priceOf,
-    categoryNameOf,
-    notify,
-    catalogLoading,
-    catalogError,
-    saveProduct,
-    setProductActive,
-  } = useModules();
+    platos,
+    categorias,
+    grupos,
+    listaActiva,
+    resumenCarta,
+    notificar,
+    cargando,
+    error,
+    precioDe,
+    nombreDeCategoria,
+    guardarPlato,
+    activarPlato,
+  } = useCatalogo();
   const [modalOpen, setModalOpen] = useState(startCreating);
   const [saving, setSaving] = useState(false);
   const [pendingToggle, setPendingToggle] = useState<{ id: string; name: string; toActive: boolean } | null>(null);
-  const [form, setForm] = useState<Form>(emptyForm(categories[0]?.id ?? ""));
+  const [form, setForm] = useState<Form>(emptyForm(categorias[0]?.id ?? ""));
   const handledSignal = useRef(0);
 
   useEffect(() => {
     if (createSignal > handledSignal.current) {
       handledSignal.current = createSignal;
-      setForm(emptyForm(categories[0]?.id ?? ""));
+      setForm(emptyForm(categorias[0]?.id ?? ""));
       setModalOpen(true);
     }
-  }, [createSignal, categories]);
+  }, [createSignal, categorias]);
 
   const openCreate = () => {
-    setForm(emptyForm(categories[0]?.id ?? ""));
+    setForm(emptyForm(categorias[0]?.id ?? ""));
     setModalOpen(true);
   };
 
   const openEdit = (id: string) => {
-    const p = products.find((x) => x.id === id);
+    const p = platos.find((x) => x.id === id);
     if (!p) return;
     setForm({
       id: p.id,
-      name: p.name,
-      description: p.description,
-      categoryId: p.categoryId,
-      image: p.image,
-      status: p.status,
-      modifierGroupIds: p.modifierGroupIds,
-      price: String(priceOf(p.id)),
+      name: p.nombre,
+      description: p.descripcion,
+      categoryId: p.categoriaId,
+      image: p.imagen,
+      status: p.estado,
+      modifierGroupIds: p.grupoIds,
+      price: String(precioDe(p.id)),
     });
     setModalOpen(true);
   };
 
   const save = async () => {
-    if (!form.name.trim() || !form.categoryId) return;
+    if (validarPlato({ nombre: form.name, categoriaId: form.categoryId })) return;
     setSaving(true);
     try {
-      await saveProduct({
+      const input: PlatoInput = {
         id: form.id ?? undefined,
-        name: form.name.trim(),
-        description: form.description,
-        categoryId: form.categoryId,
-        image: form.image,
-        status: form.status,
-        modifierGroupIds: form.modifierGroupIds,
-        price: Number(form.price) || 0,
-      });
-      notify(
+        nombre: form.name.trim(),
+        descripcion: form.description,
+        categoriaId: form.categoryId,
+        imagen: form.image,
+        activo: form.status === "Activo",
+        grupoIds: form.modifierGroupIds,
+        precio: Number(form.price) || 0,
+      };
+      await guardarPlato(input);
+      notificar(
         form.id ? "Plato actualizado" : "Plato creado",
         `"${form.name}" guardado en el maestro.`,
       );
       setModalOpen(false);
     } catch (error) {
-      notify("No se pudo guardar el plato", error instanceof Error ? error.message : "Error inesperado");
+      notificar("No se pudo guardar el plato", error instanceof Error ? error.message : "Error inesperado");
     } finally {
       setSaving(false);
     }
@@ -121,22 +123,22 @@ export function ProductsView({
   const toggleStatus = async (id: string, toActive: boolean) => {
     setPendingToggle(null);
     try {
-      await setProductActive(id, toActive);
+      await activarPlato(id, toActive);
     } catch (error) {
-      notify("No se pudo actualizar el plato", error instanceof Error ? error.message : "Error inesperado");
+      notificar("No se pudo actualizar el plato", error instanceof Error ? error.message : "Error inesperado");
     }
   };
 
-  const summary = useMemo(() => cartaSummary(products, categories, priceOf), [products, categories, priceOf]);
+  const summary = resumenCarta;
 
   return (
     <div>
-      {catalogError && (
+      {error && (
         <p className="text-sm text-red-600 mb-4" role="alert">
-          {catalogError}
+          {error}
         </p>
       )}
-      {catalogLoading && products.length === 0 && (
+      {cargando && platos.length === 0 && (
         <p className="text-sm text-ink-400 mb-4">Cargando catálogo…</p>
       )}
       <ModuleSummary
@@ -150,10 +152,8 @@ export function ProductsView({
       <Toolbar
         left={
           <p className="text-sm text-ink-400">
-            {products.filter((p) => p.status === "Activo").length} activos · precio de lista{" "}
-            <strong className="text-ink-900">
-              {priceLists.find((l) => l.active)?.name}
-            </strong>
+            {platos.filter((p) => p.estado === "Activo").length} activos · precio de lista{" "}
+            <strong className="text-ink-900">{listaActiva?.nombre}</strong>
           </p>
         }
         right={
@@ -176,33 +176,33 @@ export function ProductsView({
           </tr>
         </THead>
         <tbody>
-          {products.map((p) => (
+          {platos.map((p) => (
             <TR key={p.id}>
               <TD tone="muted" nowrap>
                 <span className="text-nav">{p.sku}</span>
               </TD>
-              <TD tone="strong">{p.name}</TD>
+              <TD tone="strong">{p.nombre}</TD>
               <TD>
                 <span className="bg-primary/[0.05] px-2.5 py-1 rounded-md text-xs font-medium text-ink-600">
-                  {categoryNameOf(p.categoryId)}
+                  {nombreDeCategoria(p.categoriaId)}
                 </span>
               </TD>
               <TD tone="strong" nowrap className="tnum">
-                ${priceOf(p.id).toFixed(2)}
+                ${precioDe(p.id).toFixed(2)}
               </TD>
               <TD>
                 <span className="text-nav">
-                  {p.modifierGroupIds.length === 0
+                  {p.grupoIds.length === 0
                     ? "—"
-                    : p.modifierGroupIds
-                        .map((g) => modifierGroups.find((m) => m.id === g)?.name)
+                    : p.grupoIds
+                        .map((g) => grupos.find((m) => m.id === g)?.nombre)
                         .filter(Boolean)
                         .join(", ")}
                 </span>
               </TD>
               <TD>
-                <Badge tone={p.status === "Activo" ? "success" : "neutral"} dot>
-                  {p.status}
+                <Badge tone={p.estado === "Activo" ? "success" : "neutral"} dot>
+                  {p.estado}
                 </Badge>
               </TD>
               <TD right nowrap>
@@ -216,12 +216,12 @@ export function ProductsView({
                 <button
                   type="button"
                   onClick={() => {
-                    const toActive = p.status !== "Activo";
-                    setPendingToggle({ id: p.id, name: p.name, toActive });
+                    const toActive = p.estado !== "Activo";
+                    setPendingToggle({ id: p.id, name: p.nombre, toActive });
                   }}
                   className="text-ink-400 hover:text-ink-900 font-medium text-nav cursor-pointer"
                 >
-                  {p.status === "Activo" ? "Desactivar" : "Activar"}
+                  {p.estado === "Activo" ? "Desactivar" : "Activar"}
                 </button>
               </TD>
             </TR>
@@ -289,16 +289,16 @@ export function ProductsView({
                   value={form.categoryId}
                   onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
                 >
-                  {categories.map((c) => (
+                  {categorias.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.nombre}
                     </option>
                   ))}
                 </Select>
               </Field>
             </div>
             <div>
-              <Field label={`Precio (lista ${priceLists.find((l) => l.active)?.name})`}>
+              <Field label={`Precio (lista ${listaActiva?.nombre})`}>
                 <TextInput
                   type="number"
                   value={form.price}
@@ -338,7 +338,7 @@ export function ProductsView({
                 Grupos de modificadores
               </span>
               <div className="flex flex-wrap gap-2">
-                {modifierGroups.map((g) => {
+                {grupos.map((g) => {
                   const on = form.modifierGroupIds.includes(g.id);
                   return (
                     <button
@@ -358,7 +358,7 @@ export function ProductsView({
                           : "text-ink-600 border border-ink-900/15"
                       }`}
                     >
-                      {g.name}
+                      {g.nombre}
                     </button>
                   );
                 })}

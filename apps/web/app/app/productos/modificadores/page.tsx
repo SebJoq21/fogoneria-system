@@ -1,4 +1,4 @@
-import { ModifiersView } from "@/components/erp/catalog/ModifiersView";
+import { ModifiersView } from "@/features/catalogo";
 
 export default function ModificadoresPage() {
   return (

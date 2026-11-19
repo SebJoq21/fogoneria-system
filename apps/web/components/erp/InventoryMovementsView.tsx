@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { kardexSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { kardexSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { fmtDateTime } from "@/lib/domain";
 import type { StockMovement } from "@/lib/erp";

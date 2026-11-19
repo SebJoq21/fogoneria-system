@@ -18,9 +18,9 @@ import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniDonut } from "@/components/erp/summaries/charts";
-import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniDonut } from "@/components/dashboard/summaries/charts";
+import { mesasSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { useOrdersRealtime } from "@/components/erp/useOrdersRealtime";
 import { useNow } from "@/components/useNow";
 import {

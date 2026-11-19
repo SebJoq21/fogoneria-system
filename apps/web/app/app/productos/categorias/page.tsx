@@ -1,4 +1,4 @@
-import { CategoriesView } from "@/components/erp/catalog/CategoriesView";
+import { CategoriesView } from "@/features/catalogo";
 
 export default function CategoriasPage() {
   return (

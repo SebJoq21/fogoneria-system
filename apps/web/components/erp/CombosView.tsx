@@ -8,9 +8,9 @@ import { Field, TextInput } from "@/components/ui/fields";
 import { Modal } from "@/components/ui/Modal";
 import { Toolbar } from "@/components/ui/Toolbar";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { combosSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { combosSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { HubBlocks } from "@/components/erp/workspace-ui";
 
 /** Combos: paquetes de productos con precio fijo. */

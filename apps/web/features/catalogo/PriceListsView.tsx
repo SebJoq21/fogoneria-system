@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -8,26 +8,27 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Field, TextInput } from "@/components/ui/fields";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
-import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { priceListsSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { validarPrecio } from "@fogoneria/contracts/catalogo";
+import { useCatalogo } from "./hooks";
 
 /** Listas de precios: Carta / Delivery / Eventos con vigencia y precio por producto. */
 export function PriceListsView() {
   const {
-    priceLists,
-    products,
-    categoryNameOf,
-    notify,
-    catalogLoading,
-    catalogError,
-    createPriceList,
-    activatePriceList,
-    setPrice,
-  } = useModules();
+    listas,
+    platos,
+    resumenListas,
+    nombreDeCategoria,
+    notificar,
+    cargando,
+    error,
+    crearLista,
+    activarLista,
+    fijarPrecio,
+  } = useCatalogo();
   const [selectedId, setSelectedId] = useState(
-    priceLists.find((l) => l.active)?.id ?? priceLists[0]?.id ?? "",
+    listas.find((l) => l.activa)?.id ?? listas[0]?.id ?? "",
   );
   const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -36,19 +37,19 @@ export function PriceListsView() {
   // Borradores de precio: se confirman con Enter o al salir del campo (no por tecla).
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
-  const selected = priceLists.find((l) => l.id === selectedId) ?? priceLists[0];
-  const summary = useMemo(() => priceListsSummary(priceLists, products), [priceLists, products]);
+  const selected = listas.find((l) => l.id === selectedId) ?? listas[0];
+  const summary = resumenListas;
 
   if (!selected) {
     return (
       <div>
-        {catalogError && (
+        {error && (
           <p className="text-sm text-red-600 mb-4" role="alert">
-            {catalogError}
+            {error}
           </p>
         )}
         <p className="text-sm text-ink-400">
-          {catalogLoading ? "Cargando listas de precios…" : "Aún no hay listas de precios."}
+          {cargando ? "Cargando listas de precios…" : "Aún no hay listas de precios."}
         </p>
       </div>
     );
@@ -69,25 +70,26 @@ export function PriceListsView() {
     }
     const price = Number(value);
     clearDraft();
+    if (validarPrecio(price)) return;
     try {
-      await setPrice(selected.id, platoId, price);
-      notify("Precio actualizado", `"${productName}" · $${price.toFixed(2)} en ${selected.name}.`);
+      await fijarPrecio({ listaId: selected.id, platoId, precio: price });
+      notificar("Precio actualizado", `"${productName}" · $${price.toFixed(2)} en ${selected.nombre}.`);
     } catch (error) {
-      notify("No se pudo guardar el precio", error instanceof Error ? error.message : "Error inesperado");
+      notificar("No se pudo guardar el precio", error instanceof Error ? error.message : "Error inesperado");
     }
   };
 
   const setActive = async (id: string) => {
-    const name = priceLists.find((l) => l.id === id)?.name ?? "—";
+    const name = listas.find((l) => l.id === id)?.nombre ?? "—";
     setPendingActive(null);
     try {
-      await activatePriceList(id);
-      notify(
+      await activarLista(id);
+      notificar(
         "Lista activa actualizada",
         `La Carta Virtual ahora muestra precios de "${name}".`,
       );
     } catch (error) {
-      notify("No se pudo activar la lista", error instanceof Error ? error.message : "Error inesperado");
+      notificar("No se pudo activar la lista", error instanceof Error ? error.message : "Error inesperado");
     }
   };
 
@@ -95,12 +97,12 @@ export function PriceListsView() {
     if (!newName.trim()) return;
     setSaving(true);
     try {
-      await createPriceList(newName.trim(), selected.id);
-      notify("Lista creada", `"${newName}" parte de los precios de "${selected.name}".`);
+      await crearLista(newName.trim(), selected.id);
+      notificar("Lista creada", `"${newName}" parte de los precios de "${selected.nombre}".`);
       setNewName("");
       setModalOpen(false);
     } catch (error) {
-      notify("No se pudo crear la lista", error instanceof Error ? error.message : "Error inesperado");
+      notificar("No se pudo crear la lista", error instanceof Error ? error.message : "Error inesperado");
     } finally {
       setSaving(false);
     }
@@ -108,9 +110,9 @@ export function PriceListsView() {
 
   return (
     <div>
-      {catalogError && (
+      {error && (
         <p className="text-sm text-red-600 mb-4" role="alert">
-          {catalogError}
+          {error}
         </p>
       )}
       <ModuleSummary
@@ -122,7 +124,7 @@ export function PriceListsView() {
         <MiniBars data={summary.bars} label="Precio promedio por lista" />
       </ModuleSummary>
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {priceLists.map((l) => (
+        {listas.map((l) => (
           <button
             key={l.id}
             type="button"
@@ -133,8 +135,8 @@ export function PriceListsView() {
                 : "text-ink-600 border border-ink-900/15"
             }`}
           >
-            {l.name}
-            {l.active && (
+            {l.nombre}
+            {l.activa && (
               <span className="w-1.5 h-1.5 rounded-full bg-surface" aria-label="Lista activa" />
             )}
           </button>
@@ -151,14 +153,14 @@ export function PriceListsView() {
       <Card className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
         <div className="flex-1">
           <h3 className="text-sm font-medium text-ink-900">
-            Lista {selected.name} {selected.active && <Badge tone="dark">Activa en carta</Badge>}
+            Lista {selected.nombre} {selected.activa && <Badge tone="dark">Activa en carta</Badge>}
           </h3>
           <p className="text-nav text-ink-400 mt-0.5">
-            Vigencia: {selected.validFrom || "—"} → {selected.validTo || "—"}
+            Vigencia: {selected.vigenciaDesde || "—"} → {selected.vigenciaHasta || "—"}
           </p>
         </div>
-        {!selected.active && (
-          <Button onClick={() => setPendingActive({ id: selected.id, name: selected.name })} className="w-max">
+        {!selected.activa && (
+          <Button onClick={() => setPendingActive({ id: selected.id, name: selected.nombre })} className="w-max">
             Activar en carta
           </Button>
         )}
@@ -170,31 +172,31 @@ export function PriceListsView() {
             <TH>SKU</TH>
             <TH>Plato</TH>
             <TH>Categoría</TH>
-            <TH>Precio ({selected.name})</TH>
+            <TH>Precio ({selected.nombre})</TH>
           </tr>
         </THead>
         <tbody>
-          {products.map((p) => (
+          {platos.map((p) => (
             <TR key={p.id}>
               <TD tone="muted" nowrap>
                 <span className="text-nav">{p.sku}</span>
               </TD>
-              <TD tone="strong">{p.name}</TD>
+              <TD tone="strong">{p.nombre}</TD>
               <TD>
-                <span className="text-nav">{categoryNameOf(p.categoryId)}</span>
+                <span className="text-nav">{nombreDeCategoria(p.categoriaId)}</span>
               </TD>
               <TD>
                 <div className="flex items-center gap-1 max-w-36">
                   <span className="text-sm text-ink-400">$</span>
                   <TextInput
                     type="number"
-                    value={drafts[p.id] ?? (selected.prices[p.id] ?? "")}
+                    value={drafts[p.id] ?? (selected.precios[p.id] ?? "")}
                     onChange={(e) => setDrafts({ ...drafts, [p.id]: e.target.value })}
-                    onBlur={(e) => commitPrice(p.id, e.target.value, p.name)}
+                    onBlur={(e) => commitPrice(p.id, e.target.value, p.nombre)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") (e.target as HTMLInputElement).blur();
                     }}
-                    aria-label={`Precio de ${p.name} en ${selected.name}`}
+                    aria-label={`Precio de ${p.nombre} en ${selected.nombre}`}
                     placeholder="—"
                     className="px-3 tnum"
                   />
@@ -242,7 +244,7 @@ export function PriceListsView() {
             />
           </Field>
           <p className="text-xs text-ink-400 mt-2">
-            La nueva lista copia los precios de “{selected.name}”.
+            La nueva lista copia los precios de “{selected.nombre}”.
           </p>
         </Modal>
       )}

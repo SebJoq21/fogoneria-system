@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./catalogo": "./src/catalogo.ts",
     "./rrhh": "./src/rrhh.ts"
   },
   "scripts": {
