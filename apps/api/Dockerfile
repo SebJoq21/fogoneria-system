@@ -11,6 +11,7 @@ WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/api/package.json apps/api/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 COPY packages/ui/package.json packages/ui/package.json
@@ -37,6 +38,9 @@ COPY --from=build /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=build /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 COPY --from=build /app/apps/api/src/generated ./apps/api/src/generated
+# Contratos compartidos: `realtime.types` reexporta `@fogoneria/contracts/tiempo-real`
+# en runtime (Node 24 ejecuta el .ts del workspace).
+COPY --from=build /app/packages/contracts ./packages/contracts
 
 WORKDIR /app/apps/api
 EXPOSE 3001

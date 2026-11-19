@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación** y **personas** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación**, **personas** y **lectura** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`; `bi` + contrato de `realtime`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación; **6** tras la ola personas) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación; **6** tras la ola personas; **4** tras la ola lectura) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -285,6 +285,35 @@ Estos son los puntos que las olas deben cortar en ese orden.
   `crmApi.config()` (el cliente queda listo). El ajuste de puntos manda
   `sucursalId` para `ADMIN_GLOBAL` y el segmento lo calcula el servidor.
 
+#### Ola lectura ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/bi.ts` (`RangoBi`, `Pnl`, `PnlDia`,
+  `PlatoTop`, `CobroMetodo`, `ReporteBi`, `calcularMargen`,
+  `etiquetaMetodoPago`) y `tiempo-real.ts` (`EventoTiempoReal`, `SobreEvento<T>`,
+  payloads `OrdenCreadaEvento`/`OrdenActualizadaEvento`/`OrdenSlaEvento`/
+  `MesaEstadoEvento`, `REALTIME_EVENT`, `REALTIME_NAMESPACE`, salas
+  `salaEmpresa`/`salaSucursal`/`salaOrden`) + subpaths `./bi` y `./tiempo-real`.
+- **Backend:** `bi/index.ts` y `realtime/index.ts` públicos; `app.module.ts`
+  importa ambos por el `index` y `orders.service`/`orders.sla.cron` toman
+  `RealtimeService` de `../realtime/index.js`. `realtime.types.ts` reexporta el
+  contrato compartido (alias `companyRoom`/`branchRoom`/`orderRoom` y
+  payloads) para que no haya dos verdades; el `OrdersGateway` sigue siendo
+  interno. Sin cambios de rooms, eventos ni consultas de BI.
+- **Baseline 6 → 4** (salen `orders → realtime` ×2). Queda `realtime → auth`
+  para la ola de plataforma.
+- **Web:** `features/bi/` (`api.ts` SDK + contratos, `hooks.ts` con `useBi` y
+  rango de 7 días de Lima vía `@fogoneria/kernel`, `AnaliticasPage` con P&L,
+  serie, ranking, cobros por método y fallback demo, `index.ts`, `bi.test.ts`).
+  La ruta `/app/analiticas` solo importa la feature; `lib/bi-api.ts` y su test
+  se retiraron. `lib/realtime.ts` deja de duplicar tipos/constantes: importa
+  `@fogoneria/contracts/tiempo-real` y sigue siendo el transporte compartido
+  (no se convierte en feature).
+- **Acoplamiento restante (consciente):** el canal en vivo sigue siendo
+  transversal (`ModulesProvider`, `features/salon`, `features/ordenes` y
+  `MozoView` comparten `lib/realtime.ts`); `realtime → auth` se resuelve en la
+  ola de plataforma. La API ejecuta el contrato `.ts` del workspace en runtime
+  (Node 24 type stripping), y el Dockerfile copia `packages/contracts`.
+
 ### Fase 4 — Desmontar el estado global
 
 `ModulesProvider` → contextos de plataforma (`Session`, `Tenant`, `Notifications`); cada feature con su estado.
@@ -321,7 +350,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación, **6** tras la ola personas).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación, **6** tras la ola personas, **4** tras la ola lectura).
 - PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

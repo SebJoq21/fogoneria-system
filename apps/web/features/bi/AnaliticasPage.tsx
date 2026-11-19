@@ -1,89 +1,61 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts";
-import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartCard } from "@/components/dashboard/workspace-ui";
-import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
-import { useModules } from "@/components/dashboard/ModulesProvider";
-import { fmtMoney } from "@/lib/domain";
-import {
-  diaCorto,
-  getPnl,
-  getPnlDaily,
-  getSalesByMethod,
-  getTopDishes,
-  ultimosDias,
-  type ApiPnl,
-  type ApiPnlDay,
-  type ApiSalesMethod,
-  type ApiTopDish,
-} from "@/lib/bi-api";
+import { useMemo } from 'react';
+import { Bar, BarChart, ResponsiveContainer, XAxis } from 'recharts';
+import { calcularMargen, etiquetaMetodoPago } from '@fogoneria/contracts/bi';
+import { diaCorto } from '@fogoneria/kernel';
+import { KpiCard } from '@/components/ui/KpiCard';
+import { TableCard, THead, TH, TR, TD } from '@/components/ui/data-table';
+import { ChartCard } from '@/components/dashboard/workspace-ui';
+import { useModules } from '@/components/dashboard/ModulesProvider';
+import { fmtMoney } from '@/lib/domain';
+import { useBi } from './hooks';
 
-const salesByDayDemo = [
-  { name: "Lun", v: 320 }, { name: "Mar", v: 410 }, { name: "Mié", v: 380 },
-  { name: "Jue", v: 520 }, { name: "Vie", v: 740 }, { name: "Sáb", v: 890 }, { name: "Dom", v: 610 },
+const ventasPorDiaDemo = [
+  { name: 'Lun', v: 320 },
+  { name: 'Mar', v: 410 },
+  { name: 'Mié', v: 380 },
+  { name: 'Jue', v: 520 },
+  { name: 'Vie', v: 740 },
+  { name: 'Sáb', v: 890 },
+  { name: 'Dom', v: 610 },
 ];
-const topDishesDemo = [
-  { name: "Lomo Saltado", qty: 86 },
-  { name: "Ceviche Clásico", qty: 74 },
-  { name: "Ají de Gallina", qty: 51 },
-  { name: "Pisco Sour", qty: 47 },
+const platosDemo = [
+  { name: 'Lomo Saltado', qty: 86 },
+  { name: 'Ceviche Clásico', qty: 74 },
+  { name: 'Ají de Gallina', qty: 51 },
+  { name: 'Pisco Sour', qty: 47 },
 ];
-const tick = { fontSize: 12, fill: "var(--c-mute)" };
+const tick = { fontSize: 12, fill: 'var(--c-mute)' };
 
-/** Analíticas: P&L, ventas por día y platos top (AYCDS-45). */
-export function AnaliticasView() {
-  const { hasSession, expenses } = useModules();
-  const [pnl, setPnl] = useState<ApiPnl | null>(null);
-  const [daily, setDaily] = useState<ApiPnlDay[]>([]);
-  const [top, setTop] = useState<ApiTopDish[]>([]);
-  const [metodos, setMetodos] = useState<ApiSalesMethod[]>([]);
-  const [error, setError] = useState<string | null>(null);
+/** Analíticas: P&L, ventas por día, platos top y cobros por método (AYCDS-45). */
+export function AnaliticasPage() {
+  const { expenses } = useModules();
+  const { pnl, serie, platos, metodos, error } = useBi();
 
-  useEffect(() => {
-    if (!hasSession) return;
-    const controller = new AbortController();
-    const rango = ultimosDias(7);
-    // Diferido al siguiente tick: el efecto no debe disparar renders en cascada.
-    const timer = setTimeout(() => {
-      Promise.all([
-        getPnl(rango, controller.signal),
-        getPnlDaily(rango, controller.signal),
-        getTopDishes({ ...rango, limit: 5 }, controller.signal),
-        getSalesByMethod(rango, controller.signal),
-      ])
-        .then(([resumen, serie, ranking, cobros]) => {
-          setPnl(resumen);
-          setDaily(serie.items);
-          setTop(ranking.items);
-          setMetodos(cobros.items);
-        })
-        .catch((problema: unknown) => {
-          if (controller.signal.aborted) return;
-          setError(problema instanceof Error ? problema.message : "No se pudieron cargar las analíticas.");
-        });
-    }, 0);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
-  }, [hasSession]);
-
-  const demoExpenses = useMemo(
-    () => expenses.reduce((total, gasto) => total + (Number(gasto.amount.replace("$", "")) || 0), 0),
+  const gastosDemo = useMemo(
+    () =>
+      expenses.reduce(
+        (total, gasto) => total + (Number(gasto.amount.replace('$', '')) || 0),
+        0,
+      ),
     [expenses],
   );
 
-  const ventas = pnl?.ventas ?? salesByDayDemo.reduce((suma, dia) => suma + dia.v, 0);
-  const gastos = pnl?.gastos ?? demoExpenses;
-  const margen = pnl?.margen ?? ventas - gastos;
-  const chart = daily.length
-    ? daily.map((dia) => ({ name: diaCorto(dia.fecha), v: dia.ventas }))
-    : salesByDayDemo;
-  const platos = top.length
-    ? top.map((plato) => ({ name: plato.nombre, qty: plato.unidades, ingresos: plato.ingresos }))
-    : topDishesDemo.map((plato) => ({ ...plato, ingresos: 0 }));
+  const ventas =
+    pnl?.ventas ?? ventasPorDiaDemo.reduce((suma, dia) => suma + dia.v, 0);
+  const gastos = pnl?.gastos ?? gastosDemo;
+  const margen = pnl?.margen ?? calcularMargen(ventas, gastos);
+  const chart = serie.length
+    ? serie.map((dia) => ({ name: diaCorto(dia.fecha), v: dia.ventas }))
+    : ventasPorDiaDemo;
+  const top = platos.length
+    ? platos.map((plato) => ({
+        name: plato.nombre,
+        qty: plato.unidades,
+        ingresos: plato.ingresos,
+      }))
+    : platosDemo.map((plato) => ({ ...plato, ingresos: 0 }));
 
   return (
     <div>
@@ -91,9 +63,13 @@ export function AnaliticasView() {
         <KpiCard
           label="Ventas 7 días"
           value={fmtMoney(ventas)}
-          hint={pnl ? `comprobado ${fmtMoney(pnl.comprobado)}` : "demo"}
+          hint={pnl ? `comprobado ${fmtMoney(pnl.comprobado)}` : 'demo'}
         />
-        <KpiCard label="Margen" value={fmtMoney(margen)} hint={`gastos ${fmtMoney(gastos)}`} />
+        <KpiCard
+          label="Margen"
+          value={fmtMoney(margen)}
+          hint={`gastos ${fmtMoney(gastos)}`}
+        />
         <KpiCard
           label="Propinas"
           value={fmtMoney(pnl?.propinas ?? 0)}
@@ -128,7 +104,7 @@ export function AnaliticasView() {
               </tr>
             </THead>
             <tbody>
-              {platos.map((plato) => (
+              {top.map((plato) => (
                 <TR key={plato.name}>
                   <TD tone="strong">{plato.name}</TD>
                   <TD right className="tnum">{plato.qty}</TD>
@@ -189,7 +165,7 @@ export function AnaliticasView() {
               ) : (
                 metodos.map((metodo) => (
                   <TR key={metodo.metodo}>
-                    <TD tone="strong">{metodo.metodo}</TD>
+                    <TD tone="strong">{etiquetaMetodoPago(metodo.metodo)}</TD>
                     <TD right className="tnum">{metodo.cobros}</TD>
                     <TD right className="tnum">{fmtMoney(metodo.monto)}</TD>
                   </TR>

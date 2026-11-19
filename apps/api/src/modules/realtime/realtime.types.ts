@@ -1,91 +1,48 @@
 import { randomUUID } from 'node:crypto';
+import {
+  REALTIME_EVENT,
+  REALTIME_NAMESPACE,
+  salaEmpresa,
+  salaOrden,
+  salaSucursal,
+} from '@fogoneria/contracts/tiempo-real';
+import type {
+  MesaEstadoEvento,
+  OrdenActualizadaEvento,
+  OrdenCreadaEvento,
+  OrdenSlaEvento,
+  SobreEvento,
+} from '@fogoneria/contracts/tiempo-real';
 
 /**
  * Contrato de eventos en vivo (AYCDS-14).
  *
- * Todo mensaje viaja con un sobre `{ eventId, at, data }`:
- *   - `eventId` es único por emisión y permite descartar duplicados cuando el
- *     cliente reconecta (Socket.io puede reentregar en un reintento).
- *   - `at` es la marca de tiempo del servidor (ISO 8601, UTC).
- *
- * El contrato completo está en `docs/websockets.md`.
+ * La fuente única vive en `@fogoneria/contracts/tiempo-real` (nombres, sobre y
+ * rooms); aquí solo se conservan los alias que ya usaba la API y la fábrica del
+ * sobre con `eventId` del servidor. El detalle operativo está en
+ * `docs/websockets.md`.
  */
 
-export const REALTIME_NAMESPACE = '/orders';
-
-export const REALTIME_EVENT = {
-  orderCreated: 'order.created',
-  orderUpdated: 'order.updated',
-  orderSla: 'order.sla',
-  tableStatus: 'table.status',
-  authError: 'auth.error',
-} as const;
+export { REALTIME_EVENT, REALTIME_NAMESPACE };
 
 export type RealtimeEventName =
   (typeof REALTIME_EVENT)[keyof typeof REALTIME_EVENT];
 
-export interface RealtimeEnvelope<T> {
-  eventId: string;
-  at: string;
-  data: T;
-}
+/** `{ eventId, at, data }`: `eventId` permite descartar duplicados al reconectar. */
+export type RealtimeEnvelope<T> = SobreEvento<T>;
 
-/** Alta de comanda (mesero o POS). */
-export interface OrderCreatedPayload {
-  ordenId: string;
-  numeroOrden: string;
-  estado: string;
-  origen: string;
-  sucursalId: string;
-  mesaId: string | null;
-  total: number;
-  creadaAt: string;
-}
+/** Alias del contrato compartido (nombres históricos de la API). */
+export type OrderCreatedPayload = OrdenCreadaEvento;
+export type OrderUpdatedPayload = OrdenActualizadaEvento;
+export type OrderSlaPayload = OrdenSlaEvento;
+export type TableStatusPayload = MesaEstadoEvento;
 
-/** Cambio de estado del KDS. */
-export interface OrderUpdatedPayload {
-  ordenId: string;
-  numeroOrden: string;
-  de: string;
-  a: string;
-  sucursalId: string;
-  mesaId: string | null;
-}
-
-/** Alerta de SLA: la comanda lleva más de 20 min sin entregarse (AYCDS-30). */
-export interface OrderSlaPayload {
-  ordenId: string;
-  numeroOrden: string;
-  estado: string;
-  sucursalId: string;
-  mesaId: string | null;
-  minutos: number;
-  slaMinutos: number;
-}
-
-/** Estado de mesa derivado (ocupada, reservada, libre, mantenimiento). */
-export interface TableStatusPayload {
-  mesaId: string;
-  numero: string | null;
-  de: string | null;
-  a: string;
-  sucursalId: string;
-}
-
-/** Room de la empresa: solo se unen los roles sin sucursal (`ADMIN_GLOBAL`). */
-export function companyRoom(empresaId: string): string {
-  return `empresa:${empresaId}`;
-}
-
-/** Room operativo: tenant + sucursal. */
-export function branchRoom(empresaId: string, sucursalId: string): string {
-  return `empresa:${empresaId}:sucursal:${sucursalId}`;
-}
-
-/** Room de una comanda concreta (`order:subscribe`). */
-export function orderRoom(ordenId: string): string {
-  return `order:${ordenId}`;
-}
+/** Rooms del contrato: `empresa:<id>`, `empresa:<id>:sucursal:<id>` y `order:<id>`. */
+export {
+  salaEmpresa as companyRoom,
+  salaSucursal as branchRoom,
+  salaOrden as orderRoom,
+};
 
 export function envelope<T>(data: T): RealtimeEnvelope<T> {
   return { eventId: randomUUID(), at: new Date().toISOString(), data };

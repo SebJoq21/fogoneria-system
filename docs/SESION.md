@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola lectura (bi + contrato de realtime)
+
+- **Contratos:** `packages/contracts/src/bi.ts` (`RangoBi`, `Pnl`, `PnlDia`, `PlatoTop`, `CobroMetodo`, `ReporteBi`, `calcularMargen`, `etiquetaMetodoPago`) y `tiempo-real.ts` (`EventoTiempoReal`, `SobreEvento<T>`, payloads de orden/mesa, `REALTIME_EVENT`, `salaEmpresa`/`salaSucursal`/`salaOrden`) + subpaths `./bi` y `./tiempo-real`. La API agrega `@fogoneria/contracts` como dependencia de workspace y el Dockerfile copia `packages/contracts` (Node 24 ejecuta el `.ts` del contrato en runtime).
+- **Backend:** `bi/index.ts` y `realtime/index.ts` públicos (`BiModule`/`BiService`, `RealtimeModule`/`RealtimeService` + contrato; `OrdersGateway` no se exporta). `app.module.ts` importa ambos por el `index`; `orders.service.ts` y `orders.sla.cron.ts` usan `../realtime/index.js`. `realtime.types.ts` reexporta el contrato con alias históricos. Sin cambios de rooms, eventos ni SQL de BI.
+- **Web:** `features/bi/` (`api.ts` SDK+contratos, `hooks.ts` con `useBi` y rango de 7 días de Lima, `AnaliticasPage`, `index.ts`, `bi.test.ts`); `/app/analiticas` solo importa la feature; se retiraron `lib/bi-api.ts` y su test. `lib/realtime.ts` importa tipos/constantes de `@fogoneria/contracts/tiempo-real` y sigue siendo transporte compartido (sin feature web).
+- Baseline **6 → 4** (`--write-baseline`): salen `orders → realtime` ×2; queda `realtime → auth` para plataforma.
+- Verificado: web **230** tests (28 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); api **305** unit + **112** e2e + `check-types` + build; `check:boundaries` OK (4 históricas, 0 nuevas).
+- Próximo: ola **plataforma** (`realtime → auth` y auditoría directa en billing/onboarding/saas), después Fase 4 (vaciar `ModulesProvider`).
+
 ## 2026-11-19 — Modularización Fase 3, ola personas (PR #60, mergeado)
 
 - **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle, movimientos de puntos, config de lealtad, inputs, etiquetas y `validarAjustePuntos`) + subpath `./crm`. El segmento lo calcula el servidor; la web solo lo pinta.

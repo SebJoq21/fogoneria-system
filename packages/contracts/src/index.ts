@@ -1,3 +1,4 @@
+export * from './bi';
 export * from './caja';
 export * from './catalogo';
 export * from './comprobantes';
@@ -9,6 +10,7 @@ export * from './ordenes';
 export * from './promociones';
 export * from './reservas';
 export * from './rrhh';
+export * from './tiempo-real';
 
 /**
  * `caja` e `inventario` tienen cada uno su `etiquetaTipoMovimiento` (movimientos

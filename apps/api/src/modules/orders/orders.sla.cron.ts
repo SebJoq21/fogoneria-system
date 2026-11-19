@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { RealtimeService } from '../realtime/realtime.service.js';
+import { RealtimeService } from '../realtime/index.js';
 import { SLA_MINUTOS, SLA_STATES, cutoffSla, slaInfo } from './orders.sla.js';
 
 export interface SlaSweepResult {
