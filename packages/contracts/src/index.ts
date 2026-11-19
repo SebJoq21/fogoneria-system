@@ -1,6 +1,7 @@
 export * from './caja';
 export * from './catalogo';
 export * from './comprobantes';
+export * from './crm';
 export * from './gastos';
 export * from './inventario';
 export * from './mesas';

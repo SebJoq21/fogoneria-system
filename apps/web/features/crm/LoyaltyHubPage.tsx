@@ -8,7 +8,7 @@ import { ChartCard, HubBlocks, type HubLink } from "@/components/dashboard/works
 const tick = { fontSize: 12, fill: "var(--c-mute)" };
 
 /** Workspace Fidelización: KPIs + gráfico + columnas. */
-export function LoyaltyWorkspace() {
+export function LoyaltyHubPage() {
   const { customers, coupons } = useModules();
   const points = customers.reduce((s, c) => s + c.points, 0);
   const redeemed = coupons.reduce((s, c) => s + c.used, 0);

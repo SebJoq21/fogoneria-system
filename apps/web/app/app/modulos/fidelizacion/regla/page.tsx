@@ -1,5 +1,5 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { LoyaltyModule } from "@/components/erp/LoyaltyModule";
+import { LoyaltyPage } from "@/features/crm";
 
 export default function FidelizacionReglaPage() {
   return (
@@ -9,7 +9,7 @@ export default function FidelizacionReglaPage() {
           <h2 className="text-section font-medium text-ink-900">Regla de puntos</h2>
           <p className="text-sm text-ink-400 mt-1">Puntos por dólar y accesos a clientes y cupones.</p>
         </div>
-        <LoyaltyModule />
+        <LoyaltyPage />
       </div>
     </ModuleGuard>
   );

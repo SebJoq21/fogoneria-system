@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola personas (PR abierto)
+
+- **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle, movimientos de puntos, config de lealtad, inputs, etiquetas y `validarAjustePuntos`) + subpath `./crm`. El segmento lo calcula el servidor; la web solo lo pinta.
+- **Backend:** `crm/index.ts` público (`CrmModule`, `CrmService`, `ConfigLealtad`); `app.module.ts` importa por el `index` y `crm.service.ts` usa `../audit/index.js`. Sin cambios de reglas, worker de consumos ni triggers. Baseline **7 → 6** (`--write-baseline`).
+- **Web:** `features/crm/` (`api.ts` SDK+contratos, `ClientesPage` con búsqueda/filtro/ficha/ajuste, `LoyaltyPage` demo, `LoyaltyHubPage`, `index.ts`) y `crm.test.ts` (11). `ModuleGate` y las rutas `/app/clientes` y `/app/modulos/fidelizacion/regla` importan la feature. Retirados `lib/crm-api.ts` y su test (los reemplaza la feature).
+- **Acoplamiento restante:** `customers`/`coupons` demo siguen en `ModulesProvider` (Fase 4); `LoyaltyPage` aún no consume `crmApi.config()` (cliente listo); el ajuste manda `sucursalId` para `ADMIN_GLOBAL`. Backend en baseline: `orders → realtime` ×2, `realtime → auth` y `audit` directo en billing/onboarding/saas.
+- Verificado: **224** web tests (28 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (baseline **6**, 0 nuevas).
+- Próximo: ola **lectura** (`bi` + `realtime`), después Fase 4 (vaciar `ModulesProvider`).
+
 ## 2026-11-19 — Modularización Fase 3, ola operación (PR #58, mergeado)
 
 - **Contratos:** `packages/contracts/src/inventario.ts` (semáforo, kardex, filtros, `ConsumoResultado`, etiquetas, `movimientoCantidadLabel`) y `promociones.ts` (combos, cupones, cupón resuelto, reglas horarias, `estadoCupon`, `etiquetaDescuento` — el importe del descuento lo calcula el servidor) + subpaths `./inventario|./promociones`. `caja` e `inventario` comparten `etiquetaTipoMovimiento`: el root conserva el de caja y el inventario va por su subpath (export explícito en `src/index.ts`).

@@ -2,7 +2,7 @@
 
 import { notFound } from "next/navigation";
 import { MODULE_CATALOG, type ModuleId } from "@/lib/erp";
-import { LoyaltyWorkspace } from "@/components/erp/LoyaltyWorkspace";
+import { LoyaltyHubPage } from "@/features/crm";
 import { BookingsWorkspace } from "@/components/erp/BookingsWorkspace";
 import { InventoryHubPage } from "@/features/inventario";
 import { StaffWorkspace } from "@/components/erp/StaffWorkspace";
@@ -32,7 +32,7 @@ export function ModuleBody({ id }: { id: string }) {
         <h2 className="text-section font-medium text-ink-900">{meta.title}</h2>
         <p className="text-sm text-ink-400 mt-1">{meta.description}</p>
       </div>
-      {meta.id === "fidelizacion" && <LoyaltyWorkspace />}
+      {meta.id === "fidelizacion" && <LoyaltyHubPage />}
       {meta.id === "reservas" && <BookingsWorkspace />}
       {meta.id === "inventario" && <InventoryHubPage />}
       {meta.id === "personal" && <StaffWorkspace />}

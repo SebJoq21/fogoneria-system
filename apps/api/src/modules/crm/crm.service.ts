@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, Injectable, Logger, NotFoundExc
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {
   CONFIG_POR_DEFECTO,
