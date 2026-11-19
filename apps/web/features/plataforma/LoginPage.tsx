@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Flame } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, TextInput } from "@/components/ui/fields";
-import { ROLE_HOME, ROLE_LABEL, DEMO_PASSWORD, demoUsers } from "@/lib/auth";
+import { ROLE_HOME } from "@/lib/auth";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 
 export function LoginPage() {
@@ -88,26 +88,12 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6">
-          <p className="text-xs text-ink-400 text-center mb-2">Cuentas demo por rol</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {demoUsers.map((u) => (
-              <button
-                key={u.id}
-                type="button"
-                onClick={() => void enterAs(u.email, DEMO_PASSWORD)}
-                className="px-3 h-10 rounded-full text-xs font-medium text-ink-600 border border-ink-900/15 hover:border-ink-900 hover:text-ink-900 transition-colors cursor-pointer"
-              >
-                {ROLE_LABEL[u.role]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-nav text-ink-600 text-center mt-6">
-          ¿No tienes cuenta?{" "}
-          <Link href="/onboarding" className="text-ink-900 font-medium hover:underline">
-            Regístrate
+        <p className="text-center mt-6">
+          <Link
+            href="/recuperar"
+            className="text-nav text-ink-600 hover:text-ink-900 hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
           </Link>
         </p>
       </div>
