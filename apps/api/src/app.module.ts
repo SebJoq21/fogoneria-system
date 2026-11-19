@@ -22,7 +22,7 @@ import { BillingModule } from './modules/billing/billing.module.js';
 import { OnboardingModule } from './modules/onboarding/onboarding.module.js';
 import { TablesModule } from './modules/tables/index.js';
 import { ReservationsModule } from './modules/reservations/index.js';
-import { RealtimeModule } from './modules/realtime/realtime.module.js';
+import { RealtimeModule } from './modules/realtime/index.js';
 import { ReceiptsModule } from './modules/receipts/index.js';
 import { InventoryModule } from './modules/inventory/index.js';
 import { PromotionsModule } from './modules/promotions/index.js';
@@ -30,7 +30,7 @@ import { CashModule } from './modules/cash/index.js';
 import { StaffModule } from './modules/staff/index.js';
 import { CrmModule } from './modules/crm/index.js';
 import { ExpensesModule } from './modules/expenses/index.js';
-import { BiModule } from './modules/bi/bi.module.js';
+import { BiModule } from './modules/bi/index.js';
 
 @Module({
   imports: [

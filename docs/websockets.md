@@ -4,6 +4,11 @@ Sincronización mesero ↔ cocina sin refrescar. El transporte es **Socket.io**
 (namespace `/orders`) sobre la misma API NestJS; el navegador **nunca** usa el
 access token: pide un ticket efímero de 60 s.
 
+El contrato (nombres de evento, sobre `{ eventId, at, data }`, payloads y salas)
+vive en `packages/contracts/src/tiempo-real.ts` (`@fogoneria/contracts/tiempo-real`):
+la API lo reexporta en `modules/realtime/realtime.types.ts` y la web lo consume
+en `lib/realtime.ts`.
+
 ## 1. Flujo de autenticación
 
 ```text

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./bi": "./src/bi.ts",
     "./caja": "./src/caja.ts",
     "./catalogo": "./src/catalogo.ts",
     "./comprobantes": "./src/comprobantes.ts",
@@ -15,7 +16,8 @@
     "./ordenes": "./src/ordenes.ts",
     "./promociones": "./src/promociones.ts",
     "./reservas": "./src/reservas.ts",
-    "./rrhh": "./src/rrhh.ts"
+    "./rrhh": "./src/rrhh.ts",
+    "./tiempo-real": "./src/tiempo-real.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"

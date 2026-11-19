@@ -5,68 +5,33 @@
    Al reconectar se pide un ticket nuevo, así que un corte largo no deja al
    cliente con un ticket vencido.
 
-   El contrato de eventos está en `docs/websockets.md` y en
-   `apps/api/src/modules/realtime/realtime.types.ts`. */
+   Los nombres de evento, el sobre y los rooms son el contrato compartido de
+   `@fogoneria/contracts/tiempo-real`: este archivo solo es el transporte. */
 
 import { io, type Socket } from "socket.io-client";
+import {
+  REALTIME_EVENT,
+  REALTIME_NAMESPACE,
+  type MesaEstadoEvento,
+  type OrdenActualizadaEvento,
+  type OrdenCreadaEvento,
+  type OrdenSlaEvento,
+  type SobreEvento,
+} from "@fogoneria/contracts/tiempo-real";
 
-export const REALTIME_NAMESPACE = "/orders";
-
-export const REALTIME_EVENT = {
-  orderCreated: "order.created",
-  orderUpdated: "order.updated",
-  orderSla: "order.sla",
-  tableStatus: "table.status",
-  authError: "auth.error",
-} as const;
+export { REALTIME_EVENT, REALTIME_NAMESPACE };
 
 export type RealtimeEventName =
   (typeof REALTIME_EVENT)[keyof typeof REALTIME_EVENT];
 
-export interface RealtimeEnvelope<T> {
-  eventId: string;
-  at: string;
-  data: T;
-}
+/** `{ eventId, at, data }`: el `eventId` descarta duplicados al reconectar. */
+export type RealtimeEnvelope<T> = SobreEvento<T>;
 
-export interface OrderCreatedPayload {
-  ordenId: string;
-  numeroOrden: string;
-  estado: string;
-  origen: string;
-  sucursalId: string;
-  mesaId: string | null;
-  total: number;
-  creadaAt: string;
-}
-
-export interface OrderUpdatedPayload {
-  ordenId: string;
-  numeroOrden: string;
-  de: string;
-  a: string;
-  sucursalId: string;
-  mesaId: string | null;
-}
-
-export interface TableStatusPayload {
-  mesaId: string;
-  numero: string | null;
-  de: string | null;
-  a: string;
-  sucursalId: string;
-}
-
-/** Alerta de SLA (AYCDS-30): la comanda cruzó los 20 minutos. */
-export interface OrderSlaPayload {
-  ordenId: string;
-  numeroOrden: string;
-  estado: string;
-  sucursalId: string;
-  mesaId: string | null;
-  minutos: number;
-  slaMinutos: number;
-}
+/** Alias del contrato compartido (nombres que ya usaba la web). */
+export type OrderCreatedPayload = OrdenCreadaEvento;
+export type OrderUpdatedPayload = OrdenActualizadaEvento;
+export type TableStatusPayload = MesaEstadoEvento;
+export type OrderSlaPayload = OrdenSlaEvento;
 
 export type RealtimeStatus = "connecting" | "connected" | "reconnecting" | "offline";
 

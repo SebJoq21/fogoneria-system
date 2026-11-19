@@ -46,6 +46,7 @@
     "db:rls:force": "prisma db execute --file ../../db/scripts/rls/010-force-rls.sql"
   },
   "dependencies": {
+    "@fogoneria/contracts": "workspace:*",
     "@nestjs/common": "^12.0.1",
     "@nestjs/config": "^12.0.1",
     "@nestjs/core": "^12.0.1",

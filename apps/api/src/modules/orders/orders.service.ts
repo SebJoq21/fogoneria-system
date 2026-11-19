@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/index.js';
-import { RealtimeService } from '../realtime/realtime.service.js';
+import { RealtimeService } from '../realtime/index.js';
 import { InventoryService } from '../inventory/index.js';
 import { PromotionsService } from '../promotions/index.js';
 import { PRICING_PORT, type PricingPort } from '../pricing/index.js';
