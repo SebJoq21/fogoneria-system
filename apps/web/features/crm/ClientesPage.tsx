@@ -13,42 +13,45 @@ import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
 import { MiniDonut } from "@/components/dashboard/summaries/charts";
 import { clientesSummary } from "@/components/dashboard/summaries/summary-selectors";
 import {
-  adjustPoints,
-  createCustomer,
-  getCustomer,
-  lastVisitLabel,
-  listCustomers,
-  segmentLabel,
-  type ApiCustomer,
-  type ApiCustomerDetail,
-  type ApiPointsType,
-  type ApiSegmento,
-} from "@/lib/crm-api";
+  etiquetaMovimientoPuntos,
+  etiquetaSegmento,
+  ultimaVisitaLabel,
+  validarAjustePuntos,
+  type Cliente,
+  type ClienteDetalle,
+  type SegmentoCliente,
+  type TipoMovimientoPuntos,
+} from "@fogoneria/contracts/crm";
+import { crmApi } from "./api";
 
 const segmentTone = { VIP: "dark", Frecuente: "success", Nuevo: "neutral" } as const;
 
-function toCustomer(api: ApiCustomer): Customer {
+function toCustomer(cliente: Cliente): Customer {
   return {
-    id: api.visitas + api.puntos, // el demo usa id numérico; aquí solo es clave de lista
-    name: api.nombre,
-    phone: api.telefono,
-    points: api.puntos,
-    visits: api.visitas,
-    segment: segmentLabel(api.segmento),
-    lastVisit: lastVisitLabel(api.ultima_visita),
+    id: cliente.visitas + cliente.puntos, // el demo usa id numérico; aquí solo es clave de lista
+    name: cliente.nombre,
+    phone: cliente.telefono,
+    points: cliente.puntos,
+    visits: cliente.visitas,
+    segment: etiquetaSegmento(cliente.segmento),
+    lastVisit: ultimaVisitaLabel(cliente.ultimaVisita),
   };
 }
 
 /** Maestro de Clientes: comensales identificados con puntos y segmento (AYCDS-40). */
-export function ClientesView() {
+export function ClientesPage() {
   const { hasSession, customers, setCustomers, notify, activeBranchId } = useModules();
-  const [apiRows, setApiRows] = useState<ApiCustomer[]>([]);
+  const [apiRows, setApiRows] = useState<Cliente[]>([]);
   const [query, setQuery] = useState("");
-  const [segmento, setSegmento] = useState<ApiSegmento | "">("");
+  const [segmento, setSegmento] = useState<SegmentoCliente | "">("");
   const [apiError, setApiError] = useState<string | null>(null);
-  const [detail, setDetail] = useState<ApiCustomerDetail | null>(null);
+  const [detail, setDetail] = useState<ClienteDetalle | null>(null);
   const [pointsOpen, setPointsOpen] = useState(false);
-  const [pointsForm, setPointsForm] = useState({ tipo: "GANANCIA" as ApiPointsType, puntos: "", motivo: "" });
+  const [pointsForm, setPointsForm] = useState({
+    tipo: "GANANCIA" as TipoMovimientoPuntos,
+    puntos: "",
+    motivo: "",
+  });
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "" });
 
@@ -57,7 +60,7 @@ export function ClientesView() {
       if (!hasSession) return;
       setApiError(null);
       try {
-        const lista = await listCustomers({
+        const lista = await crmApi.listar({
           ...(query.trim() ? { q: query.trim() } : {}),
           ...(segmento ? { segmento } : {}),
           limit: 100,
@@ -87,9 +90,9 @@ export function ClientesView() {
   const rows: Customer[] = hasSession ? apiRows.map(toCustomer) : customers;
   const summary = useMemo(() => clientesSummary(rows), [rows]);
 
-  const openDetail = async (cliente: ApiCustomer) => {
+  const openDetail = async (cliente: Cliente) => {
     try {
-      setDetail(await getCustomer(cliente.id));
+      setDetail(await crmApi.ficha(cliente.id));
     } catch (error) {
       notify("No se pudo abrir la ficha", error instanceof Error ? error.message : "Reintenta.");
     }
@@ -99,7 +102,7 @@ export function ClientesView() {
     if (!form.name.trim() || !form.phone.trim()) return;
     if (hasSession) {
       try {
-        await createCustomer({ nombre: form.name.trim(), telefono: form.phone.trim() });
+        await crmApi.crear({ nombre: form.name.trim(), telefono: form.phone.trim() });
         notify("Cliente registrado", `"${form.name}" ya acumula puntos.`);
         setModalOpen(false);
         setForm({ name: "", phone: "" });
@@ -121,11 +124,17 @@ export function ClientesView() {
   };
 
   const applyPoints = async () => {
-    if (!detail || !Number(pointsForm.puntos)) return;
+    if (!detail) return;
+    const puntos = Number(pointsForm.puntos);
+    const error = validarAjustePuntos({ tipo: pointsForm.tipo, puntos, saldo: detail.puntos });
+    if (error) {
+      notify("Ajuste inválido", error);
+      return;
+    }
     try {
-      await adjustPoints(detail.id, {
+      await crmApi.ajustarPuntos(detail.id, {
         tipo: pointsForm.tipo,
-        puntos: Number(pointsForm.puntos),
+        puntos,
         // ADMIN_GLOBAL no lleva sucursal en el token: la manda la UI (AYCDS-31).
         ...(activeBranchId ? { sucursalId: activeBranchId } : {}),
         ...(pointsForm.motivo.trim() ? { motivo: pointsForm.motivo.trim() } : {}),
@@ -136,10 +145,13 @@ export function ClientesView() {
       );
       setPointsOpen(false);
       setPointsForm({ tipo: "GANANCIA", puntos: "", motivo: "" });
-      setDetail(await getCustomer(detail.id));
+      setDetail(await crmApi.ficha(detail.id));
       await refresh();
-    } catch (error) {
-      notify("No se pudo ajustar", error instanceof Error ? error.message : "Reintenta.");
+    } catch (errorAjuste) {
+      notify(
+        "No se pudo ajustar",
+        errorAjuste instanceof Error ? errorAjuste.message : "Reintenta.",
+      );
     }
   };
 
@@ -166,7 +178,7 @@ export function ClientesView() {
             />
             <Select
               value={segmento}
-              onChange={(e) => setSegmento(e.target.value as ApiSegmento | "")}
+              onChange={(e) => setSegmento(e.target.value as SegmentoCliente | "")}
               aria-label="Filtrar por segmento"
             >
               <option value="">Todos los segmentos</option>
@@ -286,23 +298,23 @@ export function ClientesView() {
             </div>
             <div className="rounded-2xl border border-ink-900/10 p-3">
               <p className="text-xs text-ink-400">Segmento</p>
-              <p className="font-medium">{segmentLabel(detail.segmento)}</p>
+              <p className="font-medium">{etiquetaSegmento(detail.segmento)}</p>
             </div>
             <div className="rounded-2xl border border-ink-900/10 p-3">
               <p className="text-xs text-ink-400">Última visita</p>
-              <p className="font-medium">{lastVisitLabel(detail.ultima_visita)}</p>
+              <p className="font-medium">{ultimaVisitaLabel(detail.ultimaVisita)}</p>
             </div>
           </div>
           <p className="mt-4 mb-2 text-sm font-medium text-ink-900">Últimos movimientos de puntos</p>
-          {detail.movimientos_puntos.length === 0 ? (
+          {detail.movimientos.length === 0 ? (
             <p className="text-sm text-ink-400">Sin movimientos todavía.</p>
           ) : (
             <ul className="divide-y divide-ink-900/10">
-              {detail.movimientos_puntos.map((movimiento) => (
+              {detail.movimientos.map((movimiento) => (
                 <li key={movimiento.id} className="flex items-center justify-between py-2 text-sm">
                   <span className="text-ink-600">
-                    {movimiento.motivo ?? movimiento.tipo}
-                    {movimiento.orden_id ? " · comanda" : ""}
+                    {movimiento.motivo ?? etiquetaMovimientoPuntos(movimiento.tipo)}
+                    {movimiento.ordenId ? " · comanda" : ""}
                   </span>
                   <span className="tnum font-medium">
                     {movimiento.tipo === "GANANCIA" ? "+" : "-"}
@@ -334,7 +346,9 @@ export function ClientesView() {
             <Field label="Tipo">
               <Select
                 value={pointsForm.tipo}
-                onChange={(e) => setPointsForm({ ...pointsForm, tipo: e.target.value as ApiPointsType })}
+                onChange={(e) =>
+                  setPointsForm({ ...pointsForm, tipo: e.target.value as TipoMovimientoPuntos })
+                }
               >
                 <option value="GANANCIA">Cortesía (suma)</option>
                 <option value="CANJE">Canje (resta)</option>

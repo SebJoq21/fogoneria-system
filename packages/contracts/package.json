@@ -8,6 +8,7 @@
     "./caja": "./src/caja.ts",
     "./catalogo": "./src/catalogo.ts",
     "./comprobantes": "./src/comprobantes.ts",
+    "./crm": "./src/crm.ts",
     "./gastos": "./src/gastos.ts",
     "./inventario": "./src/inventario.ts",
     "./mesas": "./src/mesas.ts",

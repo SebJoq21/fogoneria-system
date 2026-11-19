@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero** y **operación** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación** y **personas** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación; **6** tras la ola personas) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -173,7 +173,7 @@ Estos son los puntos que las olas deben cortar en ese orden.
 | Salón | `tables` → `reservations` → `orders` | ✅ hecha |
 | Dinero | `receipts` → `cash` → `expenses` | ✅ hecha |
 | Operación | `inventory` → `promotions` | ✅ hecha |
-| Personas | `crm` | pendiente |
+| Personas | `crm` | ✅ hecha |
 | Lectura | `bi` → `realtime` | pendiente |
 | Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | pendiente |
 
@@ -263,6 +263,28 @@ Estos son los puntos que las olas deben cortar en ese orden.
   promociones aún no consumen `promocionesApi` (el cliente queda listo). El
   kardex ya lee la API cuando hay sesión.
 
+#### Ola personas ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/crm.ts` (segmentos, cliente y detalle,
+  movimientos de puntos, configuración de lealtad, inputs, etiquetas y
+  `validarAjustePuntos`) + subpath `./crm`.
+- **Backend:** `crm/index.ts` público (`CrmModule`, `CrmService`,
+  `ConfigLealtad`); `app.module.ts` importa por el `index` y `crm.service` usa
+  `../audit/index.js`. El CRM no depende de otros módulos: lee `ordenes` y
+  `movimientos_puntos` con Prisma scoped, así que no necesita puerto. Sin
+  cambios de reglas, worker ni triggers.
+- **Baseline 7 → 6** (sale `crm → audit` directo). Sin excepciones nuevas.
+- **Web:** `features/crm/` (`api.ts` SDK+contratos, `ClientesPage` con búsqueda,
+  filtro por segmento, ficha y ajuste, `LoyaltyPage` que sigue demo,
+  `LoyaltyHubPage` y `crm.test.ts`). `ModuleGate` importa el hub desde la
+  feature; las rutas `/app/clientes` y `/app/modulos/fidelizacion/regla` solo
+  importan su feature. `lib/crm-api.ts` y su test se retiraron: los cubre la
+  feature.
+- **Acoplamiento restante (consciente):** `customers` y `coupons` del demo
+  siguen en `ModulesProvider` hasta la Fase 4; `LoyaltyPage` aún no consume
+  `crmApi.config()` (el cliente queda listo). El ajuste de puntos manda
+  `sucursalId` para `ADMIN_GLOBAL` y el segmento lo calcula el servidor.
+
 ### Fase 4 — Desmontar el estado global
 
 `ModulesProvider` → contextos de plataforma (`Session`, `Tenant`, `Notifications`); cada feature con su estado.
@@ -299,7 +321,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación, **6** tras la ola personas).
 - PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

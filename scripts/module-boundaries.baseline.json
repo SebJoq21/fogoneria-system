@@ -1,6 +1,5 @@
 [
   "apps/api/src/modules/billing/billing.service.ts|../audit/audit.service.js",
-  "apps/api/src/modules/crm/crm.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/onboarding/onboarding.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/orders/orders.service.ts|../realtime/realtime.service.js",
   "apps/api/src/modules/orders/orders.sla.cron.ts|../realtime/realtime.service.js",

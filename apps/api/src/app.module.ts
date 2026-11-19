@@ -28,7 +28,7 @@ import { InventoryModule } from './modules/inventory/index.js';
 import { PromotionsModule } from './modules/promotions/index.js';
 import { CashModule } from './modules/cash/index.js';
 import { StaffModule } from './modules/staff/index.js';
-import { CrmModule } from './modules/crm/crm.module.js';
+import { CrmModule } from './modules/crm/index.js';
 import { ExpensesModule } from './modules/expenses/index.js';
 import { BiModule } from './modules/bi/bi.module.js';
 
