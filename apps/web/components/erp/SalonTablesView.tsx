@@ -10,9 +10,9 @@ import { Toolbar } from "@/components/ui/Toolbar";
 import { TableCard, THead, TH, TR, TD, RowActions } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import type { TableShape } from "@/lib/erp";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { mesasSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { mesasSummary } from "@/components/dashboard/summaries/summary-selectors";
 import { deriveTableStatus } from "@/lib/domain";
 import {
   createTable as apiCreateTable,

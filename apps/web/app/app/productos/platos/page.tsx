@@ -1,6 +1,6 @@
 "use client";
 
-import { ProductsView } from "@/components/erp/catalog/ProductsView";
+import { ProductsView } from "@/features/catalogo";
 
 export default function PlatosPage() {
   return (

@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { TextInput } from "@/components/ui/fields";
 import { useModules } from "@/components/dashboard/ModulesProvider";
-import { ModuleSummary } from "@/components/erp/summaries/ModuleSummary";
-import { MiniBars } from "@/components/erp/summaries/charts";
-import { clientesSummary, promosSummary } from "@/components/erp/summaries/summary-selectors";
+import { ModuleSummary } from "@/components/dashboard/summaries/ModuleSummary";
+import { MiniBars } from "@/components/dashboard/summaries/charts";
+import { clientesSummary, promosSummary } from "@/components/dashboard/summaries/summary-selectors";
 
 /** Fidelización: KPIs + regla de puntos. Cupones y clientes viven en sus módulos. */
 export function LoyaltyModule() {

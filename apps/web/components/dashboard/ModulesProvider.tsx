@@ -163,7 +163,9 @@ type ModulesContext = {
       name?: string;
       required?: boolean;
       multi?: boolean;
-      options?: { name: string; extra: number }[];
+      // `id` viaja a la API, que sincroniza las opciones por id: sin él se
+      // recrearían (y el borrado de una opción usada en órdenes da 409).
+      options?: { id?: string; name: string; extra: number }[];
     },
   ) => Promise<void>;
   deleteModifierGroup: (id: string) => Promise<void>;
@@ -861,7 +863,9 @@ export function ModulesProvider({
         name?: string;
         required?: boolean;
         multi?: boolean;
-        options?: { name: string; extra: number }[];
+        // `id` viaja a la API, que sincroniza las opciones por id: sin él se
+      // recrearían (y el borrado de una opción usada en órdenes da 409).
+      options?: { id?: string; name: string; extra: number }[];
       },
     ) => {
       await catalogApi.updateModifierGroup(id, input);
