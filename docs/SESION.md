@@ -1,5 +1,18 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 4, etapa 1 (Session + Notifications)
+
+- **Objetivo:** extraer de `ModulesProvider` la sesión y los avisos sin cambiar la API pública que consumen las ~20 vistas (`useModules().login/logout/currentUser/hasSession/notify/...`).
+- **Hecho:**
+  - `components/dashboard/providers/session.tsx`: `SessionProvider` + `useSession` (`currentUser`, `hasSession`, `login`, `logout`). Login en `/api/session`, logout en `/api/session/logout`, persistencia `fogoneria:user` y limpieza de `fogoneria:branch:<empresaId>`.
+  - `components/dashboard/providers/notifications.tsx`: `NotificationsProvider` + `useNotifications` en memoria (`notifications`, `hasUnread`, `notify`, `clearUnread`); `components/ui/Toast.tsx:4` lo consume. Helper puro `lib/notifications.ts` (ids únicos + dedupe del mismo ms).
+  - `lib/session-state.ts`: `parseSessionUser`, `storeSessionUser`, `clearSessionUser`, `branchStorageKey`, `tenantKeyOf`.
+  - `ModulesProvider.tsx:437-438` toma ambos contextos y los reexpone en su `value` (`:1736`); ya no declara estado de sesión/avisos. `app/layout.tsx:35-39` anida `Session > Notifications > Modules`. `ErpState` deja de persistir `notifications`/`hasUnread`.
+- **Verificado:** web **257** tests (31 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); `check:boundaries` OK (baseline 0); api `check-types` OK. Sin dependencias nuevas.
+- **Auditoría (12/12 PASS):** la etapa es apta para merge; se añadieron 2 tests de `storeSessionUser`/`clearSessionUser` (escritura y limpieza de usuario, sucursal y cookies planas).
+- **Pendiente (etapa 2):** `TenantProvider` + vaciar el estado de negocio de `ModulesProvider` hacia las features. `useModules` sigue siendo la fachada de compatibilidad.
+- **Nota:** los toasts ya no se persisten ni se sincronizan entre pestañas (decisión de la etapa: estado en memoria).
+
 ## 2026-11-19 — Modularización Fase 3, ola plataforma (PR #64, mergeado)
 
 - **Contratos:** `packages/contracts/src/plataforma.ts` (`RolWeb`, `UsuarioSesion`, `Empresa`, `Sucursal`, `EstadoEmpresa`, `PlanEmpresa`, `EmpresaSaas`, `MetricasSaas`, `OnboardingInput`, `OnboardingResultado`, `RespuestaLogin`, etiquetas, `estadoEmpresaTone`, `rolDesdeApi`, `isValidRuc`, `validarOnboarding`, `toOnboardingPayload`) + subpath `./plataforma`. El login **no** se movió: `/api/session` y `lib/session.ts` siguen siendo la autoridad de la cookie HttpOnly.

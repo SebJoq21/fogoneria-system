@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useModules } from "@/components/dashboard/ModulesProvider";
+import { useNotifications } from "@/components/dashboard/providers/notifications";
 
 function Toast({
   title,
@@ -34,7 +34,7 @@ function Toast({
 
 /** Campana discreta: aviso transitorio de la última notificación (4s). */
 export function Toasts() {
-  const { notifications } = useModules();
+  const { notifications } = useNotifications();
   const [dismissedAt, setDismissedAt] = useState(0);
   const latest = notifications[0];
   if (!latest || latest.timestamp <= dismissedAt) return null;
