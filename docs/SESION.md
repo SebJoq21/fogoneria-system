@@ -8,7 +8,8 @@
   - `components/dashboard/providers/notifications.tsx`: `NotificationsProvider` + `useNotifications` en memoria (`notifications`, `hasUnread`, `notify`, `clearUnread`); `components/ui/Toast.tsx:4` lo consume. Helper puro `lib/notifications.ts` (ids únicos + dedupe del mismo ms).
   - `lib/session-state.ts`: `parseSessionUser`, `storeSessionUser`, `clearSessionUser`, `branchStorageKey`, `tenantKeyOf`.
   - `ModulesProvider.tsx:437-438` toma ambos contextos y los reexpone en su `value` (`:1736`); ya no declara estado de sesión/avisos. `app/layout.tsx:35-39` anida `Session > Notifications > Modules`. `ErpState` deja de persistir `notifications`/`hasUnread`.
-- **Verificado:** web **255** tests (31 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); `check:boundaries` OK (baseline 0); api `check-types` OK. Sin dependencias nuevas.
+- **Verificado:** web **257** tests (31 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); `check:boundaries` OK (baseline 0); api `check-types` OK. Sin dependencias nuevas.
+- **Auditoría (12/12 PASS):** la etapa es apta para merge; se añadieron 2 tests de `storeSessionUser`/`clearSessionUser` (escritura y limpieza de usuario, sucursal y cookies planas).
 - **Pendiente (etapa 2):** `TenantProvider` + vaciar el estado de negocio de `ModulesProvider` hacia las features. `useModules` sigue siendo la fachada de compatibilidad.
 - **Nota:** los toasts ya no se persisten ni se sincronizan entre pestañas (decisión de la etapa: estado en memoria).
 

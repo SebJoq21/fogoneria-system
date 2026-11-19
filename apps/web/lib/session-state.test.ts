@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { branchStorageKey, parseSessionUser, tenantKeyOf } from "./session-state";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  branchStorageKey,
+  clearSessionUser,
+  parseSessionUser,
+  storeSessionUser,
+  tenantKeyOf,
+} from "./session-state";
 import type { AppUser } from "./auth";
 
 const user: AppUser = {
@@ -38,5 +44,58 @@ describe("namespace de sesión", () => {
     expect(tenantKeyOf(null)).toBe("anon");
     expect(tenantKeyOf({ ...user, empresaId: null })).toBe("anon");
     expect(tenantKeyOf(user)).toBe("e-1");
+  });
+});
+
+function fakeStorage() {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key: string) => map.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      map.set(key, value);
+    },
+    removeItem: (key: string) => {
+      map.delete(key);
+    },
+  };
+}
+
+describe("persistencia de la sesión", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("guarda el usuario del shell como JSON", () => {
+    const storage = fakeStorage();
+    vi.stubGlobal("localStorage", storage);
+
+    storeSessionUser(user);
+
+    expect(parseSessionUser(storage.getItem("fogoneria:user"))).toEqual(user);
+  });
+
+  it("al limpiar borra usuario, sucursal de la empresa y cookies planas", () => {
+    const storage = fakeStorage();
+    const cookies: string[] = [];
+    const doc = {};
+    Object.defineProperty(doc, "cookie", {
+      get: () => cookies.join("; "),
+      set: (value: string) => {
+        cookies.push(value);
+      },
+    });
+    storage.setItem("fogoneria:user", JSON.stringify(user));
+    storage.setItem(branchStorageKey("e-1"), "s-1");
+    vi.stubGlobal("localStorage", storage);
+    vi.stubGlobal("document", doc);
+
+    clearSessionUser(user);
+
+    expect(storage.getItem("fogoneria:user")).toBeNull();
+    expect(storage.getItem(branchStorageKey("e-1"))).toBeNull();
+    expect(cookies).toEqual([
+      "fogoneria.role=; path=/; max-age=0",
+      "fogoneria.branch=; path=/; max-age=0",
+    ]);
   });
 });
