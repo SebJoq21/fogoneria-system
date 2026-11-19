@@ -9,7 +9,7 @@ import { Field, TextInput } from "@/components/ui/fields";
 import { ROLE_HOME, ROLE_LABEL, DEMO_PASSWORD, demoUsers } from "@/lib/auth";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 
-export function LoginContent() {
+export function LoginPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();

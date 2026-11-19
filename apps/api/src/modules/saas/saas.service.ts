@@ -6,7 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service.js';
-import { AuditService } from '../audit/audit.service.js';
+import { AuditService } from '../audit/index.js';
 import { isValidRuc } from '../../common/utils/ruc.js';
 import type { AuthenticatedUser } from '../../common/types/authenticated-user.js';
 import type { PaginationQueryDto } from '../../common/dto/pagination.dto.js';

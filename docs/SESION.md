@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola plataforma
+
+- **Contratos:** `packages/contracts/src/plataforma.ts` (`RolWeb`, `UsuarioSesion`, `Empresa`, `Sucursal`, `EstadoEmpresa`, `PlanEmpresa`, `EmpresaSaas`, `MetricasSaas`, `OnboardingInput`, `OnboardingResultado`, `RespuestaLogin`, etiquetas, `estadoEmpresaTone`, `rolDesdeApi`, `isValidRuc`, `validarOnboarding`, `toOnboardingPayload`) + subpath `./plataforma`. El login **no** se movió: `/api/session` y `lib/session.ts` siguen siendo la autoridad de la cookie HttpOnly.
+- **Backend:** `auth`, `tenant`, `saas`, `billing` y `onboarding` exponen `index.ts` público; `app.module.ts` los importa por el `index.js`, `realtime.module.ts` toma `AuthModule` de `../auth/index.js`, y `billing`/`onboarding`/`saas` pasan a `../audit/index.js`. Sin cambios de reglas (JWT/Passport, bcrypt, rate limit, cron de morosidad, RLS, transacciones).
+- **Baseline 4 → 0** (`--write-baseline`): salen `realtime → auth` y los tres `audit` directos. Ratchet en cero, sin excepciones nuevas.
+- **Web:** `features/plataforma/` (`api.ts` SDK + contratos para onboarding/SaaS y mapeo de tenant listo para Fase 4, `LoginPage`, `OnboardingPage`, `DropZone`, `SaasPage`, `index.ts`, `plataforma.test.ts`). Rutas `/`, `/onboarding` y `/saas` delgadas. Retirados `lib/onboarding-api.ts` y `lib/saas-api.ts`. No se tocaron `lib/session.ts`, `lib/backend.ts`, `proxy.ts`, `app/api/session/**` ni `app/api/backend/**`.
+- Verificado: web **244** tests (29 archivos), `check-types`, `lint` (estilos OK), build OK (48 rutas); api **305** unit + **112** e2e + `check-types` + build; contracts `check-types`; `check:boundaries` OK (**0** históricas, 0 nuevas).
+- Próximo: **Fase 4** — vaciar `ModulesProvider` hacia contextos de plataforma (`Session`, `Tenant`, `Notifications`) y conectar `plataformaApi.empresa()/sucursales()`; después, ola de mozo.
+
 ## 2026-11-19 — Modularización Fase 3, ola lectura (PR #62, mergeado)
 
 - **Contratos:** `packages/contracts/src/bi.ts` (`RangoBi`, `Pnl`, `PnlDia`, `PlatoTop`, `CobroMetodo`, `ReporteBi`, `calcularMargen`, `etiquetaMetodoPago`) y `tiempo-real.ts` (`EventoTiempoReal`, `SobreEvento<T>`, payloads de orden/mesa, `REALTIME_EVENT`, `salaEmpresa`/`salaSucursal`/`salaOrden`) + subpaths `./bi` y `./tiempo-real`. La API agrega `@fogoneria/contracts` como dependencia de workspace y el Dockerfile copia `packages/contracts` (Node 24 ejecuta el `.ts` del contrato en runtime).
