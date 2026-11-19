@@ -13,6 +13,16 @@
 - **Pendiente (etapa 3):** vaciar el estado de negocio de `ModulesProvider` hacia las features, empezando por catálogo → gastos → inventario; `useModules` sigue como fachada de compatibilidad y las features nuevas usan `useTenant`.
 - **Riesgo conocido:** durante la hidratación del tenant las llamadas con `sucursalId` pueden salir sin filtro (vista agregada) y se repiten al resolverse la sucursal; no hay cambio visual, solo un request extra.
 
+## 2026-11-19 — Login limpio + recuperación por soporte
+
+- **Objetivo:** dejar el portal solo de inicio de sesión y ofrecer un camino honesto cuando se olvida la contraseña.
+- **Hecho:**
+  - `LoginPage` sin “Cuentas demo por rol” ni CTA “Regístrate” (la ruta `/onboarding` sigue existiendo); nuevo enlace “¿Olvidaste tu contraseña?” → `/recuperar`.
+  - `lib/auth.ts` sin `demoUsers`/`findDemoUser`/`DEMO_PASSWORD` (solo los usaba el login); se conservan `ROLE_LABEL`, `ROLE_HOME`, mapeos de rol y RBAC. El login sigue en `useModules().login` → `/api/session`.
+  - `lib/support.ts` (`SUPPORT_EMAIL`, `supportMailto` con `URLSearchParams` y espacios como `%20`) + `support.test.ts` (3 casos). No hay endpoint de reset ni envío automático: el formulario abre el cliente de correo (`mailto:`) con asunto y cuerpo prellenados.
+  - `features/plataforma/RecoverPage.tsx` (shell del login, correo opcional, “Solicitar ayuda”, correo de soporte visible y “Volver a iniciar sesión”), exportada en el índice; ruta delgada `app/recuperar/page.tsx` con metadata. `/recuperar` no está en el matcher de `proxy.ts`: es pública.
+- **Verificado:** web **268** tests (33 archivos), `check-types`, `lint` (estilos OK) y build OK (49 rutas, `/recuperar` estática); `check:boundaries` OK (baseline 0). Sin dependencias nuevas y sin tocar `/onboarding`, el BFF ni `proxy.ts`.
+
 ## 2026-11-19 — Modularización Fase 4, etapa 1 (Session + Notifications)
 
 - **Objetivo:** extraer de `ModulesProvider` la sesión y los avisos sin cambiar la API pública que consumen las ~20 vistas (`useModules().login/logout/currentUser/hasSession/notify/...`).
