@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Deploy Vercel + Railway (handoff)
+
+- **Vercel:** Production Branch = `development`; producción `development@9771f72` en https://fogoneria-system.vercel.app (login limpio, `/recuperar` 200, BFF login 200). Env `NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_REALTIME_URL` apuntan a Railway, `SESSION_SECRET` y `SESSION_COOKIE_SECURE=true`. La branch se cambia vía `PATCH /v9/projects/{id}/branch` (el MCP/`update_project` lo descarta).
+- **Railway:** proyecto `test-fogoneria`, servicios `fogoneria-system` (API) y `Postgres 18`. API con `apps/api/Dockerfile` desde la raíz del monorepo, preDeploy `npx prisma migrate deploy`, healthcheck `/api/v1/health`, watchPatterns de apps/api + packages/{contracts,kernel} + lock/workspace. Schema **`fogoneria`** (`public` vacío), 14 migraciones y seed demo.
+- **RLS:** `fogoneria_rls` (sin BYPASSRLS) y `fogoneria_saas` (con BYPASSRLS) provisionados con `apps/api/prisma/rls-roles.ts` (#69); `DATABASE_URL_RLS`/`DATABASE_URL_SAAS` apuntan a esos roles y `DATABASE_URL` queda en `postgres` solo para migraciones. Sin `FORCE ROW LEVEL SECURITY`. Verificado: health/login/tenant/branches/catálogo/tablero/BI 200.
+- **Riesgo:** antes de usuarios reales, rotar `JWT_SECRET`/`SESSION_SECRET` y decidir si el seed demo sigue público (hoy la contraseña demo es conocida).
+- Runbook completo y 8 gotchas en [`docs/despliegue.md`](despliegue.md).
+- **Próximo:** Fase 4 etapa 3 (bajar el estado de negocio de `ModulesProvider` a las features).
+
 ## 2026-11-19 — Modularización Fase 4, etapa 2 (`TenantProvider`)
 
 - **Objetivo:** extraer de `ModulesProvider` la empresa, las sucursales y la sucursal activa, sin mover todavía el estado de negocio ni cambiar la API que consumen las ~20 vistas.
