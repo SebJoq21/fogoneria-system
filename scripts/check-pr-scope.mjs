@@ -71,6 +71,21 @@ const VISTAS = {
   AnaliticasView: 'bi',
 };
 
+const FEATURES = {
+  catalogo: 'catalogo',
+  promociones: 'promociones',
+  ordenes: 'ordenes',
+  mesas: 'mesas',
+  caja: 'caja',
+  comprobantes: 'comprobantes',
+  inventario: 'inventario',
+  gastos: 'gastos',
+  crm: 'crm',
+  rrhh: 'rrhh',
+  bi: 'bi',
+  plataforma: 'plataforma',
+};
+
 const LIB = {
   catalog: 'catalogo',
   pricing: 'catalogo',
@@ -115,9 +130,20 @@ const RUTAS = [
 function moduloDe(archivo) {
   if (archivo.startsWith('docs/') || archivo.endsWith('.md')) return null;
   if (archivo.startsWith('.github/') || archivo.startsWith('scripts/')) return null;
-  if (archivo.startsWith('packages/')) return null;
   if (archivo.startsWith('apps/api/prisma/') || archivo.startsWith('db/')) return null;
   if (archivo.startsWith('apps/api/test/')) return null;
+
+  // Contratos por módulo: `packages/contracts/src/<m>.ts`.
+  const contrato = /^packages\/contracts\/src\/([a-z-]+)\.ts$/.exec(archivo);
+  if (contrato && contrato[1] !== 'index') {
+    return FEATURES[contrato[1]] ?? contrato[1];
+  }
+  // Kernel, SDK y UI son plataforma compartida.
+  if (archivo.startsWith('packages/')) return null;
+
+  // Features del frontend: `apps/web/features/<m>/**`.
+  const feature = /^apps\/web\/features\/([^/]+)\//.exec(archivo);
+  if (feature) return FEATURES[feature[1]] ?? feature[1];
   if (
     archivo === 'package.json' ||
     archivo === 'pnpm-lock.yaml' ||

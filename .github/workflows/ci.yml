@@ -50,6 +50,9 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Fronteras de módulos
+        run: pnpm check:boundaries
+
       - name: Generar cliente Prisma
         run: pnpm --filter api db:generate
 
