@@ -1,5 +1,5 @@
-import { OnboardingContent } from "@/components/onboarding/OnboardingContent";
+import { OnboardingPage } from "@/features/plataforma";
 
-export default function OnboardingPage() {
-  return <OnboardingContent />;
+export default function OnboardingRoute() {
+  return <OnboardingPage />;
 }

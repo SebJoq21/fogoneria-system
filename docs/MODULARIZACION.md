@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación**, **personas** y **lectura** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`; `bi` + contrato de `realtime`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0–2 implementadas (fundaciones, RRHH y catálogo/precios) + olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3 (`tables`, `reservations`, `orders`/KDS; `receipts`, `cash`, `expenses`; `inventory`, `promotions`; `crm`; `bi` + contrato de `realtime`; `auth`, `tenant`, `saas`, `billing`, `onboarding` y `audit`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -111,7 +111,7 @@ Mientras se migra, el frontend vive en `apps/web/features/<módulo>/` con las mi
 |---|---|
 | Un PR = un módulo | `scripts/check-pr-scope.mjs` + job CI `Un PR por módulo` |
 | Nadie importa internals de otro módulo | `scripts/check-module-boundaries.mjs` + job CI `Fronteras de módulos` |
-| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación; **6** tras la ola personas; **4** tras la ola lectura) |
+| Baseline de acoplamientos históricos | `scripts/module-boundaries.baseline.json` (22 tras las Fases 1–2; **21** tras la ola salón; **14** tras la ola dinero; **7** tras la ola operación; **6** tras la ola personas; **4** tras la ola lectura; **0** tras la ola plataforma) |
 | Paquetes compartidos | `@fogoneria/kernel`, `@fogoneria/sdk`, `@fogoneria/contracts` |
 | Contratos de módulo | `packages/contracts/src/<módulo>.ts` |
 
@@ -174,8 +174,8 @@ Estos son los puntos que las olas deben cortar en ese orden.
 | Dinero | `receipts` → `cash` → `expenses` | ✅ hecha |
 | Operación | `inventory` → `promotions` | ✅ hecha |
 | Personas | `crm` | ✅ hecha |
-| Lectura | `bi` → `realtime` | pendiente |
-| Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | pendiente |
+| Lectura | `bi` → `realtime` | ✅ hecha |
+| Plataforma | `auth`, `tenant`, `saas`, `billing`, `onboarding`, `audit` | ✅ hecha |
 
 #### Ola salón ✅ (2026-11-19) — PR #54
 
@@ -314,6 +314,35 @@ Estos son los puntos que las olas deben cortar en ese orden.
   ola de plataforma. La API ejecuta el contrato `.ts` del workspace en runtime
   (Node 24 type stripping), y el Dockerfile copia `packages/contracts`.
 
+#### Ola plataforma ✅ (2026-11-19)
+
+- **Contratos:** `packages/contracts/src/plataforma.ts` (`RolWeb`,
+  `UsuarioSesion`, `Empresa`, `Sucursal`, `EstadoEmpresa`, `PlanEmpresa`,
+  `EmpresaSaas`, `MetricasSaas`, `OnboardingInput`, `OnboardingResultado`,
+  `RespuestaLogin`, etiquetas de plan/estado, `estadoEmpresaTone`,
+  `rolDesdeApi`, `isValidRuc`, `validarOnboarding` y `toOnboardingPayload`) +
+  subpath `./plataforma`. El login no se movió: `/api/session` sigue siendo la
+  autoridad de la cookie HttpOnly.
+- **Backend:** `auth`, `tenant`, `saas`, `billing` y `onboarding` exponen
+  `index.ts` público; `app.module.ts` los importa por el `index.js` y
+  `realtime.module.ts` toma `AuthModule` de `../auth/index.js`. `billing`,
+  `onboarding` y `saas` pasan a `../audit/index.js`. Sin cambios de reglas:
+  JWT/Passport, bcrypt, rate limit del onboarding, cron de morosidad, RLS y
+  transacciones quedan igual.
+- **Baseline 4 → 0** (`--write-baseline`): salen `realtime → auth` y los tres
+  `audit` directos. Sin excepciones nuevas; el ratchet queda en cero.
+- **Web:** `features/plataforma/` (`api.ts` con SDK + contratos para onboarding,
+  SaaS y el mapeo de tenant listo para Fase 4, `LoginPage`, `OnboardingPage`,
+  `DropZone`, `SaasPage` y `plataforma.test.ts`). Las rutas `/`, `/onboarding` y
+  `/saas` solo importan la feature; conservan el redirect por rol de `lib/auth`
+  y el layout raíz. Se retiraron `lib/onboarding-api.ts` y `lib/saas-api.ts`.
+  `lib/session.ts`, `lib/backend.ts`, `proxy.ts`, `app/api/session/**` y
+  `app/api/backend/**` **no se tocaron**.
+- **Acoplamiento restante (consciente):** `ModulesProvider` sigue siendo el
+  dueño del estado (incluido el login) hasta la Fase 4; `lib/tenant-api.ts` y
+  `lib/auth-api.ts` se quedan porque los usa el BFF/`ModulesProvider`. La feature
+  no crea `SessionProvider`/`TenantProvider` todavía.
+
 ### Fase 4 — Desmontar el estado global
 
 `ModulesProvider` → contextos de plataforma (`Session`, `Tenant`, `Notifications`); cada feature con su estado.
@@ -350,7 +379,7 @@ Un módulo está “independiente” cuando:
 ## 8. Métricas
 
 - Violaciones nuevas de fronteras: **0**.
-- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación, **6** tras la ola personas, **4** tras la ola lectura).
+- Baseline de acoplamientos: **decreciente** (24 al inicio, **22** tras las Fases 1–2, **21** tras la ola salón, **14** tras la ola dinero, **7** tras la ola operación, **6** tras la ola personas, **4** tras la ola lectura, **0** tras la ola plataforma).
 - PRs por módulo u ola justificada: **100 %** (excepción `multi-modulo` documentada).
 - `--filter` por módulo: verde.
 - p95 y bundle sin regresión.

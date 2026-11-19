@@ -7,6 +7,7 @@ export * from './gastos';
 export * from './inventario';
 export * from './mesas';
 export * from './ordenes';
+export * from './plataforma';
 export * from './promociones';
 export * from './reservas';
 export * from './rrhh';

@@ -4,16 +4,13 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
-import { DropZone } from "@/components/onboarding/DropZone";
+import { DropZone } from "./DropZone";
 import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ROLE_HOME } from "@/lib/auth";
-import {
-  isValidRuc,
-  submitOnboarding,
-  type RangoSucursales,
-} from "@/lib/onboarding-api";
+import { isValidRuc, type RangoSucursales } from "@fogoneria/contracts/plataforma";
+import { plataformaApi } from "./api";
 
 const steps = ["Identidad y Local", "La Carta", "Pago y Activación"];
 
@@ -93,7 +90,7 @@ const emptyForm: Form = {
   paymentFileName: "",
 };
 
-export function OnboardingContent() {
+export function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<Form>(emptyForm);
   const [error, setError] = useState<string | null>(null);
@@ -147,7 +144,7 @@ export function OnboardingContent() {
       .join(" · ");
 
     try {
-      await submitOnboarding({
+      await plataformaApi.onboarding({
         nombreLegal: form.nombreLegal.trim(),
         nombreComercial: form.nombreComercial.trim() || undefined,
         ruc: form.ruc.trim(),

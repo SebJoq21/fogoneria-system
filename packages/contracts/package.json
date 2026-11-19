@@ -14,6 +14,7 @@
     "./inventario": "./src/inventario.ts",
     "./mesas": "./src/mesas.ts",
     "./ordenes": "./src/ordenes.ts",
+    "./plataforma": "./src/plataforma.ts",
     "./promociones": "./src/promociones.ts",
     "./reservas": "./src/reservas.ts",
     "./rrhh": "./src/rrhh.ts",
