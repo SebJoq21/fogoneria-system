@@ -120,4 +120,42 @@ describe('PricingService', () => {
       precio: 24.9,
     });
   });
+
+  it('PricingPort: cotiza varios platos en una sola consulta', async () => {
+    prisma.scoped.listas_precios.findFirst.mockResolvedValue({ id: 'l1' });
+    prisma.scoped.precios_platos.findMany.mockResolvedValue([
+      { plato_id: 'p1', precio: '24.90' },
+      { plato_id: 'p2', precio: '8.50' },
+    ]);
+    const service = buildService(prisma);
+
+    const result = await service.resolvePrices(['p1', 'p2']);
+
+    expect(prisma.scoped.precios_platos.findMany).toHaveBeenCalledWith({
+      where: { lista_id: 'l1', plato_id: { in: ['p1', 'p2'] } },
+      select: { plato_id: true, precio: true },
+    });
+    expect(result.listaId).toBe('l1');
+    expect(result.precios.get('p1')).toBe(24.9);
+    expect(result.precios.get('p2')).toBe(8.5);
+  });
+
+  it('PricingPort: sin lista activa devuelve listaId null y sin precios', async () => {
+    prisma.scoped.listas_precios.findFirst.mockResolvedValue(null);
+    const service = buildService(prisma);
+
+    const result = await service.resolvePrices(['p1']);
+
+    expect(result).toEqual({ listaId: null, precios: new Map() });
+    expect(prisma.scoped.precios_platos.findMany).not.toHaveBeenCalled();
+  });
+
+  it('PricingPort: valida la lista solicitada (404)', async () => {
+    prisma.scoped.listas_precios.findFirst.mockResolvedValue(null);
+    const service = buildService(prisma);
+
+    await expect(
+      service.resolvePrices(['p1'], 'lista-ajena'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
 });

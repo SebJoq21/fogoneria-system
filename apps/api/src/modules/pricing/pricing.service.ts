@@ -11,6 +11,7 @@ import type {
   PriceItemDto,
   UpdatePriceListDto,
 } from './dto/price-list.dto.js';
+import type { PreciosResueltos, PricingPort } from './pricing.port.js';
 
 function isUniqueViolation(error: unknown): boolean {
   return (
@@ -22,7 +23,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 @Injectable()
-export class PricingService {
+export class PricingService implements PricingPort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly tenantContext: TenantContextService,
@@ -153,6 +154,49 @@ export class PricingService {
       listaId: targetList,
       precio: price ? Number(price.precio) : null,
     };
+  }
+
+  /**
+   * Implementación del `PricingPort`: resuelve la lista y cotiza varios platos
+   * en una sola consulta, para que órdenes no lea `precios_platos`.
+   */
+  async resolvePrices(
+    platoIds: string[],
+    listaId?: string | null,
+  ): Promise<PreciosResueltos> {
+    const targetList = await this.resolveListId(listaId);
+    if (!targetList || platoIds.length === 0) {
+      return { listaId: targetList, precios: new Map() };
+    }
+
+    const precios = await this.prisma.scoped.precios_platos.findMany({
+      where: { lista_id: targetList, plato_id: { in: platoIds } },
+      select: { plato_id: true, precio: true },
+    });
+
+    return {
+      listaId: targetList,
+      precios: new Map(
+        precios.map((precio) => [precio.plato_id, Number(precio.precio)]),
+      ),
+    };
+  }
+
+  private async resolveListId(solicitada?: string | null): Promise<string | null> {
+    if (solicitada) {
+      const lista = await this.prisma.scoped.listas_precios.findFirst({
+        where: { id: solicitada, deleted_at: null },
+        select: { id: true },
+      });
+      if (!lista) throw new NotFoundException('Lista de precios no encontrada');
+      return lista.id;
+    }
+
+    const activa = await this.prisma.scoped.listas_precios.findFirst({
+      where: { activa: true, deleted_at: null },
+      select: { id: true },
+    });
+    return activa?.id ?? null;
   }
 
   private empresaId(): string {

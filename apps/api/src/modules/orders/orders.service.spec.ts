@@ -12,6 +12,7 @@ import type { AuditService } from '../audit/audit.service.js';
 import type { RealtimeService } from '../realtime/realtime.service.js';
 import type { InventoryService } from '../inventory/inventory.service.js';
 import type { PromotionsService } from '../promotions/promotions.service.js';
+import type { PricingPort } from '../pricing/index.js';
 
 const context = {
   userId: 'u1',
@@ -42,8 +43,6 @@ function buildPrisma() {
       reservas: { count: vi.fn().mockResolvedValue(0) },
       platos: { findMany: vi.fn() },
       combos: { findMany: vi.fn() },
-      precios_platos: { findMany: vi.fn() },
-      listas_precios: { findFirst: vi.fn() },
       sucursales: { findFirst: vi.fn() },
     },
   };
@@ -63,6 +62,7 @@ describe('OrdersService (AYCDS-20)', () => {
     resolverCupon: ReturnType<typeof vi.fn>;
     registrarCanje: ReturnType<typeof vi.fn>;
   };
+  let pricing: { resolvePrices: ReturnType<typeof vi.fn> };
 
   function buildService(tenant: Record<string, unknown> = context) {
     return new OrdersService(
@@ -73,6 +73,7 @@ describe('OrdersService (AYCDS-20)', () => {
       realtime as unknown as RealtimeService,
       inventory as unknown as InventoryService,
       promotions as unknown as PromotionsService,
+      pricing as unknown as PricingPort,
     );
   }
 
@@ -90,9 +91,14 @@ describe('OrdersService (AYCDS-20)', () => {
       resolverCupon: vi.fn().mockResolvedValue(null),
       registrarCanje: vi.fn().mockResolvedValue(undefined),
     };
+    pricing = {
+      resolvePrices: vi.fn().mockResolvedValue({
+        listaId: 'l1',
+        precios: new Map([[PLATO, 24.9]]),
+      }),
+    };
     vi.clearAllMocks();
 
-    prisma.scoped.listas_precios.findFirst.mockResolvedValue({ id: 'l1' });
     prisma.scoped.platos.findMany.mockResolvedValue([
       { id: PLATO, nombre: 'Anticucho', activo: true },
     ]);
@@ -103,9 +109,6 @@ describe('OrdersService (AYCDS-20)', () => {
         activo: true,
         precio_fijo: '39.90',
       },
-    ]);
-    prisma.scoped.precios_platos.findMany.mockResolvedValue([
-      { plato_id: PLATO, precio: '24.90' },
     ]);
     prisma.scoped.ordenes.create.mockImplementation(
       async ({ data }: { data: Record<string, unknown> }) => ({
@@ -127,11 +130,7 @@ describe('OrdersService (AYCDS-20)', () => {
       ],
     });
 
-    expect(prisma.scoped.precios_platos.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { lista_id: 'l1', plato_id: { in: [PLATO] } },
-      }),
-    );
+    expect(pricing.resolvePrices).toHaveBeenCalledWith([PLATO], null);
     const data = prisma.scoped.ordenes.create.mock.calls[0][0].data as {
       subtotal: number;
       total: number;
@@ -215,7 +214,7 @@ describe('OrdersService (AYCDS-20)', () => {
   });
 
   it('rechaza un plato sin precio en la lista', async () => {
-    prisma.scoped.precios_platos.findMany.mockResolvedValue([]);
+    pricing.resolvePrices.mockResolvedValue({ listaId: 'l1', precios: new Map() });
     const service = buildService();
 
     await expect(

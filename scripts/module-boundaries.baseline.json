@@ -11,7 +11,6 @@
   "apps/api/src/modules/inventory/stock-alerts.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/onboarding/onboarding.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/orders/orders.module.ts|../inventory/inventory.module.js",
-  "apps/api/src/modules/orders/orders.module.ts|../pricing/pricing.module.js",
   "apps/api/src/modules/orders/orders.module.ts|../promotions/promotions.module.js",
   "apps/api/src/modules/orders/orders.service.ts|../audit/audit.service.js",
   "apps/api/src/modules/orders/orders.service.ts|../inventory/inventory.service.js",
