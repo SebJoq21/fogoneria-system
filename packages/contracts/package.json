@@ -9,8 +9,10 @@
     "./catalogo": "./src/catalogo.ts",
     "./comprobantes": "./src/comprobantes.ts",
     "./gastos": "./src/gastos.ts",
+    "./inventario": "./src/inventario.ts",
     "./mesas": "./src/mesas.ts",
     "./ordenes": "./src/ordenes.ts",
+    "./promociones": "./src/promociones.ts",
     "./reservas": "./src/reservas.ts",
     "./rrhh": "./src/rrhh.ts"
   },

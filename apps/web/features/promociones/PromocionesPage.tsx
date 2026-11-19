@@ -18,7 +18,7 @@ import { promosSummary } from "@/components/dashboard/summaries/summary-selector
 import { HubBlocks } from "@/components/dashboard/workspace-ui";
 
 /** Promociones: cupones con cupo + promociones programadas con vigencia. */
-export function PromocionesView() {
+export function PromocionesPage() {
   const { coupons, setCoupons, notify } = useModules();
   const [promos, setPromos] = useState(initialPromos);
   const [modalOpen, setModalOpen] = useState(() => {

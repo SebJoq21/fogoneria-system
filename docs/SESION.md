@@ -1,5 +1,15 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Modularización Fase 3, ola operación (inventory + promotions)
+
+- **Contratos:** `packages/contracts/src/inventario.ts` (semáforo, kardex, filtros, `ConsumoResultado`, etiquetas, `movimientoCantidadLabel`) y `promociones.ts` (combos, cupones, cupón resuelto, reglas horarias, `estadoCupon`, `etiquetaDescuento` — el importe del descuento lo calcula el servidor) + subpaths `./inventario|./promociones`. `caja` e `inventario` comparten `etiquetaTipoMovimiento`: el root conserva el de caja y el inventario va por su subpath (export explícito en `src/index.ts`).
+- **Backend:** `inventory/index.ts` (`InventoryModule`, `InventoryService`, `ConsumptionResult`) y `promotions/index.ts` (`PromotionsModule`, `PromotionsService`, `CuponResuelto`) públicos; `orders.module`/`orders.service` importan por el `index`. `app.module.ts` registra **InventoryModule y PromotionsModule explícitamente** (antes promociones solo se montaba por órdenes). Auditoría de inventory/stock-alerts/promotions por `../audit/index.js`; sin cambios de reglas, triggers ni tablas.
+- **`PRICING_PORT` en promociones:** `PromotionsService` inyecta el puerto y `PromotionsModule` importa `PricingModule`; `precioReferencia`/anti-inflación salen de `resolvePrices` y el módulo ya no lee `precios_platos`/`listas_precios`. El spec de promociones se adaptó al nuevo constructor (4.º argumento).
+- **Web:** `features/inventario/` (`api.ts` SDK+contratos, `InventoryPage` con el maestro demo de AYCDS-24, `MovementsPage` con semáforo y kardex de la API, `InventoryHubPage`) y `features/promociones/` (`api.ts` SDK para combos/cupones/validación/schedule, `CombosPage`, `PromocionesPage`). `ModuleGate` importa el hub desde la feature; las rutas de stock, movimientos, combos y promociones solo importan su feature. Se retiraron `lib/inventory-api.ts` y su test (los cubre la feature).
+- **Acoplamiento restante:** insumos, combos y cupones siguen en `ModulesProvider` (Fase 4); `CombosPage`/`PromocionesPage` aún no consumen `promocionesApi` (cliente listo). El kardex y el semáforo ya leen la API con sesión. Backend en baseline: `orders → realtime` ×2, `realtime → auth` y `audit` directo en billing/crm/onboarding/saas.
+- Verificado: **217** web tests (28 archivos), `lint` (estilos OK), `check-types`, build OK (48 rutas); api **305** unit + **112** e2e + check-types; `check:boundaries` OK (baseline **14 → 7**, 0 nuevas).
+- Próximo: ola **personas** (`crm`), después Fase 4 (vaciar `ModulesProvider`).
+
 ## 2026-11-19 — Modularización Fase 3, ola dinero (receipts + cash + expenses)
 
 - **Contratos:** `packages/contracts/src/caja.ts`, `comprobantes.ts` y `gastos.ts` (turnos/movimientos/arqueo/cobro, comprobantes con `desgloseIgv` y SUNAT «pendiente de OSE», gastos con categorías y pago en efectivo) + subpaths `./caja|./comprobantes|./gastos`. Los re-exporta `src/index.ts`.

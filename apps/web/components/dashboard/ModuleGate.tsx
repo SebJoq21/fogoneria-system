@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { MODULE_CATALOG, type ModuleId } from "@/lib/erp";
 import { LoyaltyWorkspace } from "@/components/erp/LoyaltyWorkspace";
 import { BookingsWorkspace } from "@/components/erp/BookingsWorkspace";
-import { InventoryWorkspace } from "@/components/erp/InventoryWorkspace";
+import { InventoryHubPage } from "@/features/inventario";
 import { StaffWorkspace } from "@/components/erp/StaffWorkspace";
 
 export function moduleMeta(id: string) {
@@ -34,7 +34,7 @@ export function ModuleBody({ id }: { id: string }) {
       </div>
       {meta.id === "fidelizacion" && <LoyaltyWorkspace />}
       {meta.id === "reservas" && <BookingsWorkspace />}
-      {meta.id === "inventario" && <InventoryWorkspace />}
+      {meta.id === "inventario" && <InventoryHubPage />}
       {meta.id === "personal" && <StaffWorkspace />}
     </div>
   );

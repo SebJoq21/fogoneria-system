@@ -10,8 +10,8 @@ import { TenantContextService } from '../../common/context/tenant-context.servic
 import { SequencesService } from '../../common/sequences/sequences.service.js';
 import { AuditService } from '../audit/index.js';
 import { RealtimeService } from '../realtime/realtime.service.js';
-import { InventoryService } from '../inventory/inventory.service.js';
-import { PromotionsService } from '../promotions/promotions.service.js';
+import { InventoryService } from '../inventory/index.js';
+import { PromotionsService } from '../promotions/index.js';
 import { PRICING_PORT, type PricingPort } from '../pricing/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
 import {

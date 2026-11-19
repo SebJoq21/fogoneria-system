@@ -24,7 +24,8 @@ import { TablesModule } from './modules/tables/index.js';
 import { ReservationsModule } from './modules/reservations/index.js';
 import { RealtimeModule } from './modules/realtime/realtime.module.js';
 import { ReceiptsModule } from './modules/receipts/index.js';
-import { PromotionsModule } from './modules/promotions/promotions.module.js';
+import { InventoryModule } from './modules/inventory/index.js';
+import { PromotionsModule } from './modules/promotions/index.js';
 import { CashModule } from './modules/cash/index.js';
 import { StaffModule } from './modules/staff/index.js';
 import { CrmModule } from './modules/crm/crm.module.js';
@@ -50,6 +51,8 @@ import { BiModule } from './modules/bi/bi.module.js';
     ReservationsModule,
     RealtimeModule,
     ReceiptsModule,
+    InventoryModule,
+    PromotionsModule,
     CashModule,
     StaffModule,
     CrmModule,

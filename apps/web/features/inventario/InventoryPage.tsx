@@ -27,7 +27,8 @@ function deriveState(stock: number, min: number): StockState {
   return "Óptimo";
 }
 
-export function InventoryModule({ onlyCritical = false }: { onlyCritical?: boolean } = {}) {
+/** Inventarios · Stock: insumos, mínimos y escandallos (maestro en demo, AYCDS-24). */
+export function InventoryPage({ onlyCritical = false }: { onlyCritical?: boolean } = {}) {
   const { products, notify, ingredients, setIngredients, movements, setMovements } = useModules();
   const [criticalOnly] = useState(() => {
     if (onlyCritical) return true;
