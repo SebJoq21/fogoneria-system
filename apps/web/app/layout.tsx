@@ -4,6 +4,8 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { ModulesProvider } from "@/components/dashboard/ModulesProvider";
+import { NotificationsProvider } from "@/components/dashboard/providers/notifications";
+import { SessionProvider } from "@/components/dashboard/providers/session";
 import { initialPayments } from "@/lib/dashboard";
 
 const inter = Inter({
@@ -30,7 +32,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
-          <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+          <SessionProvider>
+            <NotificationsProvider>
+              <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+            </NotificationsProvider>
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

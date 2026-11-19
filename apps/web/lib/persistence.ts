@@ -3,8 +3,9 @@
    varias pestañas (tablet del mesero vs pantalla de cocina).
 
    El estado y el canal se namespacan por empresa (`empresaId` del token) para
-   que dos cuentas en el mismo navegador no compartan operación, tickets ni
-   notificaciones. Sin sesión (offline/demo) se usa `ANON_TENANT_KEY`. */
+   que dos cuentas en el mismo navegador no compartan operación ni tickets.
+   Las notificaciones son avisos en memoria (`NotificationsProvider`) y no se
+   persisten. Sin sesión (offline/demo) se usa `ANON_TENANT_KEY`. */
 
 import type {
   Coupon,
@@ -17,7 +18,7 @@ import type {
   StockMovement,
 } from "./erp";
 import type { Combo } from "./erp-catalog";
-import type { Notification, Ticket } from "./dashboard";
+import type { Ticket } from "./dashboard";
 import type { CashShift, TableAccount } from "./domain";
 import type { BranchScope } from "./tenancy";
 
@@ -49,8 +50,6 @@ export type ErpState = {
   expenses: Expense[];
   combos: Combo[];
   tickets: Ticket[];
-  notifications: Notification[];
-  hasUnread: boolean;
   scopes: Record<string, BranchScope>;
   accounts: TableAccount[];
   cashShifts: CashShift[];
