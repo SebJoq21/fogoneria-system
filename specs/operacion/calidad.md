@@ -114,6 +114,17 @@ pnpm --filter api exec prisma migrate diff --from-migrations prisma/migrations \
 - `SHADOW_DATABASE_URL` apunta a `fogoneria_shadow` (Prisma 7 rechaza usar la misma base).
 - No hay `down`: la migración es la fuente ejecutable; la estrategia es forward-only.
 
+Job **`Dependency review`** — push y PR (en push no revisa nada, para que el gate no vea un job skipped):
+
+```text
+actions/dependency-review-action@v5.0.0
+  fail-on-severity: high
+  comment-summary-in-pr: on-failure   (solo pull_request)
+```
+
+- Compara las dependencias que agrega/cambia el PR contra el Dependency Graph (ya poblado por pnpm) y bloquea severidad `high`.
+- Permisos del job: `contents: read`, `pull-requests: write`.
+
 Job **`Imágenes Docker y Trivy`** — push y PR:
 
 ```text
@@ -123,7 +134,7 @@ docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
 trivy image (OS/base, CRITICAL/HIGH, ignore-unfixed)   (bloqueante: exit-code 1; paquetes npm vía pnpm audit/Dependabot)
 ```
 
-Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el **único required check** del ruleset de `development` (1 aprobación + bypass del dueño).
+Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker, dependency-review, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el **único required check** del ruleset de `development` (1 aprobación + bypass del dueño).
 
 Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `development`/`main` + cron semanal, `javascript-typescript` con `security-extended` y `security-events: write`.
 
@@ -133,7 +144,15 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el ana
 
 > **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
 
-> **Dependency Review:** no está activo todavía. GitHub no genera manifests para `pnpm-lock.yaml` (Dependency Graph vacío) y la API devuelve 403; se usa `pnpm audit` advisory. En Fase B se añade dependency submission, se verifica el graph y recién entonces se vuelve bloqueante.
+> **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; se mantiene `pnpm audit` advisory dentro de `quality`.
+
+Workflows de producción (post-deploy y vigilancia):
+
+- **`Verify API production`** (`verify-api-production.yml`): `deployment_status` de Railway (`test-fogoneria / production`) o manual; falla si el deploy falló y verifica `/api/v1/health` (`status=ok`) y `/api/v1`.
+- **`Verify web production`** (`verify-web-production.yml`): `status` de Vercel en `development` o manual; falla si el deploy falló y verifica `/` (200 + `lang="es"`) y `/recuperar` (200).
+- **`Daily production smoke`** (`smoke.yml`): diario 11:00 UTC + manual; API health/info y web `/` + `/recuperar`.
+
+Los tres viven fuera del CI a propósito: un deploy que espera los checks del commit no debe esperar al job que verifica ese deploy.
 
 ## 3. Qué cubre cada suite
 
@@ -146,6 +165,9 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el ana
 | Playwright | login real, redirección por rol y bloqueo de rutas ajenas (humo E2E full-stack) |
 | OpenAPI | contrato exportado desde `AppModule` y validado contra el estándar OpenAPI 3 |
 | Migraciones | deploy idempotente, estado y drift entre migraciones aplicadas y base real |
+| Dependency review | nuevas dependencias del PR contra el graph, bloquea severidad high |
+| Verify production | health/info del API y home/recuperación del web tras cada deploy |
+| Daily smoke | API y web desplegados, todos los días |
 
 ## 4. Gates no automatizados (revisión humana)
 

@@ -1,0 +1,50 @@
+name: Daily production smoke
+
+# Vigila los servicios desplegados en el tiempo; complementa a
+# verify-api-production.yml y verify-web-production.yml, que corren al desplegar.
+on:
+  workflow_dispatch:
+  schedule:
+    # Diario 06:00 America/Lima ≈ 11:00 UTC.
+    - cron: "0 11 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-production
+  cancel-in-progress: true
+
+env:
+  API_URL: https://fogoneria-system-production.up.railway.app
+  WEB_URL: https://fogoneria-system.vercel.app
+
+jobs:
+  smoke:
+    name: Production health
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: API health
+        run: |
+          body=$(curl -fsS --retry 3 --retry-delay 5 --max-time 20 "$API_URL/api/v1/health")
+          echo "GET /api/v1/health -> $body"
+          echo "$body" | jq -e '.status == "ok"'
+
+      - name: API info
+        run: |
+          body=$(curl -fsS --retry 3 --retry-delay 5 --max-time 20 "$API_URL/api/v1")
+          echo "GET /api/v1 -> $body"
+          echo "$body" | jq -e '.health == "/api/v1/health"'
+
+      - name: Frontend
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 5 --max-time 20 "$WEB_URL/")
+          echo "frontend HTTP $code"
+          test "$code" = "200"
+
+      - name: Frontend recuperación
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 5 --max-time 20 "$WEB_URL/recuperar")
+          echo "/recuperar HTTP $code"
+          test "$code" = "200"
