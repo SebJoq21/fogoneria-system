@@ -136,4 +136,5 @@
 | `e68c843` | Ola operación (inventory + promotions) |
 | `e9dabdc` | Ola dinero (receipts + cash + expenses) |
 | `eb57d76` | Quick wins seguridad/Sonar (CodeQL, S7773/S8786/S6848, checks PR-only) |
+| `e32771d` | CodeQL http-to-file y vulns Sonar restantes (load test, Docker, secrets locales) |
 | `eec5632` | Ola salón (mesas, reservas, KDS) |
