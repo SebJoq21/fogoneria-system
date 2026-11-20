@@ -68,4 +68,34 @@ describe('AccountPanel', () => {
     expect(markup.length).toBeGreaterThan(0);
     expect(markup).toContain('Mesa 1');
   });
+
+  it('con líneas enviadas, pagos, propina y descuento pinta los totales completos', () => {
+    const markup = renderToStaticMarkup(
+      <AccountPanel
+        account={{
+          ...cuenta,
+          items: [{ ...cuenta.items[0], sent: true }],
+          payments: [{ method: 'Efectivo', amount: 40, tip: 5, at: '2026-11-20T13:00:00.000Z' }],
+          tip: 5,
+          discount: 4.4,
+          discountConcept: 'Cupón PARRILLA10',
+          couponCode: 'PARRILLA10',
+          customer: 'Ana Torres',
+        }}
+        onBack={() => {}}
+      />,
+    );
+    expect(markup).toContain('Ana Torres');
+    expect(markup).toContain('Mesa 1');
+  });
+
+  it('una cuenta cobrada muestra su estado sin acciones de cobro', () => {
+    const markup = renderToStaticMarkup(
+      <AccountPanel
+        account={{ ...cuenta, status: 'cobrada', closedAt: '2026-11-20T14:00:00.000Z' }}
+        onBack={() => {}}
+      />,
+    );
+    expect(markup).toContain('Mesa 1');
+  });
 });

@@ -60,4 +60,40 @@ describe('CajaPage', () => {
     expect(markup).toContain('Cajera');
     expect(markup).toContain('+$1.00');
   });
+
+  it('con turno abierto muestra el fondo, el esperado y las cuentas por cobrar', () => {
+    estado.openCashShift = {
+      id: 'shift-1',
+      openingFund: 200,
+      openedBy: 'Cajera',
+      openedAt: '2026-11-20T08:00:00.000Z',
+    } as never;
+    estado.accounts = [
+      {
+        id: 'acc-1',
+        branchId: 'b-1',
+        tableId: 1,
+        label: 'Mesa 1',
+        customer: 'Ana',
+        waiter: 'Luis',
+        openedAt: '2026-11-20T12:00:00.000Z',
+        closedAt: null,
+        status: 'abierta',
+        items: [],
+        payments: [],
+        tip: 0,
+        discount: 0,
+        discountConcept: '',
+        couponCode: null,
+        customerId: null,
+        motivoAnulacion: null,
+      },
+    ] as never;
+    const markup = renderToStaticMarkup(<CajaPage />);
+    expect(markup).toContain('Turno abierto');
+    expect(markup).toContain('Cerrar turno (arqueo)');
+    expect(markup).toContain('Mesa 1');
+    estado.openCashShift = null;
+    estado.accounts = [];
+  });
 });
