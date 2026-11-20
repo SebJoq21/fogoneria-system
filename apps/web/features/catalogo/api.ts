@@ -3,10 +3,9 @@
  *
  * Habla con el BFF (`/api/backend`) a través del SDK compartido: el navegador
  * nunca conoce la URL de la API ni el token. Este cliente **solo lee**: las
- * mutaciones pasan por las acciones de `ModulesProvider` (`saveProduct`,
- * `setPrice`…) porque el ERP entero comparte ese estado (carta, mesero, caja) y
- * escribir desde aquí dejaría dos fuentes de verdad. La escritura propia llega
- * cuando el estado salga del provider (Fase 4 de la modularización).
+ * mutaciones pasan por las acciones de `CatalogoProvider` (que usa
+ * `lib/catalog-api.ts`) porque el ERP entero comparte ese estado (carta,
+ * mesero, caja) y escribir desde aquí dejaría dos fuentes de verdad.
  *
  * La API responde snake_case; aquí se traduce al contrato (`@fogoneria/contracts/catalogo`).
  */

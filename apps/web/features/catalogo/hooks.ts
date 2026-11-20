@@ -1,17 +1,18 @@
 'use client';
 
 /**
- * Fachada del catálogo sobre `ModulesProvider`.
+ * Fachada del catálogo sobre `CatalogoProvider` (Fase 4 etapa 3).
  *
  * El ERP completo (carta, mesero, caja, combos) comparte un único estado de
  * catálogo, así que la feature no lo duplica: traduce el contrato del módulo
- * (`@fogoneria/contracts/catalogo`) al estado del proveedor y sus acciones.
- * Acoplamiento restante y consciente: `components/dashboard/ModulesProvider`
- * sigue siendo el dueño del estado hasta la ola de órdenes (`PricingPort`).
+ * (`@fogoneria/contracts/catalogo`) al estado del provider y sus acciones.
+ * `ModulesProvider` lo reexpone por compatibilidad para las vistas que todavía
+ * usan `useModules()`.
  */
 
 import { useMemo } from 'react';
-import { useModules } from '@/components/dashboard/ModulesProvider';
+import { useCatalogoState } from '@/components/dashboard/providers/catalog';
+import { useNotifications } from '@/components/dashboard/providers/notifications';
 import {
   cartaSummary,
   priceListsSummary,
@@ -38,7 +39,6 @@ export function useCatalogo() {
     catalogError,
     priceOf,
     categoryNameOf,
-    notify,
     saveProduct,
     setProductActive,
     saveCategory,
@@ -49,7 +49,8 @@ export function useCatalogo() {
     createPriceList,
     activatePriceList,
     setPrice,
-  } = useModules();
+  } = useCatalogoState();
+  const { notify } = useNotifications();
 
   const categorias: Categoria[] = useMemo(
     () => categories.map((c) => ({ id: c.id, nombre: c.name, posicion: c.position })),

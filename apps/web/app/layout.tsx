@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme";
 import { ModulesProvider } from "@/components/dashboard/ModulesProvider";
+import { CatalogoProvider } from "@/components/dashboard/providers/catalog";
 import { NotificationsProvider } from "@/components/dashboard/providers/notifications";
 import { SessionProvider } from "@/components/dashboard/providers/session";
 import { TenantProvider } from "@/components/dashboard/providers/tenant";
@@ -36,7 +37,9 @@ export default function RootLayout({
           <SessionProvider>
             <NotificationsProvider>
               <TenantProvider>
-                <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+                <CatalogoProvider>
+                  <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+                </CatalogoProvider>
               </TenantProvider>
             </NotificationsProvider>
           </SessionProvider>
