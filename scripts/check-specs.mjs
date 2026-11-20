@@ -256,7 +256,7 @@ const SIN_UI = new Set(['audit', 'billing']);
 const SIN_DATOS = new Set(['plataforma', 'realtime']);
 
 let specsRevisadas = 0;
-for (const spec of [...specsExistentes].sort()) {
+for (const spec of [...specsExistentes].sort((a, b) => a.localeCompare(b))) {
   const archivo = join(SPECS_MODULOS, spec);
   if (!existsSync(archivo)) continue;
   specsRevisadas++;
@@ -346,7 +346,7 @@ if (enlacesRotos.length === 0) {
 /* ---------------------------------- diff --------------------------------- */
 
 function archivosCambiados(baseRef) {
-  const salida = execFileSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], {
+  const salida = execFileSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], { // NOSONAR: git es una dependencia fija del entorno de CI/dev; no se ejecuta un shell
     cwd: ROOT,
     encoding: 'utf8',
   });
