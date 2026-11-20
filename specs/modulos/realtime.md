@@ -41,6 +41,8 @@ Eventos: `order.created`, `order.updated`, `order.sla`, `table.status`, `auth.er
 
 ## 6. Pruebas
 
+- Cobertura (2026-11-20): se añadieron tests de controlador, DTO, mapper y ramas de error para subir la cobertura de Sonar; sin cambios de comportamiento.
+
 | Suite | Archivo |
 |---|---|
 | Unit | `src/modules/realtime/orders.gateway.spec.ts` |

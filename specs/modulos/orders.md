@@ -49,6 +49,8 @@ Reglas:
 
 ## 6. Pruebas
 
+- Cobertura (2026-11-20): se añadieron tests de controlador, DTO, mapper y ramas de error para subir la cobertura de Sonar; sin cambios de comportamiento.
+
 | Suite | Archivo |
 |---|---|
 | Unit | `orders.service.spec.ts`, `orders.sla.spec.ts`, `orders.sla.cron.spec.ts`, `dto/create-order.dto.spec.ts` |
