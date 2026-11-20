@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Imagen de la web Next.js (Fogonería) usando `output: "standalone"`.
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 RUN npm install -g pnpm@11.25.0
 WORKDIR /app
 
@@ -18,7 +18,7 @@ ARG NEXT_PUBLIC_API_URL=http://api:3001/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN pnpm --filter web build
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
