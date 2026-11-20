@@ -34,8 +34,7 @@ describe('ComprobantesPage', () => {
   });
 
   it('con comprobantes pagados y anulados resume los importes', () => {
-    estado.receipts = [
-      {
+    estado.receipts = [      {
         id: 'B001-1',
         type: '03',
         at: hoy,
@@ -73,5 +72,12 @@ describe('ComprobantesPage', () => {
     expect(markup).toContain('requieren revisión');
     expect(markup).toContain('$59.00');
     estado.receipts = [];
+  });
+
+  it('con sesión arranca en modo API sin filas locales', () => {
+    estado.hasSession = true;
+    const markup = renderToStaticMarkup(<ComprobantesPage />);
+    expect(markup).toContain('Emitir comprobante');
+    estado.hasSession = false;
   });
 });

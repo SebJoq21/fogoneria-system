@@ -31,4 +31,11 @@ describe('ClientesPage', () => {
     expect(markup).toContain('Jorge Paredes');
     estado.customers = [];
   });
+
+  it('con sesión arranca en modo API y deja el buscador disponible', () => {
+    estado.hasSession = true;
+    const markup = renderToStaticMarkup(<ClientesPage />);
+    expect(markup).toContain('Buscar');
+    estado.hasSession = false;
+  });
 });

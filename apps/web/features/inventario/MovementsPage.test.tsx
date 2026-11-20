@@ -28,4 +28,11 @@ describe('MovementsPage', () => {
     expect(markup.length).toBeGreaterThan(0);
     estado.movements = movimientos;
   });
+
+  it('con sesión arranca en modo API', () => {
+    estado.hasSession = true;
+    const markup = renderToStaticMarkup(<MovementsPage />);
+    expect(markup.length).toBeGreaterThan(0);
+    estado.hasSession = false;
+  });
 });
