@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — Paridad CI/CD con Taller (G3)
+
+- **Workflows:** `dependency-review` dentro de `ci.yml` (`actions/dependency-review-action@v5`, `fail-on-severity: high`), `verify-api-production.yml` (`deployment_status` de Railway), `verify-web-production.yml` (`status` de Vercel en `development`) y `smoke.yml` (diario 11:00 UTC + manual). El gate `CI requerido` incluye `dependency-review`.
+- **Actions:** checkout/setup-node v7, upload-artifact v7, download-artifact v8, sonarqube-scan v8.5; `pnpm/action-setup` v5; CodeQL v4.39.3. Mismo set que Taller, pineado por SHA.
+- **GitHub:** `has_wiki=false` para igualar Taller; secret scanning, push protection y Dependabot security updates ya estaban ON; el ruleset mantiene `CI requerido` como required check.
+- **No copiado a propósito:** `e2e-real.yml` (LLM real, específico de Taller) y los `sonar-*` temporales (ya sin archivo). Fogoneria cubre E2E determinista en CI + smoke de producción.
+
 ## 2026-11-20 — CI: Sonar verde, required check y concurrencia
 
 - **Sonar:** el check externo fallaba en `development` por `new_coverage 1.6` (`scripts/check-specs.mjs`, 187 líneas sin cobertura). Se excluyen del scan `scripts/**`, migraciones SQL, `.github/**`, `apps/api/scripts/**`, configs y specs; el job Sonar instala dependencias para resolver los `tsconfig` de los workspaces. Gate de rama **OK** (`new_coverage 100`), check externo **success** en `adf2709`.
