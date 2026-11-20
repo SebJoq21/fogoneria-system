@@ -246,7 +246,7 @@ jobs:
 
       - name: Analizar con SonarCloud
         if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
 
   # E2E real de navegador: API + web + PostgreSQL sembrado. Los tests viven en
   # apps/web/e2e y Playwright arranca los dos procesos con `webServer`.
