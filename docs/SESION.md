@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — CI Fase A + Sonar (PR #76)
+
+- **SonarCloud:** `SONAR_TOKEN` quedó como Repository secret; organización **`kallanka-org`**, proyecto **`kallanka-org_fogoneria-system`**. Automatic Analysis corre en PRs y el gate actual (new code) está verde. El token pasó por el chat: rotarlo por un project analysis token.
+- **CI Fase A (PR #76, mergeado):** check agregado `CI requerido` (`needs` + `always`, falla por failure/cancelled/skipped), Docker build API/web + hadolint + Trivy advisory, CodeQL `security-extended` semanal, Dependabot agrupado y `pnpm audit` advisory. Sin CODEOWNERS ni cambios de branch protection.
+- **Adaptaciones:** Dependency Review no funciona con pnpm sin dependency submission (Dependency Graph 0 manifests, 403); Trivy es advisory por CVEs de la base. Ambos se vuelven bloqueantes en Fase B.
+- **Próximo (Fase B):** cobertura web/API + lcov, desactivar Automatic Analysis y pasar a Sonar CI scan con gate de cobertura overall y `qualitygate.wait`; dependency submission; Trivy bloqueante con base actualizada.
+
 ## 2026-11-19 — Repo de specs + Fase 4 etapa 3 (catálogo)
 
 - **Specs (docs-as-code):** nuevo `specs/` con `README`, plantilla de módulo, producto (visión, roles, flujos), **21 specs de módulos** (20 backend + `plataforma`), `trazabilidad.md` (44 tareas Jira de S5–S16 + 25 PRs) y operación (despliegue/calidad). `docs/INDICE.md` es la portada de docs. **169 enlaces relativos, 0 rotos**. Deuda detectada: `saas`/`billing` sin e2e, `tenant`/`audit` sin unit, AYCDS-24 al 80 %, SUNAT pendiente de OSE y vigencia de listas de precios por verificar.

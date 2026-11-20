@@ -24,6 +24,7 @@ Job **`Lint, tipos y pruebas`** — corre en `push` a `development` y en PR a `d
 
 ```text
 pnpm install --frozen-lockfile
+pnpm audit --audit-level high      (advisory: no bloquea)
 pnpm check:boundaries
 pnpm --filter api db:generate
 pnpm --filter api db:deploy        (Postgres 16 service)
@@ -57,6 +58,23 @@ node scripts/check-specs.mjs --base origin/<base>
 - Si el diff toca código de un módulo/feature, exige que cambie su spec; los cambios compartidos (providers, layout, contracts, kernel, sdk, prisma) exigen `specs/trazabilidad.md` o una spec de módulo.
 - Excepción `SPECS_SKIP=1` (o `--skip`) justificada en el PR; el reviewer valida que la spec describa el cambio real, no solo que el archivo se haya tocado.
 
+Job **`Imágenes Docker y Trivy`** — push y PR:
+
+```text
+hadolint (API, web) con .hadolint.yaml (failure-threshold: error)
+docker build -f apps/api/Dockerfile -t fogoneria-api:ci .
+docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
+trivy image (CRITICAL/HIGH, ignore-unfixed)      (advisory en Fase A)
+```
+
+Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el candidato a único required check; la protección de rama no se cambió todavía.
+
+Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `development`/`main` + cron semanal, `javascript-typescript` con `security-extended` y `security-events: write`.
+
+**Dependabot** (`.github/dependabot.yml`) — npm (raíz pnpm), github-actions y Docker (API/web), semanal, grupos minor+patch.
+
+> **Dependency Review:** no está activo todavía. GitHub no genera manifests para `pnpm-lock.yaml` (Dependency Graph vacío) y la API devuelve 403; se usa `pnpm audit` advisory. En Fase B se añade dependency submission, se verifica el graph y recién entonces se vuelve bloqueante.
+
 ## 3. Qué cubre cada suite
 
 | Suite | Cobertura real |
@@ -84,6 +102,10 @@ node scripts/check-specs.mjs --base origin/<base>
 - `tenant` no tiene unit test; `saas`, `billing` y `audit` no tienen e2e propio (`realtime` sí lo tiene).
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
+- **Dependency Review** pendiente: requerir dependency submission para `pnpm-lock.yaml`; hoy `pnpm audit` es advisory.
+- **Trivy** es advisory en Fase A por CVEs de la base/dependencias; en Fase B se actualiza la base y pasa a `exit-code: 1`.
+- **Sonar** usa Automatic Analysis con gate de new code; Fase B lo pasa a CI scan con cobertura overall y `qualitygate.wait`.
+- CODEOWNERS y protección de rama estricta siguen diferidos (decisión del usuario).
 
 ## 7. Enlaces
 

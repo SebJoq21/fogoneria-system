@@ -103,6 +103,7 @@
 | Login limpio + recuperación por soporte | #71 | `features/plataforma/{LoginPage,RecoverPage}.tsx`, `lib/support.ts` |
 | Runbook Vercel + Railway | #72 | [despliegue](../docs/despliegue.md) |
 | Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
+| CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 
@@ -122,6 +123,7 @@
 
 | Commit | Qué |
 |---|---|
+| `22f4f32` | CI Fase A mergeada (#76) |
 | `39b58c7` | Repo de specs docs-as-code + trazabilidad (#74) |
 | `1a6d3d1` | `CatalogoProvider` extraído (etapa 3, #73) |
 | `9771f72` | Producción en Vercel (`development`) verificada |
