@@ -43,7 +43,8 @@
     "db:demo:clean": "prisma db execute --file ../../db/scripts/demo/limpiar-demo.sql",
     "perf:load": "node test/load/orders-load.mjs",
     "db:rls:roles": "prisma db execute --file ../../db/scripts/rls/000-roles.sql",
-    "db:rls:force": "prisma db execute --file ../../db/scripts/rls/010-force-rls.sql"
+    "db:rls:force": "prisma db execute --file ../../db/scripts/rls/010-force-rls.sql",
+    "openapi:export": "nest build && node scripts/export-openapi.mjs"
   },
   "dependencies": {
     "@fogoneria/contracts": "workspace:*",
