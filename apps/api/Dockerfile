@@ -2,7 +2,7 @@
 # Imagen de la API NestJS (Fogonería). Construye el monorepo con pnpm y deja
 # solo lo necesario para ejecutar `dist/main.js` y Prisma (migraciones/seed).
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
@@ -23,7 +23,7 @@ COPY . .
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=fogoneria"
 RUN pnpm --filter api build
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
