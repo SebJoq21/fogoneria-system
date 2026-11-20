@@ -1,6 +1,6 @@
 # catalog — especificación
 
-**Estado:** API real · **Última revisión:** 2026-11-19
+**Estado:** API real · catálogo web con `CatalogoProvider` (Fase 4 etapa 3) · **Última revisión:** 2026-11-19
 
 ## 1. Propósito
 
@@ -12,7 +12,7 @@ Maestro de carta: categorías, platos, grupos y opciones de modificadores, y su 
 |---|---|---|
 | Backend | `apps/api/src/modules/catalog/` | real |
 | Web | `apps/web/features/catalogo/` (`ProductsView`, `CategoriesView`, `ModifiersView`, `PriceListsView`) | real (lectura/escritura vía provider) |
-| Contrato | `packages/contracts/src/catalogo.ts` | sí (solo lectura) |
+| Contrato | `packages/contracts/src/catalogo.ts` | sí (tipos, inputs y validadores; el cliente de lectura vive en la feature) |
 | Datos | `categorias`, `platos`, `grupos_modificadores`, `opciones_modificadores`, `platos_grupos_modificadores` | `20261019000000_init`, `20261020120200_soft_delete` |
 
 ## 3. API
@@ -50,7 +50,7 @@ Reglas:
 
 - `/app/productos/platos` (+ `/nuevo`) → `ProductsView`.
 - `/app/productos/categorias` → `CategoriesView`; `/modificadores` → `ModifiersView`; `/precios` → `PriceListsView`.
-- `features/catalogo/api.ts` lee por SDK y pagina platos; las mutaciones siguen en `ModulesProvider` (`lib/catalog-api.ts`).
+- `features/catalogo/api.ts` lee por SDK y pagina platos. El **estado y las mutaciones** viven en `CatalogoProvider`/`useCatalogoState` (`components/dashboard/providers/catalog.tsx`), que usa `lib/catalog-api.ts` como cliente de escritura; `ModulesProvider` solo los reexpone por compatibilidad. Layout: `Theme > Session > Notifications > Tenant > Catalogo > Modules`.
 - La carta virtual del demo vive en `app/demo/[id]` (`CartaVirtualView` en `components/erp/catalog`).
 
 ## 6. Pruebas
@@ -62,17 +62,18 @@ Reglas:
 
 ## 7. Deuda conocida
 
-- El estado del catálogo sigue en `ModulesProvider` (Fase 4, etapa 3 en curso).
-- `lib/catalog-api.ts` convive con `features/catalogo/api.ts`; el primero debe retirarse al cerrar la etapa.
+- El **cliente de escritura** sigue en `lib/catalog-api.ts`; moverlo a `features/catalogo/api.ts` para que la feature sea dueña de todo el acceso.
 - `CartaVirtualView` sigue en `components/erp/catalog`.
+- La poda de combos corre en `ModulesProvider` sobre `catalogVersion` (un render después del snapshot); si se mueve a promociones, ajustar el contrato.
 
 ## 8. Trazabilidad
 
 - Jira: AYCDS-60 (API), AYCDS-63 (UI).
-- PRs: #2, #50, #52 (pricing).
-- Docs: [modelo-datos](../../docs/modelo-datos.md), [decisiones](../../docs/decisiones.md) (UUID, precio fuera del producto).
+- PRs: #2, #50, #52 (pricing), #73 (CatalogoProvider, Fase 4 etapa 3).
+- Docs: [modelo-datos](../../docs/modelo-datos.md), [decisiones](../../docs/decisiones.md) (UUID, precio fuera del producto), [MODULARIZACION](../../docs/MODULARIZACION.md) (Fase 4 etapa 3).
 
 ## 9. Próximos pasos
 
-1. Terminar la etapa 3: estado del catálogo en su feature.
-2. Retirar `lib/catalog-api.ts` cuando la feature sea dueña del estado.
+1. Mover el cliente de escritura de `lib/catalog-api.ts` a `features/catalogo/api.ts`.
+2. Retirar `CartaVirtualView` de `components/erp/catalog` cuando la carta virtual tenga feature.
+3. Evaluar mover la poda de combos a promociones.

@@ -88,6 +88,7 @@
 | 3 · plataforma | auth, tenant, saas, billing, onboarding, audit | #64 | baseline **0** |
 | 4 · etapa 1 | `SessionProvider`, `NotificationsProvider` | #66 | `components/dashboard/providers/{session,notifications}.tsx` |
 | 4 · etapa 2 | `TenantProvider` | #70 | `providers/tenant.tsx`, `lib/tenant-scope.ts` |
+| 4 · etapa 3 | `CatalogoProvider` (catálogo/precios) | #73 | `providers/catalog.tsx`, `features/catalogo/hooks.ts` |
 
 ## 7. Infraestructura y despliegue
 
@@ -101,6 +102,7 @@
 | Script idempotente de roles RLS | #69 | `apps/api/prisma/rls-roles.ts` |
 | Login limpio + recuperación por soporte | #71 | `features/plataforma/{LoginPage,RecoverPage}.tsx`, `lib/support.ts` |
 | Runbook Vercel + Railway | #72 | [despliegue](../docs/despliegue.md) |
+| Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 
@@ -120,6 +122,8 @@
 
 | Commit | Qué |
 |---|---|
+| `39b58c7` | Repo de specs docs-as-code + trazabilidad (#74) |
+| `1a6d3d1` | `CatalogoProvider` extraído (etapa 3, #73) |
 | `9771f72` | Producción en Vercel (`development`) verificada |
 | `a9c2238` | `TenantProvider` extraído (etapa 2) |
 | `909f77b` | Ola plataforma con frontera en 0 |

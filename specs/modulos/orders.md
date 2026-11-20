@@ -62,6 +62,7 @@ Reglas:
 - Los modificadores viajan como nota; el recargo se cobra en caja. Falta `items[].modificadores` si se quiere recargo en la comanda.
 - La «cuenta» (`TableAccount`) sigue en `localStorage`; no hay API de cuentas.
 - `MozoView` aún no es feature (`components/erp/*`).
+- **Deuda RLS del KDS:** el planificador no ve `pg_statistic` de las tablas con RLS y el tablero recorre ~50k filas en vez de usar `idx_ordenes_estado` (157 ms vs 0,075 ms). Opciones en `docs/explain-orders.md` §6/§7: vista/función `SECURITY DEFINER`, contadores denormalizados o `pg_hint_plan`. No dar `BYPASSRLS` al rol de negocio.
 
 ## 8. Trazabilidad
 

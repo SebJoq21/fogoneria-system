@@ -28,6 +28,7 @@ SaaS ERP gastronómico (parrilla peruana). Monorepo `pnpm + turbo`, Node >=24.
 - Al terminar cualquier tarea de `docs/TAREAS-SEMANAS-5-8.md`, actualizar ese archivo: estado, % por tarea, % global (promedio simple), evidencia y bitácora.
 - Actualizar también el estado y comentario en Jira (`AYCDS-*`) con la evidencia.
 - No marcar una tarea como Listo si no cumple el DoD o si su dependencia dura no existe.
+- Todo PR que cambie código actualiza `specs/modulos/<m>.md` (estado/endpoints/tablas/UI/tests/deuda) y revisa coherencia; `pnpm check:specs` es gate en CI (job `Specs al día`). Excepción `SPECS_SKIP=1` justificada en el PR; el reviewer verifica coherencia.
 
 ## Memoria entre sesiones
 

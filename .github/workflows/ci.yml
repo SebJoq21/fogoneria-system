@@ -103,3 +103,26 @@ jobs:
         env:
           ALLOW_MULTI: ${{ contains(github.event.pull_request.labels.*.name, 'multi-modulo') }}
         run: node scripts/check-pr-scope.mjs "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
+
+  specs:
+    name: Specs al día
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Traer la rama base
+        run: git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: Verificar specs
+        run: pnpm check:specs --base "origin/${{ github.base_ref }}"

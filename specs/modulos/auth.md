@@ -40,6 +40,7 @@ Reglas:
 - `/` login limpio (sin cuentas demo en pantalla); «¿Olvidaste tu contraseña?» → `/recuperar`.
 - `lib/auth.ts` mapea rol API → rol web y **falla cerrado** ante rol/sucursal desconocidos.
 - `proxy.ts` aplica `canViewPath` con la cookie firmada; el rol no se puede alterar desde DevTools.
+- `SessionProvider` (`components/dashboard/providers/session.tsx`) hidrata el usuario y expone `ready` (fin de la hidratación) y `hasSession`; `ModulesProvider` lo reexpone por compatibilidad.
 
 ## 6. Pruebas
 
