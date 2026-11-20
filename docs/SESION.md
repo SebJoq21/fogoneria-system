@@ -6,7 +6,7 @@
 - **CI:** `quality` genera `coverage-api`/`coverage-web`; job `sonar` descarga ambos, corre `sonarqube-scan-action` con `SONAR_TOKEN` y `sonar.qualitygate.wait=true`; `sonar` entra en el gate agregado. `sonar-project.properties` con sources/exclusions/lcov.
 - **Trivy:** bloqueante (`exit-code: 1`); el compilador nativo de TypeScript (Go) se elimina de la imagen runtime del API.
 - **Gate Sonar:** custom `Fogoneria` creado (coverage overall ≥65) pero SonarCloud rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Hasta resolver permiso/plan, el gate efectivo es Vitest.
-- **Próximo:** PR de Fase B con revisión de Seb/Sonny/Jossua/Diego (sin admin bypass). Luego Fase C: Playwright E2E, OpenAPI y Prisma forward-only.
+- **PR:** #88 con CI verde; pendiente de aprobación de Seb/Sonny/Jossua/Diego (sin admin bypass). Luego Fase C: Playwright E2E, OpenAPI y Prisma forward-only.
 
 ## 2026-11-20 — CI Fase A + Sonar (PR #76)
 
