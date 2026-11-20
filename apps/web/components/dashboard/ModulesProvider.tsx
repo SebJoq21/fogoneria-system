@@ -70,9 +70,7 @@ import {
   type TableAccount,
 } from "@/lib/domain";
 import {
-  categoryName,
   initialCombos,
-  priceOf,
   type Combo,
   type ModifierGroup,
   type PriceList,
@@ -82,10 +80,10 @@ import {
 import { ApiError } from "@/lib/api";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
+import { useCatalogoState, type ProductInput } from "./providers/catalog";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
 import { useTenant } from "./providers/tenant";
-import * as catalogApi from "@/lib/catalog-api";
 import * as ordersApi from "@/lib/orders-api";
 import {
   UI_TO_API_STATUS,
@@ -127,17 +125,9 @@ export type CheckoutInput = {
   docNumber: string;
 };
 
-/** Entrada de alta/edición de un plato (el precio va aparte, a la lista). */
-export type ProductInput = {
-  id?: string;
-  name: string;
-  description: string;
-  categoryId: string;
-  image: string;
-  status: "Activo" | "Inactivo";
-  modifierGroupIds: string[];
-  price: number;
-};
+/* El tipo se mantiene exportado desde aquí por compatibilidad; el estado de
+   catálogo vive en `CatalogoProvider` (Fase 4 etapa 3). */
+export type { ProductInput } from "./providers/catalog";
 
 type ModulesContext = {
   payments: PlanPayment[];
@@ -271,30 +261,6 @@ type ModulesContext = {
 const Ctx = createContext<ModulesContext | null>(null);
 
 type ScopeItem = { id: number | string };
-
-/** Catálogo de la empresa servido por la API (tarea 63). */
-type CatalogState = {
-  categories: ProductCategory[];
-  products: Product[];
-  modifierGroups: ModifierGroup[];
-  priceLists: PriceList[];
-};
-
-const EMPTY_CATALOG: CatalogState = {
-  categories: [],
-  products: [],
-  modifierGroups: [],
-  priceLists: [],
-};
-
-/** Siguiente SKU secuencial (PLA-00N) a partir del maestro actual. */
-function nextSku(products: Product[]): string {
-  const max = products.reduce((acc, p) => {
-    const suffix = Number(p.sku.match(/(\d+)\s*$/)?.[1] ?? 0);
-    return Number.isFinite(suffix) ? Math.max(acc, suffix) : acc;
-  }, 0);
-  return `PLA-${String(max + 1).padStart(3, "0")}`;
-}
 
 function applyWrite(
   prev: Record<string, BranchScope>,
@@ -473,52 +439,53 @@ export function ModulesProvider({
     });
   }, [tenantKey, currentUser]);
 
-  /* ---------- Catálogo desde la API (tarea 63) ---------- */
+  /* ---------- Catálogo y precios (Fase 4 etapa 3: `CatalogoProvider`) ---------- */
 
-  const [catalog, setCatalog] = useState<CatalogState>(EMPTY_CATALOG);
-  const [catalogLoading, setCatalogLoading] = useState(false);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-  /** Descarta respuestas que llegan después de una recarga más nueva. */
-  const catalogRequest = useRef(0);
+  const {
+    products,
+    categories,
+    modifierGroups,
+    priceLists,
+    catalogLoading,
+    catalogError,
+    catalogVersion,
+    refreshCatalog,
+    saveProduct,
+    setProductActive,
+    saveCategory,
+    deleteCategory,
+    createModifierGroup,
+    updateModifierGroup,
+    deleteModifierGroup,
+    createPriceList,
+    activatePriceList,
+    setPrice,
+    priceOf,
+    categoryNameOf,
+  } = useCatalogoState();
 
-  const refreshCatalog = useCallback(async (signal?: AbortSignal) => {
-    const requestId = ++catalogRequest.current;
-    setCatalogLoading(true);
-    setCatalogError(null);
-    try {
-      const snapshot = await catalogApi.fetchCatalog(signal);
-      if (requestId !== catalogRequest.current) return;
-      setCatalog(snapshot);
-      // Los combos del seed apuntan a platos del tenant demo: en un tenant
-      // nuevo se descartan para no mostrar "Plato retirado".
-      const productIds = new Set(snapshot.products.map((product) => product.id));
-      setState((prev) => {
-        const combos = prev.combos.filter((combo) =>
-          combo.productIds.every((productId) => productIds.has(productId)),
-        );
-        return combos.length === prev.combos.length ? prev : { ...prev, combos };
-      });
-    } catch (error) {
-      if (requestId !== catalogRequest.current || signal?.aborted) return;
-      setCatalogError(
-        error instanceof ApiError ? error.message : "No se pudo cargar el catálogo.",
-      );
-    } finally {
-      if (requestId === catalogRequest.current) setCatalogLoading(false);
-    }
-  }, []);
-
-  /* Cargar el catálogo al iniciar sesión y limpiarlo al salir. */
+  /**
+   * Poda de combos: los combos del seed apuntan a platos del tenant demo, así
+   * que en un tenant nuevo se descartan para no mostrar "Plato retirado".
+   * Antes vivía dentro de `refreshCatalog`; como el catálogo ya no es de este
+   * provider, el dueño de los combos reacciona a cada snapshot exitoso
+   * (`catalogVersion`), igual que antes.
+   */
+  const prunedCombos = useRef<{ key: string; version: number } | null>(null);
   useEffect(() => {
-    if (!currentUser) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- limpiar el catálogo al cerrar sesión
-      setCatalog(EMPTY_CATALOG);
+    if (!hasSession || catalogVersion === 0) return;
+    if (prunedCombos.current?.key === tenantKey && prunedCombos.current.version === catalogVersion) {
       return;
     }
-    const controller = new AbortController();
-    void refreshCatalog(controller.signal);
-    return () => controller.abort();
-  }, [currentUser, refreshCatalog]);
+    prunedCombos.current = { key: tenantKey, version: catalogVersion };
+    const ids = new Set(products.map((product) => product.id));
+    setState((prev) => {
+      const combos = prev.combos.filter((combo) =>
+        combo.productIds.every((productId) => ids.has(productId)),
+      );
+      return combos.length === prev.combos.length ? prev : { ...prev, combos };
+    });
+  }, [hasSession, catalogVersion, products, tenantKey]);
 
   /* ---------- Comandas reales de la API (AYCDS-25) ---------- */
 
@@ -534,8 +501,8 @@ export function ModulesProvider({
 
   /** `detalles_orden` solo trae `plato_id`: el nombre sale del catálogo. */
   const platoNames = useMemo(
-    () => new Map(catalog.products.map((product) => [product.id, product.name])),
-    [catalog.products],
+    () => new Map(products.map((product) => [product.id, product.name])),
+    [products],
   );
   const platoNameOf = useCallback(
     (platoId: string | null, tipo: string): string =>
@@ -697,141 +664,6 @@ export function ModulesProvider({
     return () => controller.abort();
   }, [currentUser, refreshTables, refreshReservations]);
 
-  const saveProduct = useCallback(
-    async (input: ProductInput) => {
-      const payload = {
-        name: input.name,
-        description: input.description,
-        categoryId: input.categoryId,
-        image: input.image,
-        status: input.status,
-        modifierGroupIds: input.modifierGroupIds,
-      };
-      const isNew = !input.id;
-      const id = input.id ?? (await catalogApi.createDish({ ...payload, sku: nextSku(catalog.products) }));
-      try {
-        if (input.id) await catalogApi.updateDish(input.id, payload);
-
-        const activeList = catalog.priceLists.find((l) => l.active);
-        if (activeList) {
-          await catalogApi.setPrices(activeList.id, [{ platoId: id, precio: input.price }]);
-        }
-      } catch (error) {
-        // El plato y su precio son dos llamadas: si falla la segunda, se
-        // deshace el alta para no dejar platos sin precio.
-        if (isNew) {
-          try {
-            await catalogApi.deleteDish(id);
-          } catch {
-            /* la limpieza es best-effort */
-          }
-        }
-        throw error;
-      }
-      await refreshCatalog();
-    },
-    [catalog.products, catalog.priceLists, refreshCatalog],
-  );
-
-  const setProductActive = useCallback(
-    async (id: string, active: boolean) => {
-      await catalogApi.setDishActive(id, active);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const saveCategory = useCallback(
-    async (input: { id?: string; name: string; position: number }) => {
-      if (input.id) await catalogApi.updateCategory(input.id, { name: input.name, position: input.position });
-      else await catalogApi.createCategory({ name: input.name, position: input.position });
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const deleteCategory = useCallback(
-    async (id: string) => {
-      await catalogApi.deactivateCategory(id);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const createModifierGroup = useCallback(
-    async (input: { name: string; required: boolean; multi: boolean }) => {
-      await catalogApi.createModifierGroup(input);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const updateModifierGroup = useCallback(
-    async (
-      id: string,
-      input: {
-        name?: string;
-        required?: boolean;
-        multi?: boolean;
-        // `id` viaja a la API, que sincroniza las opciones por id: sin él se
-      // recrearían (y el borrado de una opción usada en órdenes da 409).
-      options?: { id?: string; name: string; extra: number }[];
-      },
-    ) => {
-      await catalogApi.updateModifierGroup(id, input);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const deleteModifierGroup = useCallback(
-    async (id: string) => {
-      await catalogApi.deactivateModifierGroup(id);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const createPriceList = useCallback(
-    async (name: string, fromListId?: string) => {
-      const id = await catalogApi.createPriceList(name);
-      const source = fromListId ? catalog.priceLists.find((l) => l.id === fromListId) : undefined;
-      try {
-        if (source) {
-          const items = Object.entries(source.prices).map(([platoId, precio]) => ({ platoId, precio }));
-          await catalogApi.setPrices(id, items);
-        }
-      } catch (error) {
-        // Copiar precios es una segunda llamada: si falla, se desactiva la lista
-        // recién creada para no dejar una lista vacía activa por error.
-        try {
-          await catalogApi.deletePriceList(id);
-        } catch {
-          /* la limpieza es best-effort */
-        }
-        throw error;
-      }
-      await refreshCatalog();
-    },
-    [catalog.priceLists, refreshCatalog],
-  );
-
-  const activatePriceList = useCallback(
-    async (id: string) => {
-      await catalogApi.activatePriceList(id);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
-  const setPrice = useCallback(
-    async (listId: string, platoId: string, price: number) => {
-      await catalogApi.setPrices(listId, [{ platoId, precio: price }]);
-      await refreshCatalog();
-    },
-    [refreshCatalog],
-  );
-
   const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
 
   const activeScope: BranchScope = useMemo(() => {
@@ -898,16 +730,6 @@ export function ModulesProvider({
   const setExpenses = useCallback((e: Expense[]) => setPlain("expenses", e), [setPlain]);
   const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
   const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
-
-  const priceOfCallback = useCallback(
-    (productId: string) => priceOf(productId, catalog.priceLists),
-    [catalog.priceLists],
-  );
-
-  const categoryNameOf = useCallback(
-    (categoryId: string) => categoryName(categoryId, catalog.categories),
-    [catalog.categories],
-  );
 
   const addTicket = useCallback(
     (subject: string) => {
@@ -1568,10 +1390,10 @@ export function ModulesProvider({
       tickets: state.tickets,
       addTicket,
       setTickets,
-      products: catalog.products,
-      categories: catalog.categories,
-      modifierGroups: catalog.modifierGroups,
-      priceLists: catalog.priceLists,
+      products,
+      categories,
+      modifierGroups,
+      priceLists,
       catalogLoading,
       catalogError,
       refreshCatalog,
@@ -1585,7 +1407,7 @@ export function ModulesProvider({
       createPriceList,
       activatePriceList,
       setPrice,
-      priceOf: priceOfCallback,
+      priceOf,
       categoryNameOf,
       company,
       tenant,
@@ -1662,7 +1484,10 @@ export function ModulesProvider({
       state,
       addTicket,
       setTickets,
-      catalog,
+      products,
+      categories,
+      modifierGroups,
+      priceLists,
       catalogLoading,
       catalogError,
       refreshCatalog,
@@ -1676,7 +1501,7 @@ export function ModulesProvider({
       createPriceList,
       activatePriceList,
       setPrice,
-      priceOfCallback,
+      priceOf,
       categoryNameOf,
       company,
       tenant,

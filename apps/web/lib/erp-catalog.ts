@@ -1,6 +1,7 @@
 /* Maestros de catálogo (ERP). Catálogo de la empresa, compartido por todas
    las sucursales: se carga desde la API (`lib/catalog-api.ts`) y vive en
-   `ModulesProvider`. El precio nunca está en el producto: vive en la lista. */
+   `components/dashboard/providers/catalog.tsx`. El precio nunca está en el
+   producto: vive en la lista. */
 
 export type ProductCategory = {
   id: string;
