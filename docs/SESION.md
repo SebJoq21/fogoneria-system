@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — CI Fase B: cobertura y Sonar CI
+
+- **Cobertura:** `apps/api/vitest.config.ts` y `apps/web/vitest.config.mts` con provider v8, reporter `text`+`lcov`, `coverage/lcov.info` y thresholds **API 71/54/64/72**, **Web 57/53/52/58**. Medición final: API 76.02/59.54/69.58/77.55; Web 62.61/58.88/57.91/63.73. `@vitest/coverage-v8` declarado en web + `test:coverage`.
+- **CI:** `quality` genera `coverage-api`/`coverage-web`; job `sonar` descarga ambos, corre `sonarqube-scan-action` con `SONAR_TOKEN` y `sonar.qualitygate.wait=true`; `sonar` entra en el gate agregado. `sonar-project.properties` con sources/exclusions/lcov.
+- **Trivy:** bloqueante (`exit-code: 1`); el compilador nativo de TypeScript (Go) se elimina de la imagen runtime del API.
+- **Gate Sonar:** custom `Fogoneria` creado (coverage overall ≥65) pero SonarCloud rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Hasta resolver permiso/plan, el gate efectivo es Vitest.
+- **Próximo:** PR de Fase B con revisión de Seb/Sonny/Jossua/Diego (sin admin bypass). Luego Fase C: Playwright E2E, OpenAPI y Prisma forward-only.
+
 ## 2026-11-20 — CI Fase A + Sonar (PR #76)
 
 - **SonarCloud:** `SONAR_TOKEN` quedó como Repository secret; organización **`kallanka-org`**, proyecto **`kallanka-org_fogoneria-system`**. Automatic Analysis corre en PRs y el gate actual (new code) está verde. El token pasó por el chat: rotarlo por un project analysis token.

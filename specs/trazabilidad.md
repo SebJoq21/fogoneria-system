@@ -104,6 +104,7 @@
 | Runbook Vercel + Railway | #72 | [despliegue](../docs/despliegue.md) |
 | Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
 | CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |
+| CI Fase B: cobertura API/web, artifacts lcov y Sonar CI | pendiente | `sonar-project.properties`, `vitest.config.*`, `.github/workflows/ci.yml` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 
