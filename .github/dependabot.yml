@@ -1,0 +1,59 @@
+version: 2
+
+updates:
+  # Monorepo pnpm: un solo entry en la raíz cubre los package.json de workspaces.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      npm-produccion-minor-patch:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+      npm-desarrollo-minor-patch:
+        dependency-type: development
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+    groups:
+      github-actions-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: docker
+    directory: "/apps/api"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+    groups:
+      docker-api-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: docker
+    directory: "/apps/web"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+    groups:
+      docker-web-minor-patch:
+        update-types: ["minor", "patch"]

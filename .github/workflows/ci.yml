@@ -56,6 +56,13 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Auditoría de dependencias (advisory)
+        # GitHub Dependency Review no soporta pnpm sin dependency-submission
+        # (devuelve 403 por Dependency Graph vacío). Se vuelve bloqueante en la
+        # fase B, después de corregir los advisories con overrides acotados.
+        continue-on-error: true
+        run: pnpm audit --audit-level high
+
       - name: Fronteras de módulos
         run: pnpm check:boundaries
 
@@ -136,3 +143,72 @@ jobs:
 
       - name: Verificar specs
         run: pnpm check:specs --base "origin/${{ github.base_ref }}"
+
+  # Construye las dos imágenes del monorepo (contexto = raíz) y las escanea con
+  # Trivy. Hadolint solo bloquea errores; los avisos de estilo quedan visibles.
+  docker:
+    name: Imágenes Docker y Trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: hadolint (API)
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: apps/api/Dockerfile
+          config: .hadolint.yaml
+          failure-threshold: error
+
+      - name: hadolint (web)
+        uses: hadolint/hadolint-action@06be81baf89a55ffd0e24b8f04a4185738dd3387 # v3.5.0
+        with:
+          dockerfile: apps/web/Dockerfile
+          config: .hadolint.yaml
+          failure-threshold: error
+
+      - name: Construir imagen de la API
+        run: docker build -f apps/api/Dockerfile -t fogoneria-api:ci .
+
+      - name: Construir imagen de la web
+        run: docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
+
+      # Advisory en Fase A: la base node:24 y sus dependencias arrastran CVEs
+      # conocidos. En Fase B se actualizan y Trivy pasa a exit-code 1.
+      - name: Trivy (API, CRITICAL/HIGH corregibles)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: fogoneria-api:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 0
+          format: table
+
+      - name: Trivy (web, CRITICAL/HIGH corregibles)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: fogoneria-web:ci
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: 0
+          format: table
+
+  # Gate único a futuro: cualquier job en failure/cancelled/skipped lo tumba.
+  # Hoy la protección de rama no cambia; se conectará cuando el equipo lo decida.
+  ci:
+    name: CI requerido
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [quality, pr-scope, specs, docker]
+    steps:
+      - name: Exigir que todos los jobs pasen
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
+        run: exit 1
+
+      - name: Confirmar gate verde
+        run: echo "Todos los jobs de CI pasaron."

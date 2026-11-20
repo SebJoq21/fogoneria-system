@@ -1,0 +1,6 @@
+# Reglas para los Dockerfiles del monorepo (CI: job `docker`).
+# Solo los errores bloquean; estas reglas de estilo/versión no frenan el gate.
+failure-threshold: error
+ignored:
+  - DL3008 # apt-get sin versión fija (imágenes base Debian)
+  - DL3059 # varios RUN consecutivos (capas separadas a propósito)
