@@ -248,6 +248,191 @@ jobs:
         if: env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6
 
+  # E2E real de navegador: API + web + PostgreSQL sembrado. Los tests viven en
+  # apps/web/e2e y Playwright arranca los dos procesos con `webServer`.
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fogoneria_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fogoneria_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_RLS: postgresql://fogoneria_rls:fogoneria_rls@localhost:5432/fogoneria_test?schema=fogoneria
+      DATABASE_URL_SAAS: postgresql://fogoneria_saas:fogoneria_saas@localhost:5432/fogoneria_test?schema=fogoneria
+      JWT_SECRET: ci-only-jwt-secret-change-me-32chars
+      SESSION_SECRET: ci-only-session-secret-change-me-32chars
+      SESSION_COOKIE_SECURE: "false"
+      CORS_ORIGIN: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_REALTIME_URL: http://localhost:3001
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter api db:generate
+
+      - name: Aplicar migraciones
+        run: pnpm --filter api db:deploy
+
+      - name: Crear roles RLS
+        run: pnpm --filter api db:rls:roles
+
+      - name: Activar FORCE RLS
+        run: pnpm --filter api db:rls:force
+
+      - name: Cargar datos demo
+        run: pnpm --filter api db:seed
+
+      - name: Instalar Chromium de Playwright
+        run: pnpm --filter web e2e:install
+
+      - name: Build de API y web
+        run: pnpm build
+
+      - name: Playwright E2E
+        run: pnpm --filter web exec playwright test
+
+      - name: Publicar reporte de Playwright
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Exporta el contrato OpenAPI desde AppModule (sin levantar puerto), lo valida
+  # con el validador oficial de OpenAPI y lo publica como artifact.
+  openapi:
+    name: OpenAPI
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://build:build@localhost:5432/build?schema=fogoneria
+      JWT_SECRET: ci-only-jwt-secret-change-me-32chars
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Exportar contrato OpenAPI
+        run: pnpm --filter api openapi:export
+
+      - name: Validar contrato OpenAPI
+        run: |
+          python3 -m venv "$RUNNER_TEMP/openapi-venv"
+          "$RUNNER_TEMP/openapi-venv/bin/pip" install --quiet --disable-pip-version-check openapi-spec-validator
+          "$RUNNER_TEMP/openapi-venv/bin/openapi-spec-validator" docs/openapi.json
+
+      - name: Publicar OpenAPI
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: openapi-spec
+          path: docs/openapi.json
+          if-no-files-found: error
+          retention-days: 7
+
+  # Prisma forward-only: la migración es la fuente ejecutable y no hay down.
+  # Se aplica dos veces (idempotencia), se verifica el estado y se detecta drift
+  # contra schema.prisma usando una base shadow aparte.
+  migrations:
+    name: Migraciones forward-only
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: fogoneria_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d fogoneria_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fogoneria_test?schema=fogoneria
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/fogoneria_shadow?schema=fogoneria
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Crear base shadow de Prisma
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE fogoneria_shadow"
+
+      - name: Generar cliente Prisma
+        run: pnpm --filter api db:generate
+
+      - name: Aplicar migraciones (1.ª vez)
+        run: pnpm --filter api db:deploy
+
+      - name: Aplicar migraciones (2.ª vez, idempotencia)
+        run: pnpm --filter api db:deploy
+
+      - name: Estado de migraciones
+        run: pnpm --filter api exec prisma migrate status
+
+      - name: Detectar drift (migraciones vs schema.prisma)
+        run: pnpm --filter api exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
+
   # Gate único a futuro: cualquier job en failure/cancelled/skipped lo tumba.
   # Hoy la protección de rama no cambia; se conectará cuando el equipo lo decida.
   ci:
@@ -255,7 +440,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [quality, pr-scope, specs, docker, sonar]
+    needs: [quality, pr-scope, specs, docker, sonar, e2e, openapi, migrations]
     steps:
       - name: Exigir que todos los jobs pasen
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')

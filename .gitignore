@@ -20,6 +20,9 @@ coverage/
 test-results/
 playwright-report/
 
+# OpenAPI generado por `pnpm --filter api openapi:export` (CI lo valida y publica)
+docs/openapi.json
+
 # Turbo
 .turbo/
 

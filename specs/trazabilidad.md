@@ -1,6 +1,6 @@
 # Matriz de trazabilidad
 
-**Última revisión:** 2026-11-19. Fuente: `docs/TAREAS-SEMANAS-*.md`, `docs/PLAN-MODULOS-Y-PROPIEDAD.md`, `docs/SESION.md`, `docs/decisiones.md`, `gh pr list --state merged` y `git log`.
+**Última revisión:** 2026-11-20. Fuente: `docs/TAREAS-SEMANAS-*.md`, `docs/PLAN-MODULOS-Y-PROPIEDAD.md`, `docs/SESION.md`, `docs/decisiones.md`, `gh pr list --state merged` y `git log`.
 
 > **Cómo leerla:** el estado refleja el **código mergeado**, no siempre el tablero Jira. Donde Jira va por detrás se indica en la columna Estado. `Pendiente` = sin PR merged.
 
@@ -105,6 +105,7 @@
 | Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
 | CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |
 | CI Fase B: cobertura API/web, artifacts lcov y Sonar CI | #88 | `sonar-project.properties`, `vitest.config.*`, `.github/workflows/ci.yml` |
+| CI Fase C: E2E Playwright, OpenAPI y migraciones forward-only | — (PR pendiente) | `apps/web/e2e/auth.spec.ts`, `apps/web/playwright.config.ts`, `apps/api/scripts/export-openapi.mjs`, `.github/workflows/ci.yml` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 

@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — CI Fase C: E2E Playwright, OpenAPI y Prisma forward-only
+
+- **Playwright:** `@playwright/test@1.65.1` en `apps/web`; `playwright.config.ts` (baseURL 3000, `webServer` con API 3001 + web 3000, 1 worker, retries 0/1, HTML report). `e2e/auth.spec.ts` cubre carga del login, admin→dashboard, mesero→`/app/mozo` (caja bloqueada), navegación admin a mesas/comensales/caja y cajero→`/app/caja` (mesas bloqueadas). `pnpm --filter web e2e` / `e2e:install`; Vitest excluye `e2e/**`.
+- **CI:** jobs `e2e` (Postgres 16 + migraciones + roles RLS + FORCE + seed + build + Playwright; artifact `playwright-report`), `openapi` (`openapi:export` + `openapi-spec-validator`; artifact `openapi-spec`) y `migrations` (deploy ×2 + `migrate status` + drift con base shadow). Los tres entran en `needs` del gate `CI requerido`.
+- **OpenAPI:** `apps/api/src/swagger.ts` expone `buildSwaggerConfig`/`createOpenApiDocument`; `scripts/export-openapi.mjs` corre sobre `dist/` (tsx no emite `design:paramtypes`) y escribe `docs/openapi.json` (ignorado por git). Validado localmente: OpenAPI 3.0.0, 115 KB, `openapi-spec-validator: OK`.
+- **Migraciones:** Prisma 7 usa `datasource.shadowDatabaseUrl` (`SHADOW_DATABASE_URL`) en `prisma.config.ts`; el CI crea `fogoneria_shadow` aparte y ejecuta `migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code`. Flags y rechazo de DB real (P3025) verificados; sin PostgreSQL local no se ejecutó el job completo.
+- **Verificado:** web **268** tests, `test:coverage` sin cambios, `check-types`, `lint`, build (49 rutas); api **305** tests, `check-types`, `lint`, build; Playwright local: login real contra el build (`1 passed`) y suite completa con API fake en 3001 (`5/5`, valida cookie/proxy/RBAC); API/web arrancan con los comandos del `webServer` (health 200, login 200); YAML válido con Python. El E2E contra API+PostgreSQL reales queda para CI (no hay Docker/Postgres local).
+- **PR:** pendiente de abrir; no se commiteó ni se tocaron PRs/ramas.
+
 ## 2026-11-20 — CI Fase B: cobertura y Sonar CI
 
 - **Cobertura:** `apps/api/vitest.config.ts` y `apps/web/vitest.config.mts` con provider v8, reporter `text`+`lcov`, `coverage/lcov.info` y thresholds **API 71/54/64/72**, **Web 57/53/52/58**. Medición final: API 76.02/59.54/69.58/77.55; Web 62.61/58.88/57.91/63.73. `@vitest/coverage-v8` declarado en web + `test:coverage`.
