@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { listMovements, listShifts } from './cash-api';
-import { getReceipt, listReceipts } from './receipts-api';
+import { listMovements, listShifts, closeShift, getCurrentShift, openShift } from './cash-api';
+import {
+  createReceipt,
+  fechaLima,
+  getReceipt,
+  listReceipts,
+  receiptSunatCode,
+  receiptTypeLabel,
+  voidReceipt,
+} from './receipts-api';
 import {
   apiReservationStatusOf,
   limaDateKey,
@@ -30,7 +38,7 @@ afterEach(() => {
 function stubFetch() {
   fetchMock.mockReset();
   vi.stubGlobal('fetch', fetchMock);
-  fetchMock.mockResolvedValue(json({}));
+  fetchMock.mockImplementation(async () => json({}));
 }
 
 describe('cash-api: consultas de turnos y movimientos', () => {
@@ -97,6 +105,80 @@ describe('receipts-api: consultas del comprobante', () => {
       '/api/backend/receipts/c-1',
       expect.objectContaining({ method: 'GET' }),
     );
+  });
+});
+
+describe('cash-api: apertura, cierre y consulta del turno', () => {
+  it('getCurrentShift devuelve null sin turno y el estado con turno', async () => {
+    stubFetch();
+    fetchMock.mockResolvedValueOnce(json(null));
+    await expect(getCurrentShift()).resolves.toBeNull();
+
+    fetchMock.mockResolvedValueOnce(json({ turno: { id: 't-1' }, arqueo: { fondo: 200 } }));
+    await expect(getCurrentShift()).resolves.toMatchObject({ turno: { id: 't-1' } });
+  });
+
+  it('openShift manda el fondo de apertura', async () => {
+    stubFetch();
+    await openShift(200);
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/backend/cash/shifts',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ fondoApertura: 200 }) }),
+    );
+  });
+
+  it('closeShift manda el conteo y las observaciones solo si existen', async () => {
+    stubFetch();
+    await closeShift('t-1', { efectivoContado: 480, observaciones: 'Cuadra' });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({
+      efectivoContado: 480,
+      observaciones: 'Cuadra',
+    });
+
+    await closeShift('t-1', { efectivoContado: 480 });
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({
+      efectivoContado: 480,
+    });
+  });
+});
+
+describe('receipts-api: emisión, anulación y etiquetas', () => {
+  it('createReceipt manda el documento del cliente solo si existe', async () => {
+    stubFetch();
+    await createReceipt({ ordenId: 'o-1', tipo: 'FACTURA', clienteRef: '20123456786' });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({
+      ordenId: 'o-1',
+      tipo: 'FACTURA',
+      clienteRef: '20123456786',
+    });
+
+    await createReceipt({ ordenId: 'o-1', tipo: 'BOLETA' });
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({
+      ordenId: 'o-1',
+      tipo: 'BOLETA',
+    });
+  });
+
+  it('voidReceipt manda el motivo al endpoint de anulación', async () => {
+    stubFetch();
+    await voidReceipt('c-1', 'Duplicado');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/backend/receipts/c-1/void',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ motivo: 'Duplicado' });
+  });
+
+  it('etiqueta y código SUNAT de cada tipo', () => {
+    expect(receiptTypeLabel('BOLETA')).toBe('Boleta');
+    expect(receiptTypeLabel('FACTURA')).toBe('Factura');
+    expect(receiptTypeLabel('TICKET')).toBe('Ticket');
+    expect(receiptSunatCode('FACTURA')).toBe('01');
+    expect(receiptSunatCode('BOLETA')).toBe('03');
+  });
+
+  it('fechaLima usa el día de Lima (UTC-05)', () => {
+    expect(fechaLima(new Date('2026-11-21T03:00:00.000Z'))).toBe('2026-11-20');
   });
 });
 
