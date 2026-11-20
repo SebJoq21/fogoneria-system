@@ -20,7 +20,7 @@
     "@fogoneria/kernel": "workspace:*",
     "@fogoneria/sdk": "workspace:*",
     "jose": "^6.2.17",
-    "lucide-react": "^1.73.0",
+    "lucide-react": "^1.74.0",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
