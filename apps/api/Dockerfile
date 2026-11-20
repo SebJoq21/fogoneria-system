@@ -31,7 +31,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 COPY --from=build /app/node_modules ./node_modules
+# El compilador nativo de TypeScript (Go) solo se usa en build; no viaja a
+# runtime (arrastra CVEs de Go stdlib y suma ~100 MB).
+RUN rm -rf node_modules/.pnpm/@typescript+typescript-linux-x64* node_modules/@typescript
 COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
+RUN rm -rf apps/api/node_modules/.pnpm/@typescript+typescript-linux-x64* apps/api/node_modules/@typescript
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/package.json ./apps/api/package.json
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma

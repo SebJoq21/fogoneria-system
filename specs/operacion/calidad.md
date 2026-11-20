@@ -14,6 +14,8 @@
 | `pnpm --filter api test:e2e` | 15 archivos con Prisma mockeado (realtime levanta Socket.io real) | contrato HTTP/WS roto |
 | `pnpm --filter api test:db` | 18 `*.db-spec.ts` contra PostgreSQL real (RLS forzado) | aislamiento, trigger o migración rota |
 | `pnpm --filter web test` | 33 archivos Vitest, 268 tests (features, lib, proxy, route handlers) | test rojo |
+| `pnpm --filter api test:cov` | unit + cobertura v8 con thresholds **71/54/64/72** | cobertura bajo el ratchet |
+| `pnpm --filter web test:coverage` | 268 tests + cobertura v8 con thresholds **57/53/52/58** | cobertura bajo el ratchet |
 | `pnpm check:specs` | `scripts/check-specs.mjs`: cobertura, estructura y enlaces de `specs/**` + diff del PR contra la spec del módulo | módulo/feature sin spec, enlace roto o código sin spec actualizada |
 
 > `test:db` requiere `DATABASE_URL_TEST` a una base **descartable**: los specs truncan `empresas` y `leads_cotizaciones`.
@@ -32,12 +34,14 @@ pnpm --filter api db:rls:roles
 pnpm --filter api db:rls:force
 pnpm lint
 pnpm check-types
-pnpm --filter api test
+pnpm --filter api test:cov
 pnpm --filter api test:e2e
 pnpm --filter api test:db
-pnpm --filter web test
+pnpm --filter web test:coverage
 pnpm build
 ```
+
+Sube artifacts `coverage-api` y `coverage-web` (`lcov.info`) para el job de Sonar.
 
 Job **`Un PR por módulo`** — solo en `pull_request`:
 
@@ -64,7 +68,7 @@ Job **`Imágenes Docker y Trivy`** — push y PR:
 hadolint (API, web) con .hadolint.yaml (failure-threshold: error)
 docker build -f apps/api/Dockerfile -t fogoneria-api:ci .
 docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
-trivy image (CRITICAL/HIGH, ignore-unfixed)      (advisory en Fase A)
+trivy image (OS/base, CRITICAL/HIGH, ignore-unfixed)   (bloqueante: exit-code 1; paquetes npm vía pnpm audit/Dependabot)
 ```
 
 Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el candidato a único required check; la protección de rama no se cambió todavía.
@@ -72,6 +76,10 @@ Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker]`,
 Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `development`/`main` + cron semanal, `javascript-typescript` con `security-extended` y `security-events: write`.
 
 **Dependabot** (`.github/dependabot.yml`) — npm (raíz pnpm), github-actions y Docker (API/web), semanal, grupos minor+patch.
+
+Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`coverage-web`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=true`). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla.
+
+> **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras se resuelva el permiso/plan, el gate efectivo es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
 
 > **Dependency Review:** no está activo todavía. GitHub no genera manifests para `pnpm-lock.yaml` (Dependency Graph vacío) y la API devuelve 403; se usa `pnpm audit` advisory. En Fase B se añade dependency submission, se verifica el graph y recién entonces se vuelve bloqueante.
 
@@ -103,8 +111,8 @@ Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `developmen
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
 - **Dependency Review** pendiente: requerir dependency submission para `pnpm-lock.yaml`; hoy `pnpm audit` es advisory.
-- **Trivy** es advisory en Fase A por CVEs de la base/dependencias; en Fase B se actualiza la base y pasa a `exit-code: 1`.
-- **Sonar** usa Automatic Analysis con gate de new code; Fase B lo pasa a CI scan con cobertura overall y `qualitygate.wait`.
+- **Trivy** es bloqueante para **OS/base** (`exit-code: 1`) desde Fase B; el compilador nativo de TypeScript se excluye de la imagen runtime. Los CVEs de paquetes npm de la imagen se cubren con `pnpm audit`/Dependabot y quedan como deuda de actualización de dependencias.
+- **Sonar** ya corre por CI (Automatic Analysis desactivado). El gate custom `Fogoneria` no se pudo asignar por permisos de la organización; el gate efectivo de cobertura son los thresholds de Vitest. Pendiente asignarlo cuando haya permiso/plan.
 - CODEOWNERS y protección de rama estricta siguen diferidos (decisión del usuario).
 
 ## 7. Enlaces
