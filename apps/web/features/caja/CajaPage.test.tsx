@@ -96,4 +96,13 @@ describe('CajaPage', () => {
     estado.openCashShift = null;
     estado.accounts = [];
   });
+
+  it('con sesión usa el camino de la API en el primer render', () => {
+    const usuario = estado.currentUser;
+    estado.currentUser = { ...usuario, empresaId: 'e-1' } as never;
+    const markup = renderToStaticMarkup(<CajaPage />);
+    expect(markup).toContain('Resumen de caja');
+    expect(markup).toContain('Movimientos del turno');
+    estado.currentUser = usuario;
+  });
 });
