@@ -10,7 +10,7 @@ COPY apps/web/package.json apps/web/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 COPY packages/ui/package.json packages/ui/package.json
-RUN pnpm install --frozen-lockfile --filter web...
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter web...
 
 COPY . .
 # El BFF corre dentro del contenedor: debe resolver la API por la red de Compose.
@@ -29,4 +29,6 @@ COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /app/apps/web/public ./apps/web/public
 
 EXPOSE 3000
+# El server standalone no necesita root.
+USER node
 CMD ["node", "apps/web/server.js"]

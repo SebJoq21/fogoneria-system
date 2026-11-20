@@ -15,7 +15,12 @@ export function Drawer({
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] animate-[fadeIn_0.2s_ease-out]">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <button
+        type="button"
+        aria-label="Cerrar panel"
+        className="absolute inset-0 w-full bg-black/40"
+        onClick={onClose}
+      />
       <aside className="absolute right-0 top-0 h-full w-full max-w-sm bg-surface shadow-2xl flex flex-col animate-[scaleUp_0.2s_ease-out]">
         <div className="p-4 border-b border-ink-900/10 flex justify-between items-center shrink-0">
           <h3 className="text-sm font-medium text-ink-900">{title}</h3>

@@ -1,0 +1,58 @@
+name: PR
+
+# Checks que solo tienen sentido sobre un pull request. Viven fuera de `ci.yml`
+# para que los pushes a development no los muestren como jobs skipped.
+on:
+  pull_request:
+    branches: [development, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-scope:
+    name: Un PR por módulo
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - name: Verificar alcance del PR
+        env:
+          ALLOW_MULTI: ${{ contains(github.event.pull_request.labels.*.name, 'multi-modulo') }}
+        run: node scripts/check-pr-scope.mjs "origin/${{ github.base_ref }}" "${{ github.event.pull_request.head.sha }}"
+
+  specs:
+    name: Specs al día
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+        with:
+          version: 11.25.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - name: Traer la rama base
+        run: git fetch --no-tags origin "+refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}"
+
+      - name: Verificar specs
+        run: pnpm check:specs --base "origin/${{ github.base_ref }}"

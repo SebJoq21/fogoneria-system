@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — Quick wins de seguridad + plan Sonar
+
+- **CodeQL:** 3 alertas corregidas (email sin regex, `execFileSync` en `check-pr-scope`, reporte de carga sin body de red).
+- **Sonar:** `S7773`/`S8786`/`S6848` corregidos; `.agents/**` y `apps/web/e2e/**` excluidos; Docker runtime con `USER node` y builds con `--ignore-scripts`.
+- **Skipped:** los checks PR-only (`Specs al día`, `Un PR por módulo`) salen a `pr.yml`; el ruleset exige `CI requerido`, `Specs al día` y `Un PR por módulo`.
+- **Plan:** [`docs/plan-seguridad-sonar.md`](plan-seguridad-sonar.md) con las olas de Dependabot (46: 19 high), CodeQL, secretos, cobertura 42.1→65 % y gate de Sonar.
+
 ## 2026-11-20 — Paridad CI/CD con Taller (G3)
 
 - **Workflows:** `dependency-review` dentro de `ci.yml` (`actions/dependency-review-action@v5`, `fail-on-severity: high`), `verify-api-production.yml` (`deployment_status` de Railway), `verify-web-production.yml` (`status` de Vercel en `development`) y `smoke.yml` (diario 11:00 UTC + manual). El gate `CI requerido` incluye `dependency-review`.

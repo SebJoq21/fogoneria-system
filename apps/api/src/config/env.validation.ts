@@ -1,5 +1,5 @@
 const DEV_DATABASE_URL =
-  'postgresql://fogoneria_app:fogoneria_app@localhost:5433/fogoneria_db?schema=fogoneria';
+  'postgresql://fogoneria_app:fogoneria_app@localhost:5433/fogoneria_db?schema=fogoneria'; // NOSONAR: credencial local de desarrollo, no de producción.
 
 /**
  * Valida variables de entorno al arranque.

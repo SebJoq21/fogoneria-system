@@ -243,10 +243,13 @@ async function main() {
     const counter = statuses[kind];
     counter.set(result.status, (counter.get(result.status) ?? 0) + 1);
     if (result.status >= 400 && errors.length < 10) {
+      // El body de la respuesta se muestra en consola, no se persiste: evita
+      // volcar datos de red al reporte JSON (CodeQL js/http-to-file-access).
+      const body = JSON.stringify(result.payload)?.slice(0, 240) ?? null;
+      console.warn(`[load] ${kind} ${result.status}: ${body}`);
       errors.push({
         kind,
         status: result.status,
-        body: JSON.stringify(result.payload)?.slice(0, 240) ?? null,
       });
     }
   }
