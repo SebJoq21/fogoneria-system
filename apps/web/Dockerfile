@@ -2,7 +2,7 @@
 # Imagen de la web Next.js (Fogonería) usando `output: "standalone"`.
 
 FROM node:24-bookworm-slim AS build
-RUN npm install -g pnpm@11.25.0
+RUN npm install -g pnpm@11.25.0 --ignore-scripts
 WORKDIR /app
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
