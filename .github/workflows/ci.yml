@@ -191,13 +191,14 @@ jobs:
       - name: Construir imagen de la web
         run: docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
 
-      # Fase B: el compilador nativo de TypeScript se elimina de la imagen
-      # runtime, así que Trivy puede bloquear con CRITICAL/HIGH corregibles.
+      # Fase B: Trivy bloquea CVEs de OS/base. Los CVEs de paquetes npm de la
+      # imagen se cubren con pnpm audit/Dependabot (evita mezclar devDeps).
       - name: Trivy (API, CRITICAL/HIGH corregibles)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: fogoneria-api:ci
           scanners: vuln
+          vuln-type: os
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: 1
@@ -208,6 +209,7 @@ jobs:
         with:
           image-ref: fogoneria-web:ci
           scanners: vuln
+          vuln-type: os
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: 1

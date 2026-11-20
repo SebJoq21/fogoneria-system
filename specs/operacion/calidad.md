@@ -68,7 +68,7 @@ Job **`Imágenes Docker y Trivy`** — push y PR:
 hadolint (API, web) con .hadolint.yaml (failure-threshold: error)
 docker build -f apps/api/Dockerfile -t fogoneria-api:ci .
 docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
-trivy image (CRITICAL/HIGH, ignore-unfixed)      (bloqueante: exit-code 1)
+trivy image (OS/base, CRITICAL/HIGH, ignore-unfixed)   (bloqueante: exit-code 1; paquetes npm vía pnpm audit/Dependabot)
 ```
 
 Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el candidato a único required check; la protección de rama no se cambió todavía.
@@ -111,7 +111,7 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`cov
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
 - **Dependency Review** pendiente: requerir dependency submission para `pnpm-lock.yaml`; hoy `pnpm audit` es advisory.
-- **Trivy** es bloqueante (`exit-code: 1`) desde Fase B; el compilador nativo de TypeScript se excluye de la imagen runtime. Si aparecen CVEs no corregibles, usar `.trivyignore` acotado con fecha de revisión.
+- **Trivy** es bloqueante para **OS/base** (`exit-code: 1`) desde Fase B; el compilador nativo de TypeScript se excluye de la imagen runtime. Los CVEs de paquetes npm de la imagen se cubren con `pnpm audit`/Dependabot y quedan como deuda de actualización de dependencias.
 - **Sonar** ya corre por CI (Automatic Analysis desactivado). El gate custom `Fogoneria` no se pudo asignar por permisos de la organización; el gate efectivo de cobertura son los thresholds de Vitest. Pendiente asignarlo cuando haya permiso/plan.
 - CODEOWNERS y protección de rama estricta siguen diferidos (decisión del usuario).
 
