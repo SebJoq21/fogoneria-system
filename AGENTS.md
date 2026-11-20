@@ -7,7 +7,7 @@ SaaS ERP gastronómico (parrilla peruana). Monorepo `pnpm + turbo`, Node >=24.
 - `apps/web/` — Next.js 16 + React 19 + Tailwind v4. ERP completo con mocks (sin backend aún). Ver `apps/web/AGENTS.md`.
 - `apps/api/` — NestJS 12 + Vitest + Oxlint. Scaffold virgen `Hello World`. Ver `apps/api/AGENTS.md`.
 - `packages/ui|eslint-config|typescript-config` — starter `create-turbo` sin personalizar. `web` NO usa `@repo/ui` (tiene `components/ui/` propio).
-- `docs/arquitectura.md` — mapa del sistema. `docs/decisiones.md` — decisiones vigentes. `docs/SESION.md` — estado última sesión (leer al retomar).
+- `docs/arquitectura.md` — mapa del sistema. `docs/decisiones.md` — decisiones vigentes. `docs/SESION.md` — estado última sesión (leer al retomar). `docs/INDICE.md` — portada de docs. `specs/README.md` — specs por módulo y trazabilidad (leer antes de tocar un módulo).
 
 ## Comandos (desde raíz)
 

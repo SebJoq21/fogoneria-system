@@ -1,6 +1,6 @@
 # Modularización — backend + frontend por módulo
 
-**Fecha:** 2026-11-19 · **Estado:** Fases 0–3 implementadas (fundaciones, RRHH, catálogo/precios y olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3) + **Fase 4 etapas 1–2** (`SessionProvider`/`NotificationsProvider` y `TenantProvider` extraídos de `ModulesProvider`).
+**Fecha:** 2026-11-19 · **Estado:** Fases 0-3 implementadas (fundaciones, RRHH, catálogo/precios y olas **salón**, **dinero**, **operación**, **personas**, **lectura** y **plataforma** de la Fase 3) + **Fase 4 etapas 1-3** (`SessionProvider`/`NotificationsProvider`, `TenantProvider` y `CatalogoProvider` extraídos de `ModulesProvider`).
 
 Una persona debe poder avanzar **RRHH** tocando solo `modules/rrhh` (contratos + API + web) y su página de ruta, sin abrir caja, órdenes ni el estado global.
 
@@ -410,11 +410,30 @@ Estos son los puntos que las olas deben cortar en ese orden.
 - **Verificado:** web **265** tests (32 archivos), `check-types`, `lint` (estilos
   OK), build OK; `check:boundaries` OK (baseline 0); api `check-types` OK. Sin
   dependencias nuevas y sin tocar `lib/session.ts`, `proxy.ts` ni el BFF.
-- **Queda para la etapa 3:** el estado de negocio de `ModulesProvider` (catálogo,
+- **Queda para las etapas 3-4:** el estado de negocio de `ModulesProvider` (catálogo,
   órdenes/cuentas, caja/comprobantes, gastos, inventario, promociones, CRM y
   maestros demo) hacia sus features. `useModules` sigue siendo la fachada de
   compatibilidad; las features nuevas deben usar `useTenant` para empresa y
   sucursal.
+
+#### Etapa 3 ✅ (2026-11-19) — Catálogo y precios
+
+- **`components/dashboard/providers/catalog.tsx`**: `CatalogoProvider` +
+  `useCatalogoState` con `products`, `categories`, `modifierGroups`,
+  `priceLists`, `catalogLoading`, `catalogError`, `refreshCatalog`, las acciones
+  de alta/edición/baja, `priceOf`, `categoryNameOf` y `catalogVersion` (contador
+  de snapshots para la poda de combos). Usa `lib/catalog-api.ts` y depende solo
+  de `useSession` (el catálogo es de empresa, no de sucursal).
+- **`ModulesProvider`** deja de declarar el estado/efectos/acciones de catálogo:
+  consume `useCatalogoState()` y reexpone los mismos campos en su `value` para no
+  tocar las ~20 vistas. `features/catalogo/hooks.ts` usa el provider directo.
+  La poda de combos huérfanos pasa a un efecto sobre `catalogVersion` + `products`
+  (mismo resultado, un render después).
+- **Layout:** `Theme > Session > Notifications > Tenant > Catalogo > Modules`.
+- **Verificado:** web **268** tests, `check-types`, `lint` (estilos OK), build OK
+  (49 rutas), `check:boundaries` OK (baseline 0) y api `check-types` OK.
+- **Queda para la etapa 4:** gastos, inventario, promociones, CRM, comprobantes,
+  órdenes/cuentas, mesas/reservas y caja/turnos; después los maestros demo.
 
 
 ### Fase 5 — Extracción opcional
