@@ -15,7 +15,7 @@ COPY packages/contracts/package.json packages/contracts/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
 COPY packages/typescript-config/package.json packages/typescript-config/package.json
 COPY packages/ui/package.json packages/ui/package.json
-RUN pnpm install --frozen-lockfile --filter api...
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter api...
 
 COPY . .
 # `prisma generate` (prebuild) valida el config y exige la variable, aunque no
@@ -47,5 +47,7 @@ COPY --from=build /app/apps/api/src/generated ./apps/api/src/generated
 COPY --from=build /app/packages/contracts ./packages/contracts
 
 WORKDIR /app/apps/api
+# El proceso no necesita root: la app solo lee node_modules/dist y escribe en la DB.
+USER node
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

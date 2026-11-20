@@ -48,14 +48,7 @@ const EMPTY_CATALOG: CatalogState = {
   priceLists: [],
 };
 
-/** Siguiente SKU secuencial (PLA-00N) a partir del maestro actual. */
-function nextSku(products: Product[]): string {
-  const max = products.reduce((acc, p) => {
-    const suffix = Number(p.sku.match(/(\d+)\s*$/)?.[1] ?? 0);
-    return Number.isFinite(suffix) ? Math.max(acc, suffix) : acc;
-  }, 0);
-  return `PLA-${String(max + 1).padStart(3, "0")}`;
-}
+import { nextSku } from "@/lib/catalog-sku";
 
 export type CatalogoContextValue = CatalogState & {
   catalogLoading: boolean;

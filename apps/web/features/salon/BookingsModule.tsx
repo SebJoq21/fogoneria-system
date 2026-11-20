@@ -188,7 +188,7 @@ export function BookingsModule({ view = "mapa" }: { view?: "agenda" | "mapa" }) 
   const derivedTables = useMemo(() => {
     return tables.map((t) => {
       const apiTable = apiTables.find((at) => {
-        const num = parseInt(at.numero.replace(/\D/g, ""), 10);
+        const num = Number.parseInt(at.numero.replace(/\D/g, ""), 10);
         return num === t.id || at.numero.toLowerCase() === t.label.toLowerCase();
       });
 

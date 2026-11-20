@@ -61,3 +61,5 @@ Archivos:
 
 1. Endpoint de solicitud de reset con token de un uso (cuando exista correo transaccional).
 2. Migrar las vistas a `useSession` y retirar `login`/`logout` de `useModules` (Fase 4, etapa 4).
+
+> **2026-11-20:** la validación de email del wizard se centraliza en `isValidEmail` (`@fogoneria/contracts/plataforma`), sin regex, para cerrar `S8786`/CodeQL ReDoS.

@@ -15,15 +15,17 @@ export function Modal({
   wide?: boolean;
 }) {
   return (
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.2s_ease-out]"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-out]">
+      <button
+        type="button"
+        aria-label="Cerrar modal"
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
       <div
-        className={`bg-surface w-full rounded-2xl shadow-2xl overflow-hidden animate-[scaleUp_0.2s_ease-out] flex flex-col max-h-[90vh] ${
+        className={`relative bg-surface w-full rounded-2xl shadow-2xl overflow-hidden animate-[scaleUp_0.2s_ease-out] flex flex-col max-h-[90vh] ${
           wide ? "max-w-2xl" : "max-w-lg"
         }`}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-ink-900/10 flex justify-between items-center shrink-0">
           <h3 className="text-sm font-medium text-ink-900">{title}</h3>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ROLE_HOME } from "@/lib/auth";
-import { isValidRuc, type RangoSucursales } from "@fogoneria/contracts/plataforma";
+import { isValidEmail, isValidRuc, type RangoSucursales } from "@fogoneria/contracts/plataforma";
 import { plataformaApi } from "./api";
 
 const steps = ["Identidad y Local", "La Carta", "Pago y Activación"];
@@ -125,7 +125,7 @@ export function OnboardingPage() {
     }
     if (step === steps.length) {
       if (!form.nombreAdmin.trim()) return "Ingresa el nombre del administrador.";
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.emailAdmin.trim()))
+      if (!isValidEmail(form.emailAdmin))
         return "Ingresa un correo válido.";
       if (form.password.length < 8) return "La contraseña debe tener al menos 8 caracteres.";
     }

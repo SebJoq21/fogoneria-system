@@ -134,13 +134,17 @@ docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
 trivy image (OS/base, CRITICAL/HIGH, ignore-unfixed)   (bloqueante: exit-code 1; paquetes npm vía pnpm audit/Dependabot)
 ```
 
-Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker, dependency-review, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el **único required check** del ruleset de `development` (1 aprobación + bypass del dueño).
+Job **`CI requerido`** — solo PR, `needs: [quality, docker, dependency-review, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. El ruleset de `development` exige **`CI requerido` + `Specs al día` + `Un PR por módulo`** (1 aprobación + bypass del dueño). Los dos últimos viven en `pr.yml` (solo `pull_request`) para que los pushes a development no muestren jobs skipped.
 
 Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `development`/`main` + cron semanal, `javascript-typescript` con `security-extended` y `security-events: write`.
 
+Workflow **`PR`** (`.github/workflows/pr.yml`) — solo `pull_request`: `Un PR por módulo` (alcance del PR) y `Specs al día` (spec del módulo tocado). Ambos son required checks del ruleset.
+
+Plan de seguridad y Sonar: [`docs/plan-seguridad-sonar.md`](../../docs/plan-seguridad-sonar.md).
+
 **Dependabot** (`.github/dependabot.yml`) — npm (raíz pnpm), github-actions y Docker (API/web), semanal, grupos minor+patch.
 
-Job **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el analizador TS resuelve los `tsconfig` de los workspaces), descarga `coverage-api`/`coverage-web`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=false` temporal). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla. El análisis excluye `.github/**`, `scripts/**`, `apps/api/scripts/**`, migraciones SQL, configs y specs: son infra validada por sus propios jobs y no deben arrastrar `new_coverage`.
+Sonar **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el analizador TS resuelve los `tsconfig` de los workspaces), descarga `coverage-api`/`coverage-web`/`coverage-contracts`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=false` temporal). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla. El análisis excluye `.github/**`, `scripts/**`, `apps/api/scripts/**`, migraciones SQL, configs y specs: son infra validada por sus propios jobs y no deben arrastrar `new_coverage`.
 
 > **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
 

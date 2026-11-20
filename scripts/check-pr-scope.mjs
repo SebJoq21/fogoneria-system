@@ -16,7 +16,7 @@
  * un refactor que cruce módulos con aprobación explícita del equipo.
  */
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 const [, , base, head] = process.argv;
 
@@ -189,7 +189,7 @@ function moduloDe(archivo) {
 
 let archivos;
 try {
-  archivos = execSync(`git diff --name-only "${base}...${head}"`, { encoding: 'utf8' })
+  archivos = execFileSync('git', ['diff', '--name-only', `${base}...${head}`], { encoding: 'utf8' })
     .split('\n')
     .map((linea) => linea.trim())
     .filter(Boolean);

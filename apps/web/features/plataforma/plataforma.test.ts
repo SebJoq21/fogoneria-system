@@ -7,6 +7,7 @@ import {
   etiquetaEstadoEmpresa,
   etiquetaPlan,
   etiquetaRol,
+  isValidEmail,
   isValidRuc,
   rolDesdeApi,
   toOnboardingPayload,
@@ -277,5 +278,28 @@ describe('onboarding', () => {
     });
     expect(raro.estado).toBe('LEAD');
     expect(raro.plan).toBe('TRIAL');
+  });
+});
+
+describe('isValidEmail', () => {
+  it('acepta correos razonables', () => {
+    expect(isValidEmail('admin@mirestaurante.com')).toBe(true);
+    expect(isValidEmail('a+b@sub.dominio.pe')).toBe(true);
+  });
+
+  it('rechaza correos inválidos', () => {
+    for (const value of [
+      '',
+      'a',
+      'a@b',
+      '@b.com',
+      'a@@b.com',
+      'a b@c.com',
+      'a@b..com',
+      'a@.com',
+      'a@b.',
+    ]) {
+      expect(isValidEmail(value)).toBe(false);
+    }
   });
 });

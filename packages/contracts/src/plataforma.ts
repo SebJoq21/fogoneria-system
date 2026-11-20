@@ -240,14 +240,32 @@ export function isValidRuc(value: string): boolean {
   return checkDigit === Number(ruc[10]);
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/**
+ * Validación de correo sin regex: evita el backtracking que marcan Sonar
+ * (S8786) y CodeQL (polynomial ReDoS). Es suficiente para el wizard.
+ */
+export function isValidEmail(email: string): boolean {
+  const value = email.trim();
+  if (value.length < 3 || value.length > 254) return false;
+  for (const char of value) {
+    if (char === ' ' || char === '\t' || char === '\n' || char === '\r') return false;
+  }
+  const at = value.indexOf('@');
+  if (at <= 0 || at !== value.lastIndexOf('@')) return false;
+  const local = value.slice(0, at);
+  const domain = value.slice(at + 1);
+  if (local.length > 64 || !domain || domain.startsWith('.') || domain.endsWith('.') || domain.includes('..')) {
+    return false;
+  }
+  return domain.includes('.');
+}
 
 /** Error de presentación del wizard; `null` si el paso puede continuar. */
 export function validarOnboarding(input: OnboardingInput): string | null {
   if (input.nombreLegal.trim().length < 3) return 'Ingresa la razón social del negocio.';
   if (!isValidRuc(input.ruc)) return 'El RUC debe tener 11 dígitos y ser válido.';
   if (input.nombreAdmin.trim().length < 3) return 'Ingresa el nombre del administrador.';
-  if (!EMAIL_PATTERN.test(input.emailAdmin.trim())) return 'Ingresa un correo válido.';
+  if (!isValidEmail(input.emailAdmin)) return 'Ingresa un correo válido.';
   if (input.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
   if (input.rangoSucursales && !(RANGOS_SUCURSALES as readonly string[]).includes(input.rangoSucursales)) {
     return 'Elige un rango de locales válido.';

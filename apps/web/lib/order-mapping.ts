@@ -111,7 +111,7 @@ export function orderFromApi(
   }));
 
   const tableNum = order.mesas?.numero
-    ? parseInt(order.mesas.numero.replace(/\D/g, ""), 10) || null
+    ? Number.parseInt(order.mesas.numero.replace(/\D/g, ""), 10) || null
     : null;
 
   return {
@@ -219,7 +219,7 @@ export function reconcileAccounts(
       if (acc.orderApiIds?.includes(o.id)) return true;
       if (o.mesa_id && acc.tableApiId && o.mesa_id === acc.tableApiId) return true;
       if (o.mesas?.numero && acc.tableId != null) {
-        const num = parseInt(o.mesas.numero.replace(/\D/g, ""), 10);
+        const num = Number.parseInt(o.mesas.numero.replace(/\D/g, ""), 10);
         return num === acc.tableId;
       }
       return false;
@@ -273,7 +273,7 @@ export function reconcileAccounts(
       if (a.orderApiIds?.includes(openOrder.id)) return true;
       if (openOrder.mesa_id && a.tableApiId === openOrder.mesa_id) return true;
       if (openOrder.mesas?.numero && a.tableId != null) {
-        const num = parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10);
+        const num = Number.parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10);
         return num === a.tableId;
       }
       return false;
@@ -281,7 +281,7 @@ export function reconcileAccounts(
 
     if (!alreadyCovered) {
       const tableNum = openOrder.mesas?.numero
-        ? parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10) || null
+        ? Number.parseInt(openOrder.mesas.numero.replace(/\D/g, ""), 10) || null
         : null;
       const label = openOrder.mesas?.numero
         ? (openOrder.mesas.numero.startsWith("Mesa") ? openOrder.mesas.numero : `Mesa ${openOrder.mesas.numero}`)

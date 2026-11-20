@@ -47,10 +47,11 @@ export function PlanModal({
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {plans.map((plan) => (
-          <div
+          <button
+            type="button"
             key={plan.id}
             onClick={() => setSelectedPlan(plan.id)}
-            className={`relative p-4 rounded-2xl border-2 cursor-pointer transition-all ${
+            className={`relative text-left p-4 rounded-2xl border-2 cursor-pointer transition-all ${
               selectedPlan === plan.id ? "border-ink-900" : "border-ink-900/10 hover:border-ink-900/30"
             }`}
           >
@@ -70,7 +71,7 @@ export function PlanModal({
               <span className="text-nav text-ink-400">/mes</span>
             </div>
             <p className="text-sm text-ink-600">{plan.desc}</p>
-          </div>
+          </button>
         ))}
       </div>
     </Modal>

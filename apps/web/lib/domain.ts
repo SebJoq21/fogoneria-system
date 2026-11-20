@@ -3,6 +3,10 @@
    Solo tipos y cálculos puros: nada de UI ni React aquí. */
 
 import type { CashMovement, Reservation, Table, TableStatus } from "./erp";
+import { round2 } from "./money";
+
+export { round2 };
+export { parseCouponDiscount } from "./discount";
 
 export const IGV_RATE = 0.18;
 
@@ -92,10 +96,6 @@ export type CashShift = {
 
 /* ---------- Cálculos ---------- */
 
-export function round2(n: number): number {
-  return Math.round(n * 100) / 100;
-}
-
 export function fmtMoney(n: number): string {
   return `$${n.toFixed(2)}`;
 }
@@ -145,18 +145,6 @@ export function accountTotals(account: TableAccount): {
 export function splitIgv(total: number): { subtotal: number; igv: number } {
   const subtotal = round2(total / (1 + IGV_RATE));
   return { subtotal, igv: round2(total - subtotal) };
-}
-
-/** "10% OFF" → porcentaje; "$5.00 Descuento" → monto fijo. */
-export function parseCouponDiscount(
-  coupon: { discount: string },
-  base: number,
-): number {
-  const pct = coupon.discount.match(/(\d+(?:\.\d+)?)\s*%/);
-  if (pct) return round2((base * Number(pct[1])) / 100);
-  const fixed = coupon.discount.match(/\$\s*(\d+(?:\.\d+)?)/);
-  if (fixed) return round2(Math.min(Number(fixed[1]), base));
-  return 0;
 }
 
 export const SERIE_LABEL: Record<string, string> = { "01": "F001", "03": "B001", "07": "NC01" };

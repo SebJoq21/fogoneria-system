@@ -68,3 +68,5 @@ Reglas:
 
 1. Editor visual de plano si el negocio lo pide.
 2. Añadir e2e de bloqueo con reserva activa.
+
+> **2026-11-20:** `BookingsModule` usa `Number.parseInt` para el número de mesa (`S7773`); sin cambio de contrato.
