@@ -100,14 +100,16 @@ Job **`Migraciones forward-only`** — push y PR:
 
 ```text
 pnpm --filter api db:generate
+psql ... CREATE DATABASE fogoneria_shadow
 pnpm --filter api db:deploy              (1.ª vez)
 pnpm --filter api db:deploy              (2.ª vez: idempotencia)
 pnpm --filter api exec prisma migrate status
-pnpm --filter api exec prisma migrate diff --from-config-datasource \
-  --to-schema prisma/schema.prisma --exit-code
+pnpm --filter api exec prisma migrate diff --from-migrations prisma/migrations \
+  --to-config-datasource --exit-code
 ```
 
-- El drift compara la **base migrada** contra `schema.prisma` (exit 2 si difieren); no usa shadow DB en CI.
+- El drift aplica las migraciones en una **base shadow** aparte y las compara con la base real ya migrada: detecta DDL manual o migraciones editadas sin bloquearse por nombres de constraints/índices del SQL histórico (exit 2 si difieren).
+- `SHADOW_DATABASE_URL` apunta a `fogoneria_shadow` (Prisma 7 rechaza usar la misma base).
 - No hay `down`: la migración es la fuente ejecutable; la estrategia es forward-only.
 
 Job **`Imágenes Docker y Trivy`** — push y PR:
@@ -141,13 +143,13 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`cov
 | Web | RBAC/proxy, sesión/firma, BFF, ticket WS, deduplicación, mapeos API↔UI y clientes de cada feature |
 | Playwright | login real, redirección por rol y bloqueo de rutas ajenas (humo E2E full-stack) |
 | OpenAPI | contrato exportado desde `AppModule` y validado contra el estándar OpenAPI 3 |
-| Migraciones | deploy idempotente, estado y drift entre `prisma/migrations` y `schema.prisma` |
+| Migraciones | deploy idempotente, estado y drift entre migraciones aplicadas y base real |
 
 ## 4. Gates no automatizados (revisión humana)
 
 - **Un PR = un módulo** y revisión por otra persona (CODEOWNERS diferido; el ruleset tiene 1 aprobación + bypass admin por decisión del dueño).
 - Smoke funcional por rol antes de demo/sustentación (mesero → cocina → caja).
-- Migraciones: revisar `prisma validate` y que la migración sea la fuente ejecutable; el CI verifica deploy doble y drift contra `schema.prisma`.
+- Migraciones: revisar `prisma validate` y que la migración sea la fuente ejecutable; el CI verifica deploy doble y drift entre migraciones aplicadas y base real.
 - Cambios de contrato: actualizar `packages/contracts`, la spec del módulo y `docs/decisiones.md` si es arquitectónico.
 
 ## 5. Despliegue
@@ -160,7 +162,7 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`cov
 - No hay cobertura mínima por módulo.
 - El E2E de Playwright cubre autenticación y RBAC; el flujo completo mesa→cocina→caja→comprobante sigue pendiente (AYCDS-49).
 - `docs/openapi.json` se genera en CI y no se versiona; si se necesita diff de contrato, publicarlo como artifact o commitearlo con una decisión explícita.
-- El job de migraciones prueba deploy doble y drift contra `schema.prisma`; no prueba rollback: la estrategia es forward-only.
+- El job de migraciones prueba deploy doble y drift entre migraciones aplicadas y base real; no prueba rollback: la estrategia es forward-only.
 - `tenant` no tiene unit test; `saas`, `billing` y `audit` no tienen e2e propio (`realtime` sí lo tiene).
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
