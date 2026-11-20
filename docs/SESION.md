@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-19 — Repo de specs + Fase 4 etapa 3 (catálogo)
+
+- **Specs (docs-as-code):** nuevo `specs/` con `README`, plantilla de módulo, producto (visión, roles, flujos), **21 specs de módulos** (20 backend + `plataforma`), `trazabilidad.md` (44 tareas Jira de S5–S16 + 25 PRs) y operación (despliegue/calidad). `docs/INDICE.md` es la portada de docs. **169 enlaces relativos, 0 rotos**. Deuda detectada: `saas`/`billing` sin e2e, `tenant`/`audit` sin unit, AYCDS-24 al 80 %, SUNAT pendiente de OSE y vigencia de listas de precios por verificar.
+- **Fase 4 etapa 3:** `components/dashboard/providers/catalog.tsx` (`CatalogoProvider` + `useCatalogoState`) saca catálogo/precios de `ModulesProvider`, que los reexpone para no tocar las vistas. `features/catalogo` usa el provider directo; la poda de combos pasa a `catalogVersion`. Layout `Theme > Session > Notifications > Tenant > Catalogo > Modules`.
+- **Verificado:** web **268** tests, `check-types`, `lint`, build (49 rutas) y `check:boundaries` (0); api `check-types`.
+- **Próximo (etapa 4):** gastos → inventario → promociones → CRM → comprobantes → órdenes/cuentas → mesas/reservas → caja/turnos, un paso por PR.
+
 ## 2026-11-19 — Deploy Vercel + Railway (handoff)
 
 - **Vercel:** Production Branch = `development`; producción `development@9771f72` en https://fogoneria-system.vercel.app (login limpio, `/recuperar` 200, BFF login 200). Env `NEXT_PUBLIC_API_URL`/`NEXT_PUBLIC_REALTIME_URL` apuntan a Railway, `SESSION_SECRET` y `SESSION_COOKIE_SECURE=true`. La branch se cambia vía `PATCH /v9/projects/{id}/branch` (el MCP/`update_project` lo descarta).

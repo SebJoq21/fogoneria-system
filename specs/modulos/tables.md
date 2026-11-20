@@ -1,0 +1,70 @@
+# tables — especificación
+
+**Estado:** API real · **Última revisión:** 2026-11-19
+
+## 1. Propósito
+
+Gestionar el salón: mesas por sucursal, su capacidad, zona y forma, y el bloqueo/liberación manual. Los estados `OCUPADA` y `RESERVADA` **no** se escriben aquí: los derivan órdenes y reservas.
+
+## 2. Superficies
+
+| Capa | Dónde vive | Estado |
+|---|---|---|
+| Backend | `apps/api/src/modules/tables/` | real |
+| Web | `apps/web/features/salon/` (`MesasPage`, `SalonTablesPage`, `SalonTablesView`) | real |
+| Contrato | `packages/contracts/src/mesas.ts` | sí |
+| Datos | `mesas` | `20261019000000_init`, `20261020120200_soft_delete` |
+
+## 3. API
+
+| Método | Ruta | Roles | Qué hace |
+|---|---|---|---|
+| `GET` | `/api/v1/tables` | autenticado | Lista por sucursal (`estado`, `zona`) |
+| `GET` | `/api/v1/tables/:id` | autenticado | Detalle |
+| `POST` | `/api/v1/tables` | `ADMIN_GLOBAL`, `GERENTE_SUCURSAL` | Crea mesa |
+| `PATCH` | `/api/v1/tables/:id` | admin/sucursal | Edita número, capacidad, zona, forma |
+| `PATCH` | `/api/v1/tables/:id/status` | admin/sucursal | Solo `LIBRE` y `MANTENIMIENTO` |
+| `DELETE` | `/api/v1/tables/:id` | admin/sucursal | Baja lógica (`deleted_at`) |
+
+Reglas:
+- Una mesa con orden abierta o reserva activa **no** se bloquea ni se da de baja → 409.
+- `ADMIN_GLOBAL` indica `sucursalId` en body/query; un rol operativo que pida otra sucursal recibe 400. El tenant sigue saliendo del JWT.
+- `MANTENIMIENTO` se muestra en la UI como `reservada` + `blocked: true` (no es un cuarto estado de negocio).
+- Toda alta/edición/baja emite `table.status` cuando corresponde.
+
+## 4. Datos
+
+- `mesas`: `numero` (único por sucursal), `capacidad`, `zona`, `forma` (`REDONDA|RECTANGULAR`), `estado` (`LIBRE|OCUPADA|RESERVADA|MANTENIMIENTO`), `sucursal_id`, `deleted_at`.
+- RLS por empresa/sucursal.
+
+## 5. UI y rutas
+
+- `/app/mesas` → `MesasPage` (mapa; abre cuenta, registra llegada, bloquea/libera).
+- `/app/mesas/maestro` → `SalonTablesPage` (solo `sucursal`; CRUD y estado derivado).
+- `lib/table-mapping.ts` traduce UUID → `Table.id` numérico estable con FNV-1a de 32 bits y resuelve colisiones; `deriveTableStatus` respeta el `OCUPADA` del servidor.
+- Refresco por `order.created`, `order.updated` y `table.status`.
+
+## 6. Pruebas
+
+| Suite | Archivo |
+|---|---|
+| Unit | `src/modules/tables/tables.service.spec.ts` |
+| e2e | `test/tables.e2e-spec.ts` |
+| DB | `test/db/tables-reservas.db-spec.ts` |
+| Web | `features/salon/salon.test.ts`, `lib/table-mapping.test.ts`, `lib/tables-api.test.ts` |
+
+## 7. Deuda conocida
+
+- La UI de bloqueo está limitada a `sucursal` (`canChangeTableStatus`); el dueño solo lee.
+- No hay plano arrastrable (croquis): el mapa usa zonas y una grilla fija.
+
+## 8. Trazabilidad
+
+- Jira: AYCDS-16 (API), AYCDS-26 (mapa/maestro).
+- PRs: #11, #18.
+- Docs: [decisiones](../../docs/decisiones.md) (estados derivados, `Table.id`).
+
+## 9. Próximos pasos
+
+1. Editor visual de plano si el negocio lo pide.
+2. Añadir e2e de bloqueo con reserva activa.
