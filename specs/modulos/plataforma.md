@@ -34,7 +34,7 @@ Archivos:
 
 - **El login es solo inicio de sesión**: sin botones de cuentas demo ni CTA de registro.
 - «¿Olvidaste tu contraseña?» abre `mailto:` a soporte (`lib/support.ts`); no simula correo automático.
-- La sesión no se toca en la feature: `SessionProvider` (`components/dashboard/providers/session.tsx`) maneja login/logout y `ModulesProvider` lo reexpone.
+- La sesión no se toca en la feature: `SessionProvider` (`components/dashboard/providers/session.tsx`) maneja login/logout, expone `ready` (fin de la hidratación) y `ModulesProvider` lo reexpone.
 - Con sesión, el shell nunca pinta datos demo.
 - `RecoverPage` no está en el matcher de `proxy.ts`: es pública.
 
@@ -60,4 +60,4 @@ Archivos:
 ## 8. Próximos pasos
 
 1. Endpoint de solicitud de reset con token de un uso (cuando exista correo transaccional).
-2. Mover el login de `ModulesProvider` a `SessionProvider` en las vistas (Fase 4, etapa 3).
+2. Migrar las vistas a `useSession` y retirar `login`/`logout` de `useModules` (Fase 4, etapa 4).

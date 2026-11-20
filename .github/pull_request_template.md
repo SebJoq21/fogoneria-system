@@ -30,6 +30,13 @@
 - [ ] Si cambia un contrato (endpoint, payload, evento): docs actualizadas y aviso al equipo.
 - [ ] Sin secretos, credenciales ni datos reales.
 - [ ] Evidencia para el reviewer (captura, log o respuesta de la API).
+- [ ] Actualicé `specs/modulos/<m>.md` con estado/endpoints/tablas/UI/tests/deuda.
+- [ ] Revisé coherencia con specs/docs existentes y `specs/trazabilidad.md` si cambió el estado.
+- [ ] Si no aplica, justifico `SPECS_SKIP`/`sin-spec` en la sección **Specs**.
+
+## Specs
+
+<!-- Delta de 2–4 líneas: qué spec cambió y qué se verificó. Si no aplica, escribe «sin-spec» y el motivo. -->
 
 ## Revisión
 

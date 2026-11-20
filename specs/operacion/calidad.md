@@ -10,10 +10,11 @@
 | `pnpm check-types` | `tsc --noEmit` en api, web y contratos | error de tipos |
 | `pnpm check:boundaries` | `scripts/check-module-boundaries.mjs` sobre el baseline | import nuevo entre módulos (baseline **0**) |
 | `pnpm build` | Next build + Nest build + paquetes | error de compilación |
-| `pnpm --filter api test` | Vitest unit (26 archivos `*.spec.ts` en `src/modules` + `src/common`) | test rojo |
+| `pnpm --filter api test` | Vitest unit (33 archivos, 305 tests, en `src/modules` + `src/common`) | test rojo |
 | `pnpm --filter api test:e2e` | 15 archivos con Prisma mockeado (realtime levanta Socket.io real) | contrato HTTP/WS roto |
 | `pnpm --filter api test:db` | 18 `*.db-spec.ts` contra PostgreSQL real (RLS forzado) | aislamiento, trigger o migración rota |
-| `pnpm --filter web test` | 33 archivos Vitest (features, lib, proxy, route handlers) | test rojo |
+| `pnpm --filter web test` | 33 archivos Vitest, 268 tests (features, lib, proxy, route handlers) | test rojo |
+| `pnpm check:specs` | `scripts/check-specs.mjs`: cobertura, estructura y enlaces de `specs/**` + diff del PR contra la spec del módulo | módulo/feature sin spec, enlace roto o código sin spec actualizada |
 
 > `test:db` requiere `DATABASE_URL_TEST` a una base **descartable**: los specs truncan `empresas` y `leads_cotizaciones`.
 
@@ -46,6 +47,16 @@ node scripts/check-pr-scope.mjs origin/<base> <head-sha>
 - Revisa que el diff toque **un solo módulo**. Archivos compartidos (docs, CI, prisma, tests, design system) no cuentan.
 - Excepción controlada: etiqueta **`multi-modulo`** (debe justificarse en el PR).
 
+Job **`Specs al día`** — solo en `pull_request`:
+
+```text
+node scripts/check-specs.mjs --base origin/<base>
+```
+
+- Exige una spec por módulo/feature, las secciones mínimas de la plantilla y enlaces relativos válidos.
+- Si el diff toca código de un módulo/feature, exige que cambie su spec; los cambios compartidos (providers, layout, contracts, kernel, sdk, prisma) exigen `specs/trazabilidad.md` o una spec de módulo.
+- Excepción `SPECS_SKIP=1` (o `--skip`) justificada en el PR; el reviewer valida que la spec describa el cambio real, no solo que el archivo se haya tocado.
+
 ## 3. Qué cubre cada suite
 
 | Suite | Cobertura real |
@@ -70,7 +81,7 @@ node scripts/check-pr-scope.mjs origin/<base> <head-sha>
 ## 6. Deuda de calidad conocida
 
 - No hay E2E de navegador (Playwright) ni cobertura mínima por módulo.
-- `tenant` no tiene unit test; `billing`, `audit` y `realtime` no tienen e2e propio.
+- `tenant` no tiene unit test; `saas`, `billing` y `audit` no tienen e2e propio (`realtime` sí lo tiene).
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
 

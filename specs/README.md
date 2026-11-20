@@ -2,7 +2,7 @@
 
 Repositorio de **especificaciones vivas** dentro del monorepo (docs-as-code). Responde, por módulo, qué existe, qué está mock, qué falta y dónde vive cada pieza.
 
-> Última revisión: **2026-11-19** · Fase 3 de modularización completa (6/6 olas, baseline de fronteras **0**) · Fase 4 en curso (etapas 1 y 2 extraídas; etapa 3 empezando por catálogo).
+> Última revisión: **2026-11-19** · Fase 3 de modularización completa (6/6 olas, baseline de fronteras **0**) · Fase 4 en curso (etapas 1–3 extraídas: `Session`/`Notifications`, `Tenant` y `Catalogo`).
 
 ## Relación con `docs/`
 
@@ -52,6 +52,25 @@ specs/
 3. Actualiza `trazabilidad.md` si la tarea Jira cambió de estado o apareció un PR.
 4. Si la decisión es arquitectónica, registra además en `docs/decisiones.md` (no solo en la spec).
 5. Verifica que cada ruta relativa exista antes de cerrar el PR (los enlaces se revisan en el mismo PR que la spec).
+
+## Flujo obligatorio: código → specs
+
+`specs/` es la **fuente de verdad del estado por módulo**; `docs/` es histórico y operativo (arquitectura, ADR, runbooks, actas). Un PR de código no está listo si la spec del módulo quedó vieja.
+
+Checklist del PR:
+
+- [ ] Actualicé `specs/modulos/<m>.md`: estado, endpoints, tablas/migraciones, UI/rutas, pruebas y deuda.
+- [ ] Revisé coherencia con las specs y `docs/` existentes; si cambió el estado, actualicé `specs/trazabilidad.md`.
+- [ ] Si el cambio es compartido (`apps/web/components/dashboard/providers/**`, `apps/web/app/layout.tsx`, `packages/contracts|kernel|sdk/**`), actualicé `specs/trazabilidad.md` o una spec de módulo afectada.
+- [ ] Si no aplica, justifiqué `SPECS_SKIP`/`sin-spec` en la sección **Specs** del PR.
+
+Comando local (estructura, cobertura y enlaces; con `--base` compara el PR):
+
+```bash
+pnpm check:specs --base origin/development
+```
+
+El gate corre en CI (job **Specs al día**) en cada PR. La excepción `SPECS_SKIP=1` (o `--skip`) es para casos justificados: el reviewer verifica el motivo y que la spec describa el cambio real, no solo que el archivo se haya tocado.
 
 ## Índice de módulos
 
