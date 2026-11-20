@@ -32,7 +32,7 @@ Job **`Lint, tipos y pruebas`** — corre en `push` a `development` y en PR a `d
 
 ```text
 pnpm install --frozen-lockfile
-pnpm audit --audit-level high      (advisory: no bloquea)
+pnpm audit --audit-level high      (bloqueante: altas/críticas)
 pnpm check:boundaries
 pnpm --filter api db:generate
 pnpm --filter api db:deploy        (Postgres 16 service)
@@ -148,7 +148,7 @@ Sonar **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el a
 
 > **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
 
-> **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; se mantiene `pnpm audit` advisory dentro de `quality`.
+> **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; `pnpm audit --audit-level high` es bloqueante dentro de `quality` (0 altas; queda 1 moderado de `minimatch` 9 en dev tooling).
 
 Workflows de producción (post-deploy y vigilancia):
 
@@ -194,7 +194,7 @@ Los tres viven fuera del CI a propósito: un deploy que espera los checks del co
 - `tenant` no tiene unit test; `saas`, `billing` y `audit` no tienen e2e propio (`realtime` sí lo tiene).
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
-- **Dependency Review** pendiente: requerir dependency submission para `pnpm-lock.yaml`; hoy `pnpm audit` es advisory.
+- **Dependency Review** activo en CI (`fail-on-severity: high`); `pnpm audit --audit-level high` es bloqueante y hoy queda 1 moderado (`minimatch` 9 vía `@typescript-eslint`).
 - **Trivy** es bloqueante para **OS/base** (`exit-code: 1`) desde Fase B; el compilador nativo de TypeScript se excluye de la imagen runtime. Los CVEs de paquetes npm de la imagen se cubren con `pnpm audit`/Dependabot y quedan como deuda de actualización de dependencias.
 - **Sonar** ya corre por CI (Automatic Analysis desactivado). El gate custom `Fogoneria` no se pudo asignar por permisos de la organización; el gate efectivo de cobertura son los thresholds de Vitest. Pendiente asignarlo cuando haya permiso/plan.
 - CODEOWNERS y protección de rama estricta siguen diferidos (decisión del usuario).
