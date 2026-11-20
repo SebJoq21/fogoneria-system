@@ -1,5 +1,11 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — CI: Sonar verde, required check y concurrencia
+
+- **Sonar:** el check externo fallaba en `development` por `new_coverage 1.6` (`scripts/check-specs.mjs`, 187 líneas sin cobertura). Se excluyen del scan `scripts/**`, migraciones SQL, `.github/**`, `apps/api/scripts/**`, configs y specs; el job Sonar instala dependencias para resolver los `tsconfig` de los workspaces. Gate de rama **OK** (`new_coverage 100`), check externo **success** en `adf2709`.
+- **Concurrencia:** `cancel-in-progress` solo aplica a PRs; los merges a `development` corren su CI completo. Antes, el merge siguiente cancelaba el run anterior (#84, #95, #96, #100–#102) y el commit quedaba sin validar.
+- **Ruleset:** `CI requerido` es required status check del ruleset de `development` (1 aprobación + bypass del dueño). PR #106 mergeado (`adf2709`).
+
 ## 2026-11-20 — CI Fase C: E2E Playwright, OpenAPI y Prisma forward-only
 
 - **Playwright:** `@playwright/test@1.65.1` en `apps/web`; `playwright.config.ts` (baseURL 3000, `webServer` con API 3001 + web 3000, 1 worker, retries 0/1, HTML report). `e2e/auth.spec.ts` cubre carga del login, admin→dashboard, mesero→`/app/mozo` (caja bloqueada), navegación admin a mesas/comensales/caja y cajero→`/app/caja` (mesas bloqueadas). `pnpm --filter web e2e` / `e2e:install`; Vitest excluye `e2e/**`.
