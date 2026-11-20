@@ -46,6 +46,8 @@ Reglas:
 
 ## 6. Pruebas
 
+- Cobertura (2026-11-20): se añadieron tests de controlador, DTO, mapper y ramas de error para subir la cobertura de Sonar; sin cambios de comportamiento.
+
 | Suite | Archivo |
 |---|---|
 | Unit | `src/modules/receipts/receipts.service.spec.ts` |

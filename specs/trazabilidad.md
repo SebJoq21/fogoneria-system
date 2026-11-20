@@ -137,4 +137,5 @@
 | `e9dabdc` | Ola dinero (receipts + cash + expenses) |
 | `eb57d76` | Quick wins seguridad/Sonar (CodeQL, S7773/S8786/S6848, checks PR-only) |
 | `e32771d` | CodeQL http-to-file y vulns Sonar restantes (load test, Docker, secrets locales) |
+| `cobertura-65` | Tests de cobertura API/Web/contratos para Sonar (rama `test/cobertura-65`) |
 | `eec5632` | Ola salón (mesas, reservas, KDS) |
