@@ -5,8 +5,11 @@
 #   pnpm --filter api db:deploy
 #   pnpm --filter api db:seed
 # Se publica en 5433 por defecto para no chocar con el Postgres de otros
-# proyectos locales (p. ej. dydalo usa 5432). Sobreescribe POSTGRES_PORT en un
-# .env de la raíz si necesitas otro puerto, y actualiza DATABASE_URL/
+# proyectos locales (p. ej. dydalo usa 5432).
+# Antes de arrancar: cp .env.example .env (Compose lee ese archivo) y ajusta
+# las claves. POSTGRES_PASSWORD, POSTGRES_RLS_PASSWORD, POSTGRES_SAAS_PASSWORD,
+# JWT_SECRET y SESSION_SECRET son obligatorias: el compose falla si faltan.
+# Si cambias POSTGRES_PASSWORD, actualiza también DATABASE_URL y
 # SHADOW_DATABASE_URL en apps/api/.env.
 
 services:
@@ -19,7 +22,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-fogoneria_db}
       POSTGRES_USER: ${POSTGRES_USER:-fogoneria_app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fogoneria_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
@@ -44,7 +47,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:-fogoneria_app}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
     command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
     restart: "no"
 
@@ -55,11 +58,15 @@ services:
       migrate:
         condition: service_completed_successfully
     environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD:-fogoneria_app}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      RLS_PASSWORD: ${POSTGRES_RLS_PASSWORD:?Define POSTGRES_RLS_PASSWORD en .env}
+      SAAS_PASSWORD: ${POSTGRES_SAAS_PASSWORD:?Define POSTGRES_SAAS_PASSWORD en .env}
     volumes:
       - ./db/scripts/rls:/rls:ro
     command: >-
       sh -c "psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -f /rls/000-roles.sql
+      && psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -v rls_password=\"$$RLS_PASSWORD\" -c \"ALTER ROLE fogoneria_rls PASSWORD :'rls_password'\"
+      && psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -v saas_password=\"$$SAAS_PASSWORD\" -c \"ALTER ROLE fogoneria_saas PASSWORD :'saas_password'\"
       && psql -h db -U ${POSTGRES_USER:-fogoneria_app} -d ${POSTGRES_DB:-fogoneria_db} -v ON_ERROR_STOP=1 -f /rls/010-force-rls.sql"
     restart: "no"
 
@@ -75,10 +82,10 @@ services:
       NODE_ENV: production
       PORT: 3001
       CORS_ORIGIN: http://localhost:3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:-fogoneria_app}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
-      DATABASE_URL_RLS: postgresql://fogoneria_rls:fogoneria_rls@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
-      DATABASE_URL_SAAS: postgresql://fogoneria_saas:fogoneria_saas@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
-      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-change-me-32-chars}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-fogoneria_app}:${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      DATABASE_URL_RLS: postgresql://fogoneria_rls:${POSTGRES_RLS_PASSWORD:?Define POSTGRES_RLS_PASSWORD en .env}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      DATABASE_URL_SAAS: postgresql://fogoneria_saas:${POSTGRES_SAAS_PASSWORD:?Define POSTGRES_SAAS_PASSWORD en .env}@db:5432/${POSTGRES_DB:-fogoneria_db}?schema=fogoneria
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
       JWT_EXPIRES_IN: 8h
     ports:
       - "3001:3001"
@@ -108,7 +115,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      SESSION_SECRET: ${SESSION_SECRET:-dev-only-session-secret-change-me-32chars}
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET en .env}
       # Compose local sirve por HTTP; en producción (HTTPS) quitar esta línea.
       SESSION_COOKIE_SECURE: "false"
     ports:
