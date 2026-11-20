@@ -56,6 +56,13 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
+      - name: Auditoría de dependencias (advisory)
+        # GitHub Dependency Review no soporta pnpm sin dependency-submission
+        # (devuelve 403 por Dependency Graph vacío). Se vuelve bloqueante en la
+        # fase B, después de corregir los advisories con overrides acotados.
+        continue-on-error: true
+        run: pnpm audit --audit-level high --prod
+
       - name: Fronteras de módulos
         run: pnpm check:boundaries
 
@@ -188,31 +195,6 @@ jobs:
           exit-code: 1
           format: table
 
-  # Corre también en push (no-op) para que un required check nunca quede
-  # `skipped`. En PR revisa el diff de dependencias contra el Dependency Graph.
-  dependency-review:
-    name: Revisión de dependencias
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - name: Sin diff de dependencias en push
-        if: github.event_name != 'pull_request'
-        run: 'echo "Push: no hay diff de dependencias que revisar."'
-
-      - name: Revisar dependencias del PR
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: on-failure
-
   # Gate único a futuro: cualquier job en failure/cancelled/skipped lo tumba.
   # Hoy la protección de rama no cambia; se conectará cuando el equipo lo decida.
   ci:
@@ -220,7 +202,7 @@ jobs:
     if: always() && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [quality, pr-scope, specs, docker, dependency-review]
+    needs: [quality, pr-scope, specs, docker]
     steps:
       - name: Exigir que todos los jobs pasen
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')
