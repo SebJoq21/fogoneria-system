@@ -106,6 +106,8 @@
 | CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |
 | CI Fase B: cobertura API/web, artifacts lcov y Sonar CI | #88 | `sonar-project.properties`, `vitest.config.*`, `.github/workflows/ci.yml` |
 | CI Fase C: E2E Playwright, OpenAPI y migraciones forward-only | #94 | `apps/web/e2e/auth.spec.ts`, `apps/web/playwright.config.ts`, `apps/api/scripts/export-openapi.mjs`, `.github/workflows/ci.yml` |
+| CVEs altos a 0 y `pnpm audit` bloqueante | #111, #113 | `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.github/workflows/ci.yml` |
+| `lcov` sin Prisma generado y `sonar.sources` fuera | #114 | `apps/api/vitest.config.ts`, `sonar-project.properties` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 
