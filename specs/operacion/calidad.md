@@ -123,7 +123,7 @@ docker build -f apps/web/Dockerfile -t fogoneria-web:ci .
 trivy image (OS/base, CRITICAL/HIGH, ignore-unfixed)   (bloqueante: exit-code 1; paquetes npm vía pnpm audit/Dependabot)
 ```
 
-Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el candidato a único required check; la protección de rama no se cambió todavía.
+Job **`CI requerido`** — solo PR, `needs: [quality, pr-scope, specs, docker, sonar, e2e, openapi, migrations]`, `if: always()`; falla si algún job queda en `failure`, `cancelled` o `skipped`. Es el **único required check** del ruleset de `development` (1 aprobación + bypass del dueño).
 
 Workflow **`CodeQL`** (`.github/workflows/codeql.yml`) — push/PR a `development`/`main` + cron semanal, `javascript-typescript` con `security-extended` y `security-events: write`.
 
