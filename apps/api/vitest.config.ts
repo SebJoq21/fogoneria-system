@@ -18,7 +18,7 @@ export default defineConfig({
       // El cliente Prisma generado se importa en los tests y aparecía en el
       // lcov; Sonar lo excluye del análisis (`**/generated/**`) y avisaba
       // "Could not resolve 4 file paths". Fuera del reporte y del umbral.
-      exclude: [...configDefaults.coverage.exclude, 'src/generated/**'],
+      exclude: [...(configDefaults.coverage.exclude ?? []), 'src/generated/**'],
       // Ratchet aprobado en G3: 71/54/64/72. La medición excluye
       // `src/generated`, que Sonar ignora en el análisis.
       thresholds: {

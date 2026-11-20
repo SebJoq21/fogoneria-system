@@ -188,6 +188,7 @@ Los tres viven fuera del CI a propósito: un deploy que espera los checks del co
 ## 6. Deuda de calidad conocida
 
 - No hay cobertura mínima por módulo.
+- El `lcov` de la API excluye `src/generated/**` (cliente Prisma, se importa en los tests). Sonar ya lo excluía del análisis y avisaba `Could not resolve 4 file paths` en cada scan; ahora el reporte coincide con el alcance. `sonar.sources` se retiró porque el nuevo *analysis scope* lo ignora.
 - El E2E de Playwright cubre autenticación y RBAC; el flujo completo mesa→cocina→caja→comprobante sigue pendiente (AYCDS-49).
 - `docs/openapi.json` se genera en CI y no se versiona; si se necesita diff de contrato, publicarlo como artifact o commitearlo con una decisión explícita.
 - El job de migraciones prueba deploy doble y drift entre migraciones aplicadas y base real; no prueba rollback: la estrategia es forward-only.
