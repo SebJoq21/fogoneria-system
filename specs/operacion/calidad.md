@@ -94,7 +94,7 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`cov
 
 ## 4. Gates no automatizados (revisión humana)
 
-- **Un PR = un módulo** y revisión por otra persona (CODEOWNERS/protección diferidos hasta cerrar el avance masivo; ver [plan](../../docs/PLAN-MODULOS-Y-PROPIEDAD.md) §3).
+- **Un PR = un módulo** y revisión por otra persona (CODEOWNERS diferido; el ruleset tiene 1 aprobación + bypass admin por decisión del dueño).
 - Smoke funcional por rol antes de demo/sustentación (mesero → cocina → caja).
 - Migraciones: revisar `prisma validate` y que la migración sea la fuente ejecutable.
 - Cambios de contrato: actualizar `packages/contracts`, la spec del módulo y `docs/decisiones.md` si es arquitectónico.
