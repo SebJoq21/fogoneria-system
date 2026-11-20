@@ -11,6 +11,7 @@ ERP/CRM multitenant para restaurantes: API NestJS, web Next.js y PostgreSQL 16 c
 
 ```sh
 pnpm install
+cp .env.example .env
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 pnpm --filter api db:up
@@ -25,17 +26,18 @@ pnpm dev
 - API: http://localhost:3001/api/v1
 - Swagger: http://localhost:3001/api/docs
 
-En PowerShell usa `Copy-Item` en lugar de `cp`. El orden importa: el seed corre antes de activar `FORCE ROW LEVEL SECURITY`.
+En PowerShell usa `Copy-Item` en lugar de `cp`. `.env` es la configuración del Compose (Postgres, roles RLS y secretos de la API/web); `apps/api/.env` es la de la API cuando corre fuera de Docker y debe usar el mismo `POSTGRES_PASSWORD`/puerto. El orden importa: el seed corre antes de activar `FORCE ROW LEVEL SECURITY`.
 
 Credenciales demo: `admin@mirestaurante.com` / `Fogoneria123!` (también `super@fogoneria.com`, `sucursal@`, `cocina@`, `mesero@` y `caja@mirestaurante.com`).
 
 ## Docker Compose
 
 ```sh
+cp .env.example .env   # PowerShell: Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Levanta PostgreSQL, aplica migraciones y seed, crea los roles RLS y arranca API y web. Para un entorno limpio:
+Levanta PostgreSQL, aplica migraciones y seed, crea los roles RLS y arranca API y web. El Compose exige `POSTGRES_PASSWORD`, `POSTGRES_RLS_PASSWORD`, `POSTGRES_SAAS_PASSWORD`, `JWT_SECRET` y `SESSION_SECRET`: sin `.env` falla con un mensaje explícito. Para un entorno limpio:
 
 ```sh
 docker compose down -v
