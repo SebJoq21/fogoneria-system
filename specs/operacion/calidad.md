@@ -147,6 +147,8 @@ Plan de seguridad y Sonar: [`docs/plan-seguridad-sonar.md`](../../docs/plan-segu
 Sonar **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el analizador TS resuelve los `tsconfig` de los workspaces), descarga `coverage-api`/`coverage-web`/`coverage-contracts`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=false` temporal). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla. El análisis excluye `.github/**`, `scripts/**`, `apps/api/scripts/**`, migraciones SQL, configs y specs: son infra validada por sus propios jobs y no deben arrastrar `new_coverage`.
 
 > **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
+>
+> **2026-11-20:** cobertura overall Sonar **65.6 %** (nuevo código 81.1 %), 0 vulnerabilidades/code smells/hotspots, ratings A; gate default **OK**. Tests: API 594, Web 646, contratos 111.
 
 > **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; `pnpm audit --audit-level high` es bloqueante dentro de `quality` (0 altas; queda 1 moderado de `minimatch` 9 en dev tooling).
 

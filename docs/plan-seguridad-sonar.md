@@ -1,6 +1,23 @@
 # Plan de seguridad, Code Scanning y Sonar
 
-> Estado al 2026-11-20. Objetivo: **0 alertas abiertas de CodeQL**, **0 vulnerabilidades high de Dependabot**, `pnpm audit --audit-level high` verde y **Sonar en verde en todos los aspectos** (gate OK, ratings A, cobertura ≥65 %, duplicación ≤3 %, hotspots 100 %).
+> **Cierre 2026-11-20.** Objetivo cumplido: **0 alertas CodeQL**, **0 altas de Dependabot**, `pnpm audit --audit-level high` bloqueante y **Sonar en verde** (gate OK, ratings A, cobertura overall **65.6 %**, nuevo código **81.1 %**, duplicación 0.7 %, hotspots 100 %).
+
+## 0. Estado final
+
+| Fuente | Antes | Cierre |
+|---|---|---|
+| Dependabot | 46 (19 high, 21 medium, 6 low) | **1 moderada** (`minimatch` 9, dev tooling) |
+| CodeQL | 3 (1 high, 2 medium) | **0** |
+| Sonar vulnerabilidades | 12 | **0** |
+| Sonar code smells | 15 | **0** |
+| Sonar cobertura overall | 42.1 % | **65.6 %** (líneas 66.0, ramas 64.9) |
+| Sonar nuevo código | — | **81.1 %** (umbral 80) |
+| Sonar ratings | Security E, Reliability A, Maintainability A | **A / A / A** |
+| Duplicación / hotspots | 0.7 % / 0 | **0.7 % / 0** |
+| `pnpm audit --audit-level high` | advisory | **bloqueante, 0 altas** |
+| Tests (API / Web / contratos) | 305 / 268 / 0 | **594 / 646 / 111** |
+
+PRs: **#111** (Dependabot + secretos), **#113** (auditoría bloqueante), **#115/#116/#117** (cobertura). `development` en `0dd2be8`, 0 PRs abiertos.
 
 ## 1. Punto de partida
 
