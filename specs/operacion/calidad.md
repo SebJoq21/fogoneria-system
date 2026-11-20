@@ -26,6 +26,8 @@
 
 ## 2. CI (`.github/workflows/ci.yml`)
 
+Concurrencia: los runs de PR se cancelan al pushear de nuevo (`cancel-in-progress` solo en `pull_request`); un push a `development` (merge) **nunca** se cancela, para que el commit de merge tenga su CI completo.
+
 Job **`Lint, tipos y pruebas`** — corre en `push` a `development` y en PR a `development`/`main`:
 
 ```text
