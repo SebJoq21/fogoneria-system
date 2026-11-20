@@ -61,7 +61,7 @@ jobs:
         # (devuelve 403 por Dependency Graph vacío). Se vuelve bloqueante en la
         # fase B, después de corregir los advisories con overrides acotados.
         continue-on-error: true
-        run: pnpm audit --audit-level high --prod
+        run: pnpm audit --audit-level high
 
       - name: Fronteras de módulos
         run: pnpm check:boundaries

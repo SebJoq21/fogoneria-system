@@ -3,5 +3,4 @@
 failure-threshold: error
 ignored:
   - DL3008 # apt-get sin versión fija (imágenes base Debian)
-  - DL3015 # apt-get sin --no-install-recommends (ya se usa donde aplica)
   - DL3059 # varios RUN consecutivos (capas separadas a propósito)
