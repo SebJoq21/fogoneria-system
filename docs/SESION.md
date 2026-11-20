@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-20 — Cierre seguridad/Sonar al 100 %
+
+- **Dependabot:** 46 → **1** (moderada `minimatch` 9, dev tooling); **0 high**. `pnpm audit --audit-level high` es **bloqueante** (#111, #113).
+- **CodeQL:** 3 → **0**.
+- **Sonar:** cobertura **42.7 → 65.6 %** (nuevo código 81.1 %); gate **OK**; Security/Reliability/Maintainability **A**; 0 vulnerabilidades, 0 code smells, 0 hotspots; duplicación 0.7 %.
+- **Secretos:** `.env.example` raíz + Compose sin defaults; README actualizado (#111).
+- **Tests:** API **594**, Web **646**, contratos **111** (#115, #116, #117).
+- `development` en `0dd2be8`, **0 PRs abiertos**; plan cerrado en [`docs/plan-seguridad-sonar.md`](plan-seguridad-sonar.md).
+
 ## 2026-11-20 — Quick wins de seguridad + plan Sonar
 
 - **CodeQL:** 3 alertas corregidas (email sin regex, `execFileSync` en `check-pr-scope`, reporte de carga sin body de red).
