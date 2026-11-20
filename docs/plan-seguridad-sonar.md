@@ -56,6 +56,7 @@ Después: `codeql.yml` sigue con `security-extended` y cron semanal; no activar 
   - Añadir `.env.example` raíz y exigir `POSTGRES_PASSWORD` en Compose (`${POSTGRES_PASSWORD:?}`), o
   - marcarlas como **false positive** en Sonar con justificación (dev local, no producción) y mantener el arranque sin `.env`.
 - `secrets:S6698` en `.agents/**` ya desaparece por exclusión.
+- Los 5 `secrets:S6698` restantes (`docker-compose.yml` y `env.validation.ts`) son **credenciales locales de desarrollo**; se ignoran con `sonar.issue.ignore.multicriteria` y quedan documentados aquí. La migración a `.env`/`POSTGRES_PASSWORD` obligatorio queda como tarea de la ola 2 si el equipo quiere eliminar el default.
 
 **Aceptación:** Sonar sin `secrets:S6698`/`docker:S6505`/`docker:S6471` abiertos; Compose documentado.
 

@@ -293,8 +293,8 @@ async function main() {
     rampSec: config.ramp,
     itemsPerOrder: config.items,
     readRatio: config.readRatio,
-    role: session.rol,
-    sucursalId: session.sucursalId,
+    role: ["ADMIN_GLOBAL", "GERENTE_SUCURSAL", "MESERO", "CAJERO", "COCINA"].indexOf(session.rol),
+    sucursalIdPresente: Boolean(session.sucursalId),
     orders: {
       total: created,
       rps: round(created / elapsedSec),
