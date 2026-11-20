@@ -105,7 +105,7 @@
 | Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
 | CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |
 | CI Fase B: cobertura API/web, artifacts lcov y Sonar CI | #88 | `sonar-project.properties`, `vitest.config.*`, `.github/workflows/ci.yml` |
-| CI Fase C: E2E Playwright, OpenAPI y migraciones forward-only | — (PR pendiente) | `apps/web/e2e/auth.spec.ts`, `apps/web/playwright.config.ts`, `apps/api/scripts/export-openapi.mjs`, `.github/workflows/ci.yml` |
+| CI Fase C: E2E Playwright, OpenAPI y migraciones forward-only | #94 | `apps/web/e2e/auth.spec.ts`, `apps/web/playwright.config.ts`, `apps/api/scripts/export-openapi.mjs`, `.github/workflows/ci.yml` |
 
 ## 8. Pendientes sin PR (backlog vivo)
 

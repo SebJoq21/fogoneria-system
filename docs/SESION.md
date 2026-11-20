@@ -3,11 +3,11 @@
 ## 2026-11-20 — CI Fase C: E2E Playwright, OpenAPI y Prisma forward-only
 
 - **Playwright:** `@playwright/test@1.65.1` en `apps/web`; `playwright.config.ts` (baseURL 3000, `webServer` con API 3001 + web 3000, 1 worker, retries 0/1, HTML report). `e2e/auth.spec.ts` cubre carga del login, admin→dashboard, mesero→`/app/mozo` (caja bloqueada), navegación admin a mesas/comensales/caja y cajero→`/app/caja` (mesas bloqueadas). `pnpm --filter web e2e` / `e2e:install`; Vitest excluye `e2e/**`.
-- **CI:** jobs `e2e` (Postgres 16 + migraciones + roles RLS + FORCE + seed + build + Playwright; artifact `playwright-report`), `openapi` (`openapi:export` + `openapi-spec-validator`; artifact `openapi-spec`) y `migrations` (deploy ×2 + `migrate status` + drift con base shadow). Los tres entran en `needs` del gate `CI requerido`.
+- **CI:** jobs `e2e` (Postgres 16 + migraciones + roles RLS + FORCE + seed + build + Playwright; artifact `playwright-report`), `openapi` (`openapi:export` + `openapi-spec-validator`; artifact `openapi-spec`) y `migrations` (deploy ×2 + `migrate status` + drift DB vs schema). Los tres entran en `needs` del gate `CI requerido`.
 - **OpenAPI:** `apps/api/src/swagger.ts` expone `buildSwaggerConfig`/`createOpenApiDocument`; `scripts/export-openapi.mjs` corre sobre `dist/` (tsx no emite `design:paramtypes`) y escribe `docs/openapi.json` (ignorado por git). Validado localmente: OpenAPI 3.0.0, 115 KB, `openapi-spec-validator: OK`.
-- **Migraciones:** Prisma 7 usa `datasource.shadowDatabaseUrl` (`SHADOW_DATABASE_URL`) en `prisma.config.ts`; el CI crea `fogoneria_shadow` aparte y ejecuta `migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code`. Flags y rechazo de DB real (P3025) verificados; sin PostgreSQL local no se ejecutó el job completo.
+- **Migraciones:** el CI aplica `db:deploy` dos veces sobre Postgres limpio, verifica `migrate status` y detecta drift con `migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code` (DB migrada vs schema, sin shadow). Sin rollback: forward-only. Sin PostgreSQL local no se ejecutó el job completo aquí.
 - **Verificado:** web **268** tests, `test:coverage` sin cambios, `check-types`, `lint`, build (49 rutas); api **305** tests, `check-types`, `lint`, build; Playwright local: login real contra el build (`1 passed`) y suite completa con API fake en 3001 (`5/5`, valida cookie/proxy/RBAC); API/web arrancan con los comandos del `webServer` (health 200, login 200); YAML válido con Python. El E2E contra API+PostgreSQL reales queda para CI (no hay Docker/Postgres local).
-- **PR:** pendiente de abrir; no se commiteó ni se tocaron PRs/ramas.
+- **PR:** #94 abierto con CI en iteración; E2E ya pasa, OpenAPI y migraciones se corrigieron (Prisma generate + drift DB vs schema).
 
 ## 2026-11-20 — CI Fase B: cobertura y Sonar CI
 

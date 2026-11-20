@@ -99,17 +99,16 @@ python3 -m venv "$RUNNER_TEMP/openapi-venv"
 Job **`Migraciones forward-only`** — push y PR:
 
 ```text
-psql ... CREATE DATABASE fogoneria_shadow
 pnpm --filter api db:generate
 pnpm --filter api db:deploy              (1.ª vez)
 pnpm --filter api db:deploy              (2.ª vez: idempotencia)
 pnpm --filter api exec prisma migrate status
-pnpm --filter api exec prisma migrate diff --from-migrations prisma/migrations \
+pnpm --filter api exec prisma migrate diff --from-config-datasource \
   --to-schema prisma/schema.prisma --exit-code
 ```
 
-- `SHADOW_DATABASE_URL` apunta a una base aparte (Prisma 7 rechaza la base real con `P3025`).
-- No hay `down`: la migración es la fuente ejecutable y el drift se detecta comparando migraciones vs `schema.prisma` (exit 2 si difieren).
+- El drift compara la **base migrada** contra `schema.prisma` (exit 2 si difieren); no usa shadow DB en CI.
+- No hay `down`: la migración es la fuente ejecutable; la estrategia es forward-only.
 
 Job **`Imágenes Docker y Trivy`** — push y PR:
 
@@ -161,7 +160,7 @@ Job **`SonarCloud`** — push/PR, `needs: quality`; descarga `coverage-api`/`cov
 - No hay cobertura mínima por módulo.
 - El E2E de Playwright cubre autenticación y RBAC; el flujo completo mesa→cocina→caja→comprobante sigue pendiente (AYCDS-49).
 - `docs/openapi.json` se genera en CI y no se versiona; si se necesita diff de contrato, publicarlo como artifact o commitearlo con una decisión explícita.
-- El job de migraciones usa una base shadow aparte (`fogoneria_shadow`) y no prueba rollback: la estrategia es forward-only.
+- El job de migraciones prueba deploy doble y drift contra `schema.prisma`; no prueba rollback: la estrategia es forward-only.
 - `tenant` no tiene unit test; `saas`, `billing` y `audit` no tienen e2e propio (`realtime` sí lo tiene).
 - `test:db` no corre en local sin PostgreSQL y base descartable.
 - El gate de estilos exime `app/demo/*`.
