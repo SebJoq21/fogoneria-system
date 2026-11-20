@@ -47,6 +47,12 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "actions/setup-node"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/upload-artifact"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/download-artifact"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "SonarSource/sonarqube-scan-action"
+        update-types: ["version-update:semver-major"]
     groups:
       github-actions-minor-patch:
         update-types: ["minor", "patch"]
