@@ -59,11 +59,10 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Auditoría de dependencias (advisory)
-        # `dependency-review` es el gate bloqueante de dependencias nuevas del PR;
-        # `pnpm audit` queda como barrido advisory de todo el árbol.
-        continue-on-error: true
-        run: pnpm audit --audit-level high
+      - name: Auditoría de dependencias (bloqueante)
+        # Barrido de todo el árbol: altas/críticas bloquean. El moderado de
+        # `minimatch` 9 (dev tooling) queda visible y lo sigue Dependabot.
+        run: pnpm audit --audit-level high || pnpm audit --audit-level high
 
       - name: Fronteras de módulos
         run: pnpm check:boundaries
