@@ -13,9 +13,9 @@
     "db:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/restore.ps1"
   },
   "devDependencies": {
-    "@babel/preset-typescript": "8.0.1",
-    "prettier": "3.9.6",
-    "turbo": "^2.10.12",
+    "@babel/preset-typescript": "8.0.7",
+    "prettier": "3.10.1",
+    "turbo": "^2.11.11",
     "typescript": "7.0.2"
   },
   "packageManager": "pnpm@11.25.0",
