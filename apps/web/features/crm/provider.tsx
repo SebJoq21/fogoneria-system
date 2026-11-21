@@ -17,6 +17,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useId,
 } from 'react';
 import { useSession } from '@/components/dashboard/providers/session';
 import { initialCustomers, type Customer } from '@/lib/erp';
@@ -100,7 +101,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   const tenantKey = tenantKeyOf(currentUser);
   const [customers, setCustomersState] = useState<Customer[]>([]);
   const [hydrated, setHydrated] = useState(false);
-  const sourceRef = useRef(`crm-${Math.random().toString(36).slice(2)}`);
+  const sourceId = useId();
   const applyingRemote = useRef(false);
   const skipBroadcast = useRef(false);
 
@@ -124,21 +125,21 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     }
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(channelKey(tenantKey));
-    channel.postMessage({ type: 'state', source: sourceRef.current, customers } satisfies CrmSyncMessage);
+    channel.postMessage({ type: 'state', source: sourceId, customers } satisfies CrmSyncMessage);
     channel.close();
-  }, [customers, hydrated, tenantKey]);
+  }, [customers, hydrated, tenantKey, sourceId]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
     const channel = new BroadcastChannel(channelKey(tenantKey));
     channel.onmessage = (event: MessageEvent<CrmSyncMessage>) => {
       const message = event.data;
-      if (!message || message.source === sourceRef.current) return;
+      if (!message || message.source === sourceId) return;
       applyingRemote.current = true;
       setCustomersState(message.customers ?? []);
     };
     return () => channel.close();
-  }, [tenantKey]);
+  }, [tenantKey, sourceId]);
 
   const setCustomers = useCallback((next: Customer[]) => {
     setCustomersState(next);
@@ -170,10 +171,10 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     setCustomersState(next);
     if (typeof BroadcastChannel !== 'undefined') {
       const channel = new BroadcastChannel(channelKey(tenantKey));
-      channel.postMessage({ type: 'reset', source: sourceRef.current, customers: next } satisfies CrmSyncMessage);
+      channel.postMessage({ type: 'reset', source: sourceId, customers: next } satisfies CrmSyncMessage);
       channel.close();
     }
-  }, [tenantKey]);
+  }, [tenantKey, sourceId]);
 
   const value = useMemo(
     () => ({ customers, setCustomers, addPoints, resetCustomers }),

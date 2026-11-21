@@ -223,9 +223,7 @@ pnpm check:specs --base origin/development
 **Estado:** **20/20/20/20** (backend, frontend, contratos, specs), 12 alias
 deprecados, `check:modules --strict` verde y cableado en CI.
 
-**Fase 6 (timeboxed):** el shell consume `modules-nav.ts` (sidebar/topbar) y
-`features/registry.ts` (`FeatureProviders`); `TenantProvider` y `CrmProvider`
-migrados a sus features. El resto del estado sigue en `ModulesProvider`.
+**Fase 6 (timeboxed):** el shell consume `modules-nav.ts` (sidebar/topbar y títulos de detalle generados) y `features/registry.ts` (`FeatureProviders`); `TenantProvider` y `CrmProvider` migrados a sus features (clientes con purga legacy y sync entre pestañas). El resto del estado sigue en `ModulesProvider`.
 
 **Siguiente:** completar la Fase 6 (providers por módulo/retirar
 `ModulesProvider`); de la Fase 7 queda la convención de migraciones por módulo

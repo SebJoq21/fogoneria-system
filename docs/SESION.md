@@ -2,10 +2,10 @@
 
 ## 2026-11-21 — Paridad F6 (timeboxed): shell generado + providers piloto
 
-- **Shell:** `AppSidebar` consume `lib/modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` deriva títulos de `modules-nav.ts`/registry. `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
-- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes (`fogoneria:crm:v1:<tenant>`, migración desde `ErpState` v2 con purga legacy y sync por `BroadcastChannel`). `ModulesProvider` los consume y reexporta `customers`/`setCustomers`.
+- **Shell:** `AppSidebar` consume `modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` usa `moduleTitles` generado (incluye `detailTitles`) y `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
+- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes: persiste `fogoneria:crm:v1:<tenant>`, migra y **purga** `customers` del `ErpState` v2, y sincroniza entre pestañas con `BroadcastChannel` propio ignorando el eco. `ModulesProvider` los consume y reexporta `customers`/`setCustomers`.
 - **Resto:** órdenes, cuentas, caja, gastos, inventario, promociones y comprobantes siguen en `ModulesProvider` (F6 completo pendiente).
-- Verificado: web **882** tests, `check:modules --strict`, `gen:modules --check`, boundaries 0, types, lint y build.
+- Verificado: web **885** tests, `check:modules --strict`, `gen:modules --check`, boundaries 0, types, lint y build.
 
 ## 2026-11-21 — Paridad F7: Prisma multi-archivo por módulo
 
