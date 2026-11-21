@@ -5,7 +5,7 @@
 - **Fase 0:** `modules/<id>/module.json` en los 20 módulos; `scripts/gen-modules.mjs` (`pnpm gen:modules`) genera `apps/api/src/modules/registry.ts` (consumido por `app.module.ts`), `apps/web/features/registry.ts` y `apps/web/lib/modules-nav.ts` (el shell aún usa su lista). `check:modules` valida manifiestos y reporta **backend 20/20, frontend 12/20, contratos 9/20 (+7 alias), specs 20/20**; step advisory en `quality`.
 - **Fase 1:** `features/crm/module.ts` alimenta el registry y la entrada de nav generada; test `lib/modules-registry.test.ts`; `/app/clientes` intacta.
 - **Fase 2:** renombres 1:1 `orders`, `cash`, `receipts`, `expenses`, `inventory`, `promotions`, `staff` en features y contratos. Subpaths antiguos (`caja`, `comprobantes`, `gastos`, `inventario`, `ordenes`, `promociones`, `rrhh`) quedan como alias `@deprecated`. Imports, mocks, specs, `check-specs`, `check-pr-scope`, catálogo y `AGENTS.md` actualizados. Sin splits, providers ni cambios de estado.
-- Verificado: api **677** unit + **112** e2e; web **865**; contracts **119**; lint, check-types, builds, `check:boundaries` (0) y `check:specs` OK.
+- Verificado: api **680** unit + **112** e2e; web **865**; contracts **119**; lint, check-types, builds, `check:boundaries` (0) y `check:specs` OK.
 
 ## 2026-11-21 — Plan de paridad de módulos 1:1
 
