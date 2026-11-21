@@ -22,6 +22,7 @@ SaaS ERP gastronómico (parrilla peruana). Monorepo `pnpm + turbo`, Node >=24.
 - No commitear `*.tsbuildinfo`, `.next/`, `dist/`, `.env*` (solo `.env.example`).
 - Verificar antes de cerrar: `lint + check-types`; en api además `vitest run` si tocó `src/`.
 - Tareas chicas y enfocadas; `@explore` para búsquedas amplias, no leer 100+ archivos en el hilo principal.
+- Paridad de módulos: el mismo ID debe existir en `apps/api/src/modules/<id>`, `apps/web/features/<id>`, `packages/contracts/src/<id>.ts` y `specs/modulos/<id>.md`; un PR toca un solo módulo y evita archivos generados/compartidos. Ver `docs/plan-paridad-modulos.md` y `pnpm check:modules`.
 
 ## Seguimiento de tareas
 

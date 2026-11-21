@@ -10,7 +10,8 @@
     "check:boundaries": "node scripts/check-module-boundaries.mjs",
     "check:specs": "node scripts/check-specs.mjs",
     "db:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/backup.ps1",
-    "db:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/restore.ps1"
+    "db:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/restore.ps1",
+    "check:modules": "node scripts/check-module-parity.mjs"
   },
   "devDependencies": {
     "@babel/preset-typescript": "8.0.7",
