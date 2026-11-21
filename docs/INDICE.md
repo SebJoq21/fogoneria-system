@@ -8,7 +8,7 @@ Portada de la documentación histórica y operativa del proyecto. Para el **esta
 
 | Bloque | Qué responde | Documentos |
 |---|---|---|
-| **Arquitectura** | Cómo está construido y por qué | [arquitectura](arquitectura.md), [MODULARIZACION](MODULARIZACION.md), [decisiones](decisiones.md) |
+| **Arquitectura** | Cómo está construido y por qué | [arquitectura](arquitectura.md), [MODULARIZACION](MODULARIZACION.md), [plan-paridad-modulos](plan-paridad-modulos.md), [decisiones](decisiones.md) |
 | **Datos** | Modelo, aislamiento, errores y respaldo | [modelo-datos](modelo-datos.md), [rls-modelo](rls-modelo.md), [errores-db](errores-db.md), [respaldo-recuperacion](respaldo-recuperacion.md), [bi-vistas](bi-vistas.md) |
 | **Operación** | Cómo se despliega y se mide | [despliegue](despliegue.md), [explain-orders](explain-orders.md), [explain-rls](explain-rls.md), [websockets](websockets.md) |
 | **Calidad** | Qué se probó y con qué evidencia | [acta-qa-aycds-66](acta-qa-aycds-66.md), [acta-qa-aycds-50](acta-qa-aycds-50.md) |
@@ -19,6 +19,7 @@ Portada de la documentación histórica y operativa del proyecto. Para el **esta
 
 - **[arquitectura.md](arquitectura.md)** — mapa del sistema: rutas web, módulos API, BFF, sesión, WebSockets, datos.
 - **[MODULARIZACION.md](MODULARIZACION.md)** — fases 0–4, reglas de dependencia, baseline de fronteras y criterios de aceptación por módulo.
+- **[plan-paridad-modulos.md](plan-paridad-modulos.md)** — catálogo canónico de 20 módulos, paridad backend/frontend/contratos/specs, estrategia de rebase y plan por fases.
 - **[decisiones.md](decisiones.md)** — decisiones vigentes (ADR en una línea): Prisma, RLS, sesión, precios, caja, comprobantes, CRM, BI…
 - **[PLAN-MODULOS-Y-PROPIEDAD.md](PLAN-MODULOS-Y-PROPIEDAD.md)** — inventario por módulo, regla «un PR = un módulo», severidades y observaciones.
 

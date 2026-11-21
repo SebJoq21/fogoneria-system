@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "canonical": true,
+  "modules": [
+    { "id": "auth", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/", "/recuperar"], "legacy": ["apps/web/features/plataforma", "packages/contracts/src/plataforma.ts"] },
+    { "id": "tenant", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": [], "legacy": ["apps/web/features/plataforma", "apps/web/components/dashboard/providers/tenant.tsx", "packages/contracts/src/plataforma.ts"] },
+    { "id": "onboarding", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/onboarding"], "legacy": ["apps/web/features/plataforma", "packages/contracts/src/plataforma.ts"] },
+    { "id": "saas", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/saas"], "legacy": ["apps/web/features/plataforma", "packages/contracts/src/plataforma.ts"] },
+    { "id": "billing", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/saas"], "legacy": ["apps/web/features/plataforma", "packages/contracts/src/plataforma.ts"] },
+    { "id": "audit", "kind": "api", "owner": "@por-asignar", "status": "pending", "routes": ["/app/auditoria"], "legacy": [] },
+    { "id": "catalog", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/productos/platos", "/app/productos/categorias", "/app/productos/modificadores"], "legacy": ["apps/web/features/catalogo", "packages/contracts/src/catalogo.ts"] },
+    { "id": "pricing", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/productos/precios"], "legacy": ["apps/web/features/catalogo", "packages/contracts/src/catalogo.ts"] },
+    { "id": "tables", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/mesas", "/app/mesas/maestro"], "legacy": ["apps/web/features/salon", "apps/web/components/erp/BookingsWorkspace.tsx", "packages/contracts/src/mesas.ts"] },
+    { "id": "reservations", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/modulos/reservas/agenda"], "legacy": ["apps/web/features/salon", "apps/web/components/erp/BookingsWorkspace.tsx", "packages/contracts/src/reservas.ts"] },
+    { "id": "orders", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/ordenes", "/app/cocina", "/app/mozo"], "legacy": ["apps/web/features/ordenes", "apps/web/components/erp/MozoView.tsx", "apps/web/components/erp/mozo", "packages/contracts/src/ordenes.ts"] },
+    { "id": "realtime", "kind": "infra", "owner": "@por-asignar", "status": "pending", "routes": [], "legacy": ["apps/web/lib/realtime.ts", "apps/web/lib/orders-realtime.ts", "packages/contracts/src/tiempo-real.ts"] },
+    { "id": "cash", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/caja"], "legacy": ["apps/web/features/caja", "packages/contracts/src/caja.ts"] },
+    { "id": "receipts", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/comprobantes"], "legacy": ["apps/web/features/comprobantes", "packages/contracts/src/comprobantes.ts"] },
+    { "id": "expenses", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/gastos"], "legacy": ["apps/web/features/gastos", "packages/contracts/src/gastos.ts"] },
+    { "id": "inventory", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/modulos/inventario/stock", "/app/modulos/inventario/movimientos"], "legacy": ["apps/web/features/inventario", "packages/contracts/src/inventario.ts"] },
+    { "id": "promotions", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/combos", "/app/promociones"], "legacy": ["apps/web/features/promociones", "packages/contracts/src/promociones.ts"] },
+    { "id": "crm", "kind": "ui", "owner": "@por-asignar", "status": "aligned", "routes": ["/app/clientes", "/app/modulos/fidelizacion/regla"], "legacy": [] },
+    { "id": "staff", "kind": "ui", "owner": "@por-asignar", "status": "pending", "routes": ["/app/modulos/personal/asistencia", "/app/modulos/personal/turnos", "/app/modulos/personal/directorio", "/app/modulos/personal/roles", "/app/modulos/personal/propinas"], "legacy": ["apps/web/features/rrhh", "apps/web/components/erp/StaffModule.tsx", "apps/web/components/erp/RolesView.tsx", "apps/web/components/erp/StaffWorkspace.tsx", "packages/contracts/src/rrhh.ts"] },
+    { "id": "bi", "kind": "ui", "owner": "@por-asignar", "status": "aligned", "routes": ["/app/analiticas"], "legacy": [] }
+  ]
+}

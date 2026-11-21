@@ -145,3 +145,4 @@
 | `eec5632` | Ola salón (mesas, reservas, KDS) |
 | 33f54bc | Cobertura DB en Sonar y ratchet de thresholds (configs compartidas) |
 | `cobertura-100-f7` | Fase 7 safe wins: lcov de SDK/kernel, exclusiones del starter y tests web de shell/workspaces |
+| `plan` | Plan de paridad de módulos + manifiesto/validador (`docs/plan-paridad-modulos.md`) |
