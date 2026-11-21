@@ -1,6 +1,6 @@
 # receipts — especificación
 
-**Estado:** Mixto (emisión real; SUNAT pendiente de OSE) · **Última revisión:** 2026-11-19
+**Estado:** Mixto (emisión real; SUNAT pendiente de OSE) · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Emitir y anular el comprobante de una comanda ya cobrada, con serie y correlativ
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/receipts/` | real |
-| Web | `apps/web/features/comprobantes/` (`ComprobantesPage`, `api.ts`) | real |
-| Contrato | `packages/contracts/src/comprobantes.ts` (`desgloseIgv`, SUNAT «pendiente de OSE») | sí |
+| Web | `apps/web/features/receipts/` (`ComprobantesPage`, `api.ts`) | real |
+| Contrato | `packages/contracts/src/receipts.ts` (`desgloseIgv`, SUNAT «pendiente de OSE») | sí |
 | Datos | `comprobantes`, `secuencias`, `ordenes` | `20261019000000_init`, `20261027120000_secuencias_tenant`, `20261106140000_reversion_financiera` |
 
 ## 3. API
@@ -57,9 +57,11 @@ Reglas:
 | Unit | `src/modules/receipts/receipts.service.spec.ts` |
 | e2e | `test/receipts.e2e-spec.ts` |
 | DB | `test/db/comprobantes.db-spec.ts` |
-| Web | `features/comprobantes/comprobantes.test.ts`, `lib/receipt-mapping.test.ts` |
+| Web | `features/receipts/receipts.test.ts`, `lib/receipt-mapping.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/receipts/` y contrato `packages/contracts/src/receipts.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - SUNAT real (OSE) fuera del piloto: no hay XML/UBL, CDR ni resumen diario.
 - El listado de la UI no pagina (la API sí lo soporta).

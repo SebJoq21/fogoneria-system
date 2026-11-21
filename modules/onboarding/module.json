@@ -1,0 +1,9 @@
+{
+  "id": "onboarding",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/onboarding"
+  ]
+}

@@ -1,6 +1,6 @@
 # promotions — especificación
 
-**Estado:** API real; UI demo · **Última revisión:** 2026-11-19
+**Estado:** API real; UI demo · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Combos a precio fijo, cupones y reglas horarias. El objetivo es que una promo no
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/promotions/` | real |
-| Web | `apps/web/features/promociones/` (`CombosPage`, `PromocionesPage` demo, `api.ts` listo) | Mixto |
-| Contrato | `packages/contracts/src/promociones.ts` | sí |
+| Web | `apps/web/features/promotions/` (`CombosPage`, `PromocionesPage` demo, `api.ts` listo) | Mixto |
+| Contrato | `packages/contracts/src/promotions.ts` | sí |
 | Datos | `combos`, `combos_platos`, `cupones`, `canjes_cupones`, `reglas_horarias_promos` | `20261019000000_init` |
 
 ## 3. API
@@ -46,7 +46,7 @@ Reglas:
 ## 5. UI y rutas
 
 - `/app/combos` → `CombosPage`; `/app/promociones` → `PromocionesPage`. Ambas siguen con estado demo.
-- `features/promociones/api.ts` (`promocionesApi`) cubre combos, cupones, validación y schedule.
+- `features/promotions/api.ts` (`promocionesApi`) cubre combos, cupones, validación y schedule.
 - El descuento siempre lo calcula la API; la UI solo muestra.
 
 ## 6. Pruebas
@@ -63,9 +63,11 @@ Reglas:
 |---|---|
 | Unit | `promotions.service.spec.ts`, `promotions.rules.spec.ts` |
 | e2e | `test/promotions.e2e-spec.ts` |
-| Web | `features/promociones/promociones.test.ts` |
+| Web | `features/promotions/promotions.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/promotions/` y contrato `packages/contracts/src/promotions.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - `CombosPage`/`PromocionesPage` no consumen `/promotions` (observación 3 del plan; AYCDS-27).
 - Las reglas horarias no se aplican al cobro (solo se informan).

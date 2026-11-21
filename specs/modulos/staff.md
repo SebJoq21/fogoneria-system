@@ -1,6 +1,6 @@
 # staff — especificación
 
-**Estado:** Mixto (asistencia/turnos reales; directorio/roles/propinas demo) · **Última revisión:** 2026-11-19
+**Estado:** Mixto (asistencia/turnos reales; directorio/roles/propinas demo) · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Personal del restaurante: plan de turnos, marcación de asistencia y reparto del
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/staff/` | real |
-| Web | `apps/web/features/rrhh/` (`AttendancePage`, `ShiftsPage`) | real |
-| Contrato | `packages/contracts/src/rrhh.ts` | sí |
+| Web | `apps/web/features/staff/` (`AttendancePage`, `ShiftsPage`) | real |
+| Contrato | `packages/contracts/src/staff.ts` | sí |
 | Datos | `empleados`, `roles_empresa`, `turnos_plan`, `asistencias`, `pozos_propinas`, `repartos_propinas`, `ordenes.propina` | `20261019000000_init` |
 
 ## 3. API
@@ -70,9 +70,11 @@ Reglas:
 | Unit | `staff.service.spec.ts`, `staff.rules.spec.ts` |
 | e2e | `test/staff.e2e-spec.ts` |
 | DB | `test/db/propinas.db-spec.ts` |
-| Web | `features/rrhh/rrhh.test.ts` |
+| Web | `features/staff/staff.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/staff/` y contrato `packages/contracts/src/staff.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - Directorio, roles y propinas siguen demo (observación 6 del plan).
 - No hay horario contractual ni control de horas extra.

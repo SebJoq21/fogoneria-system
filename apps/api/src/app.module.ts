@@ -11,26 +11,7 @@ import { TenantContextModule } from './common/context/tenant-context.module.js';
 import { TenantContextInterceptor } from './common/context/tenant.interceptor.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
-import { AuditModule } from './modules/audit/audit.module.js';
-import { AuthModule } from './modules/auth/index.js';
-import { TenantModule } from './modules/tenant/index.js';
-import { OrdersModule } from './modules/orders/index.js';
-import { CatalogModule } from './modules/catalog/index.js';
-import { PricingModule } from './modules/pricing/index.js';
-import { SaasModule } from './modules/saas/index.js';
-import { BillingModule } from './modules/billing/index.js';
-import { OnboardingModule } from './modules/onboarding/index.js';
-import { TablesModule } from './modules/tables/index.js';
-import { ReservationsModule } from './modules/reservations/index.js';
-import { RealtimeModule } from './modules/realtime/index.js';
-import { ReceiptsModule } from './modules/receipts/index.js';
-import { InventoryModule } from './modules/inventory/index.js';
-import { PromotionsModule } from './modules/promotions/index.js';
-import { CashModule } from './modules/cash/index.js';
-import { StaffModule } from './modules/staff/index.js';
-import { CrmModule } from './modules/crm/index.js';
-import { ExpensesModule } from './modules/expenses/index.js';
-import { BiModule } from './modules/bi/index.js';
+import { MODULE_REGISTRY } from './modules/registry.js';
 
 @Module({
   imports: [
@@ -38,26 +19,7 @@ import { BiModule } from './modules/bi/index.js';
     ScheduleModule.forRoot(),
     TenantContextModule,
     PrismaModule,
-    AuditModule,
-    AuthModule,
-    TenantModule,
-    OrdersModule,
-    CatalogModule,
-    PricingModule,
-    SaasModule,
-    BillingModule,
-    OnboardingModule,
-    TablesModule,
-    ReservationsModule,
-    RealtimeModule,
-    ReceiptsModule,
-    InventoryModule,
-    PromotionsModule,
-    CashModule,
-    StaffModule,
-    CrmModule,
-    ExpensesModule,
-    BiModule,
+    ...MODULE_REGISTRY,
   ],
   controllers: [AppController, HealthController],
   providers: [

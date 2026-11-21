@@ -1,0 +1,10 @@
+{
+  "id": "crm",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "aligned",
+  "routes": [
+    "/app/clientes",
+    "/app/modulos/fidelizacion/regla"
+  ]
+}

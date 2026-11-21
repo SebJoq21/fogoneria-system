@@ -8,7 +8,7 @@ const notFound = vi.hoisted(() => vi.fn(() => {
 vi.mock('next/navigation', () => ({ notFound }));
 
 vi.mock('@/features/crm', () => ({ LoyaltyHubPage: () => <div>loyalty-hub</div> }));
-vi.mock('@/features/inventario', () => ({ InventoryHubPage: () => <div>inventory-hub</div> }));
+vi.mock('@/features/inventory', () => ({ InventoryHubPage: () => <div>inventory-hub</div> }));
 vi.mock('@/components/erp/BookingsWorkspace', () => ({
   BookingsWorkspace: () => <div>bookings-workspace</div>,
 }));

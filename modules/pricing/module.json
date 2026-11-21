@@ -1,0 +1,9 @@
+{
+  "id": "pricing",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/app/productos/precios"
+  ]
+}

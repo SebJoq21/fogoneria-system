@@ -1,0 +1,9 @@
+{
+  "id": "audit",
+  "kind": "api",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/app/auditoria"
+  ]
+}

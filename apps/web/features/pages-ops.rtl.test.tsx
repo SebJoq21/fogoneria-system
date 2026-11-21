@@ -19,10 +19,10 @@ const estado = vi.hoisted(() => ({
 
 vi.mock('@/components/dashboard/ModulesProvider', () => ({ useModules: () => estado }));
 
-import { CombosPage } from './promociones/CombosPage';
-import { GastosPage } from './gastos/GastosPage';
-import { InventoryPage } from './inventario/InventoryPage';
-import { PromocionesPage } from './promociones/PromocionesPage';
+import { CombosPage } from './promotions/CombosPage';
+import { GastosPage } from './expenses/GastosPage';
+import { InventoryPage } from './inventory/InventoryPage';
+import { PromocionesPage } from './promotions/PromocionesPage';
 
 const insumo = (overrides: Record<string, unknown> = {}) => ({
   id: 1,

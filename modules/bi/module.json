@@ -1,0 +1,9 @@
+{
+  "id": "bi",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "aligned",
+  "routes": [
+    "/app/analiticas"
+  ]
+}

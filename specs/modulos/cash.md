@@ -1,6 +1,6 @@
 # cash — especificación
 
-**Estado:** API real · **Última revisión:** 2026-11-19
+**Estado:** API real · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Abrir y cerrar el turno de caja por sucursal, registrar ingresos/egresos y **cob
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/cash/` | real |
-| Web | `apps/web/features/caja/` (`CajaPage`, `CheckoutModal`, `api.ts`) | real |
-| Contrato | `packages/contracts/src/caja.ts` | sí |
+| Web | `apps/web/features/cash/` (`CajaPage`, `CheckoutModal`, `api.ts`) | real |
+| Contrato | `packages/contracts/src/cash.ts` | sí |
 | Datos | `turnos_caja`, `movimientos_caja`, `ordenes.propina` | `20261106160000_caja_turnos_propina` |
 
 ## 3. API
@@ -45,7 +45,7 @@ Reglas:
 
 - `/app/caja` → `CajaPage`: turno y arqueo del servidor, movimientos, historial, apertura/cierre y cobro de comandas `ENTREGADO`.
 - Sin sesión cae al estado local del demo.
-- `features/caja/api.ts` traduce snake_case → contrato (`@fogoneria/contracts/caja`).
+- `features/cash/api.ts` traduce snake_case → contrato (`@fogoneria/contracts/cash`).
 - `lib/cash-api.ts` queda como cliente legado (solo lo usan sus tests).
 
 ## 6. Pruebas
@@ -65,9 +65,11 @@ Reglas:
 | Unit | `src/modules/cash/cash.service.spec.ts` |
 | e2e | `test/cash.e2e-spec.ts` |
 | DB | `test/db/caja.db-spec.ts` |
-| Web | `features/caja/caja.test.ts`, `lib/cash-api.test.ts` |
+| Web | `features/cash/cash.test.ts`, `lib/cash-api.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/cash/` y contrato `packages/contracts/src/cash.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - No hay arqueo por denominación de billetes (solo total contado).
 - No hay conciliación con tarjeta/Yape (el dinero electrónico solo se registra).

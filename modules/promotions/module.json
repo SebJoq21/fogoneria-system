@@ -1,0 +1,10 @@
+{
+  "id": "promotions",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "in-progress",
+  "routes": [
+    "/app/combos",
+    "/app/promociones"
+  ]
+}

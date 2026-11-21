@@ -67,6 +67,10 @@ jobs:
       - name: Fronteras de módulos
         run: pnpm check:boundaries
 
+      - name: Paridad de módulos (reporte)
+        # Advisory hasta la Fase 8: reporta el avance 20/20/20/20 sin bloquear.
+        run: pnpm check:modules
+
       - name: Generar cliente Prisma
         run: pnpm --filter api db:generate
 

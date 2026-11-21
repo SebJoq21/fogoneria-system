@@ -1,6 +1,6 @@
 # crm — especificación
 
-**Estado:** API real; fidelización demo · **Última revisión:** 2026-11-19
+**Estado:** API real; fidelización demo · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -69,6 +69,8 @@ Reglas:
 | Web | `features/crm/crm.test.ts` |
 
 ## 7. Deuda conocida
+
+- Fase 1 de paridad (2026-11-21): `features/crm/module.ts` describe la entrada del registry/nav generado (`pnpm gen:modules`); la ruta `/app/clientes` y el estado en `ModulesProvider` no cambian.
 
 - `LoyaltyPage` sigue demo (reglas de fidelización).
 - `customers`/`coupons` del demo siguen en `ModulesProvider` hasta la Fase 4.

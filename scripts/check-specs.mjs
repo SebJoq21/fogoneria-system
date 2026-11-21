@@ -33,23 +33,22 @@ const DOCS_INDICE = join(ROOT, 'docs/INDICE.md');
 
 /**
  * Mapa explícito feature web → specs de módulo. No siempre es 1:1:
- * `salon` agrupa mesas + reservas, `rrhh` vive en `staff`, `plataforma` incluye
+ * `salon` agrupa mesas + reservas, `staff` es RRHH, `plataforma` incluye
  * su spec web y los seis módulos backend (auth, tenant, saas, billing,
- * onboarding, audit) y el resto toma el nombre del módulo backend (caja →
- * cash, comprobantes → receipts, etc.).
+ * onboarding, audit) y el resto usa el mismo ID que su módulo backend.
  */
 const FEATURE_SPECS = {
   bi: ['bi'],
-  caja: ['cash'],
+  cash: ['cash'],
   catalogo: ['catalog'],
-  comprobantes: ['receipts'],
+  receipts: ['receipts'],
   crm: ['crm'],
-  gastos: ['expenses'],
-  inventario: ['inventory'],
-  ordenes: ['orders'],
+  expenses: ['expenses'],
+  inventory: ['inventory'],
+  orders: ['orders'],
   plataforma: ['plataforma', 'auth', 'tenant', 'saas', 'billing', 'onboarding', 'audit'],
-  promociones: ['promotions'],
-  rrhh: ['staff'],
+  promotions: ['promotions'],
+  staff: ['staff'],
   salon: ['tables', 'reservations'],
 };
 

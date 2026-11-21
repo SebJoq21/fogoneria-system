@@ -1,0 +1,10 @@
+{
+  "id": "inventory",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "in-progress",
+  "routes": [
+    "/app/modulos/inventario/stock",
+    "/app/modulos/inventario/movimientos"
+  ]
+}

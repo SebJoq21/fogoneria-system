@@ -1,6 +1,6 @@
 # expenses — especificación
 
-**Estado:** API real; UI demo · **Última revisión:** 2026-11-19
+**Estado:** API real; UI demo · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Registrar gastos operativos y cuentas por pagar, y **sacar de caja** el gasto pa
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/expenses/` | real |
-| Web | `apps/web/features/gastos/` (`GastosPage` demo, `api.ts` listo) | Mixto |
-| Contrato | `packages/contracts/src/gastos.ts` | sí |
+| Web | `apps/web/features/expenses/` (`GastosPage` demo, `api.ts` listo) | Mixto |
+| Contrato | `packages/contracts/src/expenses.ts` | sí |
 | Datos | `gastos`, `proveedores`, `movimientos_caja` | `20261019000000_init`, `20261106160000_caja_turnos_propina` |
 
 ## 3. API
@@ -40,7 +40,7 @@ Reglas:
 ## 5. UI y rutas
 
 - `/app/gastos` → `GastosPage` **sigue en el estado demo** de `ModulesProvider`.
-- `features/gastos/api.ts` (`gastosApi`) ya cubre listar, resumen, crear y pagar; falta conectarlo (AYCDS-27).
+- `features/expenses/api.ts` (`gastosApi`) ya cubre listar, resumen, crear y pagar; falta conectarlo (AYCDS-27).
 - Sin sesión, la vista mantiene el demo.
 
 ## 6. Pruebas
@@ -58,9 +58,11 @@ Reglas:
 | Unit | `src/modules/expenses/expenses.service.spec.ts` |
 | e2e | `test/expenses.e2e-spec.ts` |
 | DB | `test/db/gastos.db-spec.ts` |
-| Web | `features/gastos/gastos.test.ts` |
+| Web | `features/expenses/expenses.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/expenses/` y contrato `packages/contracts/src/expenses.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - La UI no consume `/expenses` (observación 2 del plan de módulos).
 - No hay adjuntos de factura ni conciliación bancaria.

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { MODULE_CATALOG, type ModuleId } from "@/lib/erp";
 import { LoyaltyHubPage } from "@/features/crm";
 import { BookingsWorkspace } from "@/components/erp/BookingsWorkspace";
-import { InventoryHubPage } from "@/features/inventario";
+import { InventoryHubPage } from "@/features/inventory";
 import { StaffWorkspace } from "@/components/erp/StaffWorkspace";
 
 export function moduleMeta(id: string) {
