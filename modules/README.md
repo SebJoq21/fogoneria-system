@@ -15,4 +15,4 @@ Fases 0–5 ejecutadas: manifiestos **20/20**, backend **20/20**, frontend **20/
 
 Los subpaths antiguos de contratos (`caja`, `catalogo`, `plataforma`, `tiempo-real`, `comprobantes`, `gastos`, `inventario`, `mesas`, `ordenes`, `promociones`, `reservas`, `rrhh`) quedan como alias `@deprecated` de sus equivalentes (`cash`, `catalog`+`pricing`, `auth`+`tenant`+`onboarding`+`saas`+`billing`, `realtime`, `receipts`, `expenses`, `inventory`, `tables`, `orders`, `promotions`, `reservations`, `staff`) durante una release.
 
-Pendiente: providers por módulo/retirar `ModulesProvider` (Fase 6) y Prisma multi-archivo (Fase 7). Documento completo: [`docs/plan-paridad-modulos.md`](../docs/plan-paridad-modulos.md).
+Pendiente: completar la Fase 6 (providers de los módulos restantes y retirar `ModulesProvider`) y la Fase 7 (Prisma multi-archivo). Documento completo: [`docs/plan-paridad-modulos.md`](../docs/plan-paridad-modulos.md).

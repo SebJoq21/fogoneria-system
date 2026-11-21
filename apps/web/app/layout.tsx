@@ -7,7 +7,7 @@ import { ModulesProvider } from "@/components/dashboard/ModulesProvider";
 import { CatalogoProvider } from "@/components/dashboard/providers/catalog";
 import { NotificationsProvider } from "@/components/dashboard/providers/notifications";
 import { SessionProvider } from "@/components/dashboard/providers/session";
-import { TenantProvider } from "@/components/dashboard/providers/tenant";
+import { FeatureProviders } from "@/features/registry";
 import { initialPayments } from "@/lib/dashboard";
 
 const inter = Inter({
@@ -36,11 +36,11 @@ export default function RootLayout({
         <ThemeProvider>
           <SessionProvider>
             <NotificationsProvider>
-              <TenantProvider>
+              <FeatureProviders>
                 <CatalogoProvider>
                   <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
                 </CatalogoProvider>
-              </TenantProvider>
+              </FeatureProviders>
             </NotificationsProvider>
           </SessionProvider>
         </ThemeProvider>

@@ -9,7 +9,6 @@
 
 import type {
   Coupon,
-  Customer,
   Expense,
   Ingredient,
   Receipt,
@@ -44,7 +43,6 @@ export type ErpState = {
   reservations: Reservation[];
   ingredients: Ingredient[];
   movements: StockMovement[];
-  customers: Customer[];
   coupons: Coupon[];
   receipts: Receipt[];
   expenses: Expense[];

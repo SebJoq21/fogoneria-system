@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F6 (timeboxed): shell generado + providers piloto
+
+- **Shell:** `AppSidebar` consume `lib/modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` deriva títulos de nav/registry. `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
+- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes (`fogoneria:crm:v1:<tenant>` + migración de `ErpState` v2). `ModulesProvider` los consume y reexporta `customers`/`setCustomers`.
+- **Resto:** órdenes, cuentas, caja, gastos, inventario, promociones y comprobantes siguen en `ModulesProvider` (F6 completo pendiente).
+- Verificado: web **882** tests, `check:modules --strict`, `gen:modules --check`, boundaries 0, types, lint y build.
+
 ## 2026-11-21 — Paridad F4/F5 + strict 20/20/20/20
 
 - **Hardening:** BOM quitado de 5 páginas de productos; duplicado de `tables` fuera del barrel; `module.ts` en las 8 features que faltaban.

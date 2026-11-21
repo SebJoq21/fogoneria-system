@@ -214,5 +214,9 @@ pnpm check:specs --base origin/development
 **Estado:** **20/20/20/20** (backend, frontend, contratos, specs), 12 alias
 deprecados, `check:modules --strict` verde y cableado en CI.
 
-**Siguiente:** Fase 6 (providers por módulo/retirar `ModulesProvider`) y
-Fase 7 (Prisma multi-archivo).
+**Fase 6 (timeboxed):** el shell consume `modules-nav.ts` (sidebar/topbar) y
+`features/registry.ts` (`FeatureProviders`); `TenantProvider` y `CrmProvider`
+migrados a sus features. El resto del estado sigue en `ModulesProvider`.
+
+**Siguiente:** completar la Fase 6 (providers por módulo/retirar
+`ModulesProvider`) y la Fase 7 (Prisma multi-archivo).

@@ -5,7 +5,7 @@ import { billingApi } from './billing/api';
 import { onboardingApi } from './onboarding/api';
 import { saasApi } from './saas/api';
 import { tenantApi } from './tenant/api';
-import { featureModules } from './registry';
+import { featureModules, featureProviders, FeatureProviders } from './registry';
 import * as realtime from './realtime';
 
 /**
@@ -33,5 +33,7 @@ describe('superficies de plataforma', () => {
 
   it('registra las 20 features sin pendientes', () => {
     expect(featureModules).toHaveLength(20);
+    expect(featureProviders.map((provider) => provider.id)).toEqual(['tenant', 'crm']);
+    expect(typeof FeatureProviders).toBe('function');
   });
 });

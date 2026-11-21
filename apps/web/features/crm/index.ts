@@ -7,6 +7,8 @@
  */
 
 export { ClientesPage } from './ClientesPage';
+export { CrmProvider, useCrm } from './provider';
+
 export { LoyaltyPage } from './LoyaltyPage';
 export { LoyaltyHubPage } from './LoyaltyHubPage';
 export {

@@ -48,6 +48,7 @@ Reglas:
 - `/app/clientes` → `ClientesPage`: búsqueda por nombre/teléfono, filtro por segmento, ficha con movimientos y ajuste.
 - `/app/modulos/fidelizacion/regla` → `LoyaltyPage` (**demo**); `crmApi.config()`/`actualizarConfig()` listos para conectarla.
 - `/app/modulos/fidelizacion` → `LoyaltyHubPage`.
+- F6: `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) es el dueño del estado demo de clientes; persiste `fogoneria:crm:v1:<tenant>` y migra la lista antigua de `ErpState` v2. `ModulesProvider` reexporta `customers`/`setCustomers` para compatibilidad.
 
 ## 6. Pruebas
 

@@ -141,6 +141,9 @@ async function webMetadataOf(id) {
       errors.push(`apps/web/features/${id}/module.ts no tiene "${field}"`);
     }
   }
+  if (metadata.provider !== undefined && typeof metadata.provider !== 'string') {
+    errors.push(`apps/web/features/${id}/module.ts: "provider" debe ser el nombre del export`);
+  }
   for (const role of metadata.roles ?? []) {
     if (!ROLE_VALUES.has(role)) {
       errors.push(`apps/web/features/${id}/module.ts usa el rol desconocido "${role}"`);
@@ -215,15 +218,22 @@ const registryImports = implemented.map((module) => ({
   module,
   exportName: webMetadata.get(module.id).exportName,
 }));
+const providerModules = implemented.filter((module) => webMetadata.get(module.id).provider);
+const providerImports = providerModules.map(
+  (module) =>
+    `import { ${webMetadata.get(module.id).provider} } from './${module.id}/provider';`,
+);
 const webRegistry = `/**
  * GENERADO por scripts/gen-modules.mjs — no editar a mano.
  * Regenera con \`pnpm gen:modules\`.
  *
- * Fase 0–3: lista las features que ya exponen \`module.ts\`. Los providers
- * por módulo llegan en la Fase 6; el layout todavía no consume este registry.
+ * Fase 6: lista las features y compone los providers opcionales de \`module.ts\`.
+ * El layout consume \`FeatureProviders\`; el estado global restante sigue en
+ * \`ModulesProvider\` hasta completar la migración.
  */
-import type { ComponentType, ReactNode } from 'react';
+import { createElement, type ComponentType, type ReactNode } from 'react';
 ${registryImports.map(({ module }) => `import { ${webMetadata.get(module.id).exportName ?? `${module.id}Module`} } from './${module.id}/module';`).join('\n')}
+${providerImports.join('\n')}
 
 export type FeatureModule = {
   id: string;
@@ -232,6 +242,7 @@ export type FeatureModule = {
   path: string;
   roles: string[];
   group: string;
+  provider?: string;
 };
 
 export type FeatureProvider = {
@@ -247,7 +258,22 @@ ${registryImports.map(({ module }) => `  ${webMetadata.get(module.id).exportName
 export const pendingFeatureIds = ${JSON.stringify(pending.map((module) => module.id))};
 
 /** Providers opcionales por módulo (Fase 6). */
-export const featureProviders: FeatureProvider[] = [];
+export const featureProviders: FeatureProvider[] = [
+${providerModules
+  .map(
+    (module) =>
+      `  { id: ${JSON.stringify(module.id)}, Provider: ${webMetadata.get(module.id).provider} },`,
+  )
+  .join('\n')}
+];
+
+/** Envuelve a los hijos con los providers de las features que los declaran. */
+export function FeatureProviders({ children }: { children: ReactNode }): ReactNode {
+  return featureProviders.reduceRight<ReactNode>(
+    (wrapped, { Provider }) => createElement(Provider, null, wrapped),
+    children,
+  );
+}
 `;
 
 /* -------------------------------- web nav -------------------------------- */
