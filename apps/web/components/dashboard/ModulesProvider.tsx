@@ -321,6 +321,21 @@ function prepareOps(state: ErpState, branchIds: string[]): ErpState {
   };
 }
 
+/**
+ * Remapea las cuentas del seed (slug) a las sucursales reales (UUID).
+ * Idempotente: devuelve el mismo array si no hay nada que remapear.
+ */
+function remapAccountBranches(accounts: TableAccount[]): TableAccount[] {
+  let changed = false;
+  const next = accounts.map((account) => {
+    const branchId = SEED_SLUG_BRANCH_IDS[account.branchId] ?? account.branchId;
+    if (branchId === account.branchId) return account;
+    changed = true;
+    return { ...account, branchId };
+  });
+  return changed ? next : accounts;
+}
+
 /** Estado de arranque de un tenant nuevo: sin mocks compartidos. */
 function buildEmptyState(): ErpState {
   return {
@@ -472,19 +487,29 @@ export function ModulesProvider({
     if (preparedBranches.current === signature) return;
     preparedBranches.current = signature;
     setState((prev) => prepareOps(prev, ids));
-    // Las cuentas viven en su provider (F6c1): mismo remapeo slug→UUID que
-    // hacía `prepareOps`, sin reescribir si ya están canónicas.
-    setAccounts((prev) => {
-      let changed = false;
-      const next = prev.map((account) => {
-        const branchId = SEED_SLUG_BRANCH_IDS[account.branchId] ?? account.branchId;
-        if (branchId === account.branchId) return account;
-        changed = true;
-        return { ...account, branchId };
-      });
-      return changed ? next : prev;
-    });
-  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches, setAccounts]);
+  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches]);
+
+  /**
+   * Remapeo slug→UUID de las cuentas (F6c1). Corre cuando cambian las cuentas
+   * (hidratación del provider) o las sucursales reales, sin depender de
+   * `preparedBranches`: si `realBranches` ya está al montar remapea lo cargado,
+   * y si llega después remapea entonces. Es idempotente: un UUID no está en el
+   * mapa y, si nada cambia, devuelve el mismo array (sin re-render).
+   */
+  useEffect(() => {
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    setAccounts(remapAccountBranches);
+  }, [
+    accounts,
+    activeBranchId,
+    empresaId,
+    hasSession,
+    realBranches,
+    setAccounts,
+    tenantError,
+    tenantLoading,
+  ]);
 
   /* Persistir + difundir a otras pestañas de la misma empresa */
   useEffect(() => {

@@ -40,7 +40,7 @@ El nudo es `scopes` (`BranchScope = { orders, tables, cash }`): es un hub por su
 
 **Persistencia/sync:** `fogoneria:orders:v1:<tenant>` + `BroadcastChannel fogoneria:orders-sync:<tenant>` (`lib/module-store.ts`, mismo contrato que F6b).
 
-**Migración:** `accounts` sale del `ErpState` v2 y se purga en el loader de `ModulesProvider` antes del primer guardado (`migrateLegacyArray`, merge por `id`). El remapeo slug→UUID del seed que hacía `prepareOps` pasa a aplicarse sobre `setAccounts` en el mismo efecto y con la misma condición (`hasSession` + sucursales reales), para no cambiar el comportamiento del demo.
+**Migración:** `accounts` sale del `ErpState` v2 y se purga en el loader de `ModulesProvider` antes del primer guardado (`migrateLegacyArray`, merge por `id`). El remapeo slug→UUID del seed que hacía `prepareOps` pasa a un **efecto propio e idempotente** que depende de `accounts`, `realBranches` y la sucursal activa: remapea tanto si las sucursales ya están al montar (cuentas hidratadas después por el provider) como si llegan más tarde, y devuelve el mismo array cuando no hay nada que cambiar. La condición de sesión (`hasSession`, sin `tenantLoading`/`tenantError`, con `empresaId` y al menos una sucursal real) se mantiene para no tocar el demo.
 
 **Qué NO se mueve todavía (y por qué):**
 
@@ -147,8 +147,19 @@ Reglas:
 
 - **Unit (puros):** `runCheckout` con puertos falsos (orden de llamadas, cupón, propina, idempotencia, cuenta no abierta, doble cobro).
 - **Provider:** hidratación demo/legacy, persistencia por tenant, sync sin eco, reset y guardia de cambio de tenant (patrón F6b).
-- **Integración:** `module-migration.integration.test.tsx` siembra un `ErpState` legacy con todos los slices y verifica las claves nuevas, la purga y que remontar no duplica.
+- **Integración:** `module-migration.integration.test.tsx` siembra un `ErpState` legacy con todos los slices y verifica las claves nuevas, la purga y que remontar no duplica. Incluye el remapeo slug→UUID de `accounts` en los dos órdenes posibles: sucursales disponibles **al montar** y sucursales que **llegan después**; en ambos casos comprueba `branchId`/`tableId` y que una segunda pasada no duplica ni pierde cuentas.
 - **Regresión:** `ModulesProvider.actions.test.tsx` sigue cubriendo el flujo completo (abrir → items → enviar → cobrar → anular → caja) montando los providers reales.
+
+### L1 (fallo entre `accounts` y `receipts`/`cash`) — diferido a F6c2
+
+El test de fallo parcial durante `checkoutAccount` **no es viable en F6c1**:
+
+1. No hay punto de inyección. `setAccounts` (provider) y `setState` (receipts/cash/cupones/mesa) se ejecutan en el mismo handler y React los agrupa; los updaters son puros (map/patch) y no hay un puerto que se pueda hacer fallar entre ambos sin mockear internals de React.
+2. Forzar el fallo con un mock del provider de cuentas mediría el mock, no la garantía: la atomicidad real no existe entre providers (no hay transacción), y lo que hoy evita el estado a medias es el batching, no un contrato.
+3. La garantía correcta es de F6c2: `runCheckout` calcula todo, valida idempotencia (cuenta `abierta`, sin comprobante `Pagada` previo) y aplica el lote en un orden fijo. Ahí sí se puede testear con puertos falsos: un puerto que lanza deja `accounts`/`receipts`/`cash` sin cambios y no se duplica al reintentar.
+
+Mientras tanto, la consistencia del camino feliz está cubierta: `ModulesProvider.actions.test.tsx` verifica que tras el cobro hay comprobante `Pagada`, cuenta `cobrada` y movimiento de caja en el turno.
+
 
 ## 6. Criterios para retirar `ModulesProvider`
 
@@ -165,7 +176,7 @@ Reglas:
 |---|---|---|
 | Perder atomicidad del cobro (5 slices en un `setState`) | Cobro sin caja o sin comprobante | Coordinador con orden fijo + guard de idempotencia + test de regresión del flujo completo |
 | `scopes` compartido entre cuentas/caja/órdenes | Escrituras cruzadas y pérdida de datos | F6c2 introduce `addMovements`/`reverseMovements`; F6c3 separa `orders`/`tables` |
-| Remapeo slug→UUID al mover `accounts` | Cuentas invisibles en la sucursal | Mismo efecto y condición que hoy; test de integración con sucursales reales |
+| Remapeo slug→UUID al mover `accounts` | Cuentas invisibles en la sucursal | Efecto idempotente por `accounts`+`realBranches`+sucursal activa; tests de integración con sucursales al montar y después |
 | Doble cobro por doble clic | Dos comprobantes y dos ingresos | Guard `checkingOut` + comprobante único por cuenta |
 | Providers nuevos sin cobertura | Sonar `new_coverage` < 80 | Tests de provider y del coordinador en el mismo PR |
 | Cambio de comportamiento del demo | Regresión visible | `ModulesProvider.actions.test.tsx` intacto salvo el wrapper |

@@ -3,7 +3,8 @@
 ## 2026-11-21 — F6c: diseño POS + piloto `AccountsProvider`
 
 - **Diseño:** `docs/plan-f6c-pos.md` — `AccountsProvider` (orders), `CashProvider` (turnos + movimientos por sucursal), `ReceiptsProvider`, `PromotionsProvider` y `CheckoutCoordinator` en capa compartida (`lib/checkout.ts` + hook), con orden del cobro, idempotencia, migración/purga, tests y fases F6c1–F6c3.
-- **Piloto (F6c1):** `features/orders/provider.tsx` (`AccountsProvider`/`useAccounts`) dueño de `accounts`, con `fogoneria:orders:v1:<tenant>` y `BroadcastChannel`; el loader de `ModulesProvider` migra/purga `accounts` del `ErpState` y aplica el remapeo slug→UUID de `prepareOps` sobre el provider.
+- **Piloto (F6c1):** `features/orders/provider.tsx` (`AccountsProvider`/`useAccounts`) dueño de `accounts`, con `fogoneria:orders:v1:<tenant>` y `BroadcastChannel`; el loader de `ModulesProvider` migra/purga `accounts` del `ErpState` y un efecto propio e idempotente remapea slug→UUID (corre con `accounts`, `realBranches` y la sucursal activa, así funcione con sucursales al montar o después; cubierto por dos tests de integración).
+- **L1 diferido:** el test de fallo entre `accounts` y `receipts`/`cash` durante el cobro no es viable sin el coordinador (no hay punto de inyección); queda documentado en `docs/plan-f6c-pos.md` §5 y se implementa en F6c2.
 - **Sin mover todavía:** abrir/enviar/anular/cobrar siguen en `ModulesProvider` (escriben `scopes` y orquestan caja/comprobantes/CRM). `checkoutAccount` solo cambió `state.accounts` por `accounts` del provider.
 - **Estado:** providers fuera de `ModulesProvider`: tenant, orders/cuentas, expenses, inventory, crm y staff (6).
 - Verificado: web **910** tests, types, lint, build, `check:modules --strict` 20/20/20/20, `gen:modules --check`, boundaries 0 y `check:specs`.
