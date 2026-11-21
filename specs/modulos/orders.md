@@ -53,6 +53,8 @@ Reglas:
 
 - Cobertura (2026-11-20): se añadieron tests de controlador, DTO, mapper y ramas de error para subir la cobertura de Sonar; sin cambios de comportamiento.
 
+- Refactor de duplicación (2026-11-20): empresa, sucursal y filtro salen de `TenantScopedService` (`apps/api/src/common/tenant/branch-scope.ts`); reglas, mensajes y scoping no cambian.
+
 | Suite | Archivo |
 |---|---|
 | Unit | `orders.service.spec.ts`, `orders.sla.spec.ts`, `orders.sla.cron.spec.ts`, `dto/create-order.dto.spec.ts` |

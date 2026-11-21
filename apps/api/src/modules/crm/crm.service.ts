@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 import { TenantContextService } from '../../common/context/tenant-context.service.js';
 import { AuditService } from '../audit/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
+import { TenantScopedService } from '../../common/tenant/branch-scope.js';
 import {
   CONFIG_POR_DEFECTO,
   deltaPuntos,
@@ -62,14 +63,16 @@ function isUniqueViolation(error: unknown): boolean {
  * `GANANCIA` con la misma orden, y recalcula visitas y puntos desde las fuentes.
  */
 @Injectable()
-export class CrmService {
+export class CrmService extends TenantScopedService {
   private readonly logger = new Logger(CrmService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
+    protected readonly prisma: PrismaService,
+    protected readonly tenantContext: TenantContextService,
     private readonly audit: AuditService,
-  ) {}
+  ) {
+    super();
+  }
 
   /* ------------------------------- clientes ------------------------------ */
 
@@ -488,40 +491,5 @@ export class CrmService {
       umbral_frecuente: config.umbral_frecuente,
       umbral_vip: config.umbral_vip,
     };
-  }
-
-  private tenant(): { empresaId: string; userId: string | null } {
-    const context = this.tenantContext.get();
-    if (!context?.empresaId) {
-      throw new BadRequestException('La operación requiere empresa en el token');
-    }
-    return { empresaId: context.empresaId, userId: context.userId ?? null };
-  }
-
-  /**
-   * Sucursal del movimiento de puntos: la del token o, para `ADMIN_GLOBAL`
-   * (que no la lleva), la indicada en el body y validada contra su empresa.
-   */
-  private async resolveSucursal(solicitada?: string): Promise<string> {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
-    if (!solicitada) {
-      throw new BadRequestException(
-        'Indica sucursalId: tu usuario no está atado a una sucursal',
-      );
-    }
-    const sucursal = await this.prisma.scoped.sucursales.findFirst({
-      where: { id: solicitada, deleted_at: null },
-      select: { id: true },
-    });
-    if (!sucursal) throw new NotFoundException('Sucursal no encontrada');
-    return sucursal.id;
   }
 }

@@ -88,6 +88,27 @@ function modifiersOf(detail: ApiOrderDetail): string[] {
   });
 }
 
+/** Línea de cuenta desde el detalle de la API (el nombre sale del catálogo). */
+function accountItemFromDetail(
+  detail: ApiOrderDetail,
+  nameOf: (platoId: string | null, tipo: string) => string,
+): AccountItem {
+  return {
+    id: detail.id,
+    productId: detail.plato_id ?? detail.combo_id ?? "",
+    name: nameOf(detail.plato_id, detail.tipo),
+    qty: detail.cantidad,
+    unitPrice: Number(detail.precio_unitario),
+    modifiers: (detail.detalles_orden_modificadores ?? []).map((m) => ({
+      optionId: m.opcion_id,
+      name: m.opcion_id,
+      extra: Number(m.precio_extra ?? 0),
+    })),
+    notes: detail.notas ?? "",
+    sent: true,
+  };
+}
+
 /**
  * Convierte una orden de la API a la forma que consumen `OrdersView` (KDS),
  * `MozoView` y los resúmenes del dashboard.
@@ -233,20 +254,9 @@ export function reconcileAccounts(
 
       let nextItems = acc.items;
       if (nextItems.length === 0 && (matchingOrder.detalles_orden ?? []).length > 0) {
-        nextItems = matchingOrder.detalles_orden.map((detail) => ({
-          id: detail.id,
-          productId: detail.plato_id ?? detail.combo_id ?? "",
-          name: nameOf(detail.plato_id, detail.tipo),
-          qty: detail.cantidad,
-          unitPrice: Number(detail.precio_unitario),
-          modifiers: (detail.detalles_orden_modificadores ?? []).map((m) => ({
-            optionId: m.opcion_id,
-            name: m.opcion_id,
-            extra: Number(m.precio_extra ?? 0),
-          })),
-          notes: detail.notas ?? "",
-          sent: true,
-        }));
+        nextItems = (matchingOrder.detalles_orden ?? []).map((detail) =>
+          accountItemFromDetail(detail, nameOf),
+        );
       } else {
         nextItems = nextItems.map((item) => ({ ...item, sent: true }));
       }
@@ -287,20 +297,9 @@ export function reconcileAccounts(
         ? (openOrder.mesas.numero.startsWith("Mesa") ? openOrder.mesas.numero : `Mesa ${openOrder.mesas.numero}`)
         : "Para llevar";
 
-      const accItems: AccountItem[] = (openOrder.detalles_orden ?? []).map((detail) => ({
-        id: detail.id,
-        productId: detail.plato_id ?? detail.combo_id ?? "",
-        name: nameOf(detail.plato_id, detail.tipo),
-        qty: detail.cantidad,
-        unitPrice: Number(detail.precio_unitario),
-        modifiers: (detail.detalles_orden_modificadores ?? []).map((m) => ({
-          optionId: m.opcion_id,
-          name: m.opcion_id,
-          extra: Number(m.precio_extra ?? 0),
-        })),
-        notes: detail.notas ?? "",
-        sent: true,
-      }));
+      const accItems: AccountItem[] = (openOrder.detalles_orden ?? []).map((detail) =>
+        accountItemFromDetail(detail, nameOf),
+      );
 
       newAccounts.push({
         id: openOrder.mesa_id ? `CT-mesa-${openOrder.mesa_id}` : `CT-order-${openOrder.id}`,

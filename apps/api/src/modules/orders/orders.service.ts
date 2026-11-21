@@ -18,6 +18,10 @@ import {
   ACTIVE_RESERVATION_STATES,
   OPEN_ORDER_STATES,
 } from '../../common/constants/estados.js';
+import {
+  buscarSucursal,
+  TenantScopedService,
+} from '../../common/tenant/branch-scope.js';
 import type { estado_orden, origen_orden } from '../../generated/prisma/enums.js';
 import type { CreateOrderDto, OrderItemDto } from './dto/create-order.dto.js';
 import type { ListOrdersQueryDto } from './dto/list-orders.dto.js';
@@ -59,17 +63,19 @@ function round2(value: number): number {
 }
 
 @Injectable()
-export class OrdersService {
+export class OrdersService extends TenantScopedService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
+    protected readonly prisma: PrismaService,
+    protected readonly tenantContext: TenantContextService,
     private readonly sequences: SequencesService,
     private readonly audit: AuditService,
     private readonly realtime: RealtimeService,
     private readonly inventory: InventoryService,
     private readonly promotions: PromotionsService,
     @Inject(PRICING_PORT) private readonly pricing: PricingPort,
-  ) {}
+  ) {
+    super();
+  }
 
   async list(query: ListOrdersQueryDto) {
     const { skip, take } = paginationOf(query);
@@ -109,7 +115,7 @@ export class OrdersService {
   async board(query: BoardOrdersQueryDto, now: Date = new Date()) {
     const dias = query.dias ?? BOARD_DIAS;
     const limite = query.limite ?? BOARD_LIMITE;
-    const sucursalId = this.resolveSucursalFilter(query.sucursalId);
+    const sucursalId = this.resolveSucursalFiltro(query.sucursalId);
     const desde = inicioVentana(now, dias);
     const porSucursal = sucursalId ? { sucursal_id: sucursalId } : {};
 
@@ -222,7 +228,7 @@ export class OrdersService {
   async create(dto: CreateOrderDto) {
     const { empresaId, userId } = this.tenant();
     const mesa = dto.mesaId ? await this.requireMesa(dto.mesaId) : null;
-    const sucursalId = await this.resolveSucursal(dto.sucursalId, mesa?.sucursal_id);
+    const sucursalId = await this.resolveSucursalDeOrden(dto.sucursalId, mesa?.sucursal_id);
 
     if (mesa && mesa.sucursal_id !== sucursalId) {
       throw new BadRequestException('La mesa pertenece a otra sucursal');
@@ -600,19 +606,12 @@ export class OrdersService {
    * que la orden la toma de la mesa (o de `sucursalId` en el body) y se valida
    * contra su empresa.
    */
-  private async resolveSucursal(
+  private async resolveSucursalDeOrden(
     solicitada?: string,
     deMesa?: string,
   ): Promise<string> {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
+    const delToken = this.sucursalDelToken(solicitada);
+    if (delToken) return delToken;
 
     if (deMesa && solicitada && solicitada !== deMesa) {
       throw new BadRequestException('La mesa pertenece a otra sucursal');
@@ -622,41 +621,9 @@ export class OrdersService {
     if (deMesa) return deMesa;
 
     if (!solicitada) {
-      throw new BadRequestException(
-        'Indica la mesa o la sucursal de la orden',
-      );
+      throw new BadRequestException('Indica la mesa o la sucursal de la orden');
     }
 
-    const sucursal = await this.prisma.scoped.sucursales.findFirst({
-      where: { id: solicitada, deleted_at: null },
-      select: { id: true },
-    });
-    if (!sucursal) throw new NotFoundException('Sucursal no encontrada');
-    return sucursal.id;
-  }
-
-  private tenant(): { empresaId: string; userId: string | null } {
-    const context = this.tenantContext.get();
-    if (!context?.empresaId) {
-      throw new BadRequestException('La operación requiere empresa en el token');
-    }
-    return { empresaId: context.empresaId, userId: context.userId ?? null };
-  }
-
-  /**
-   * Filtro de lectura por sucursal: el rol atado a sucursal nunca ve las demás,
-   * aunque pida otra explícitamente. `ADMIN_GLOBAL` puede acotar o ver todas.
-   */
-  private resolveSucursalFilter(solicitada?: string): string | null {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
-    return solicitada ?? null;
+    return buscarSucursal(this.prisma.scoped.sucursales, solicitada);
   }
 }

@@ -50,11 +50,8 @@ const EMPTY_CATALOG: CatalogState = {
 
 import { nextSku } from "@/lib/catalog-sku";
 
-export type CatalogoContextValue = CatalogState & {
-  catalogLoading: boolean;
-  catalogError: string | null;
-  /** Se incrementa con cada snapshot exitoso (lo usa la poda de combos). */
-  catalogVersion: number;
+/** Acciones del catálogo; `ModulesProvider` las reexpone por compatibilidad. */
+export type CatalogoActions = {
   refreshCatalog: (signal?: AbortSignal) => Promise<void>;
   saveProduct: (input: ProductInput) => Promise<void>;
   setProductActive: (id: string, active: boolean) => Promise<void>;
@@ -79,6 +76,14 @@ export type CatalogoContextValue = CatalogState & {
   priceOf: (productId: string) => number;
   categoryNameOf: (categoryId: string) => string;
 };
+
+export type CatalogoContextValue = CatalogState &
+  CatalogoActions & {
+    catalogLoading: boolean;
+    catalogError: string | null;
+    /** Se incrementa con cada snapshot exitoso (lo usa la poda de combos). */
+    catalogVersion: number;
+  };
 
 const Ctx = createContext<CatalogoContextValue | null>(null);
 

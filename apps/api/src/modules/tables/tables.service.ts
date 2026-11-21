@@ -10,6 +10,7 @@ import {
   ACTIVE_RESERVATION_STATES,
   OPEN_ORDER_STATES,
 } from '../../common/constants/estados.js';
+import { TenantScopedService } from '../../common/tenant/branch-scope.js';
 import type {
   CreateTableDto,
   ListTablesQueryDto,
@@ -34,11 +35,13 @@ function isUniqueViolation(error: unknown): boolean {
  * y nunca deja una mesa bloqueada con actividad abierta.
  */
 @Injectable()
-export class TablesService {
+export class TablesService extends TenantScopedService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
-  ) {}
+    protected readonly prisma: PrismaService,
+    protected readonly tenantContext: TenantContextService,
+  ) {
+    super();
+  }
 
   list(query: ListTablesQueryDto) {
     const sucursalId = this.resolveSucursalFilter(query.sucursalId);
@@ -165,41 +168,6 @@ export class TablesService {
     });
     if (!mesa) throw new NotFoundException('Mesa no encontrada');
     return mesa;
-  }
-
-  private tenant(): { empresaId: string } {
-    const context = this.tenantContext.get();
-    if (!context?.empresaId) {
-      throw new BadRequestException('La operación requiere empresa en el token');
-    }
-    return { empresaId: context.empresaId };
-  }
-
-  /**
-   * Sucursal donde se crea la mesa. Los roles operativos la llevan en el JWT;
-   * `ADMIN_GLOBAL` no, así que debe indicarla y se valida contra su empresa.
-   */
-  private async resolveSucursal(solicitada?: string): Promise<string> {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
-    if (!solicitada) {
-      throw new BadRequestException(
-        'Indica sucursalId: tu usuario no está atado a una sucursal',
-      );
-    }
-    const sucursal = await this.prisma.scoped.sucursales.findFirst({
-      where: { id: solicitada, deleted_at: null },
-      select: { id: true },
-    });
-    if (!sucursal) throw new NotFoundException('Sucursal no encontrada');
-    return sucursal.id;
   }
 
   /** Filtro de lectura: el rol atado a sucursal nunca ve las demás. */

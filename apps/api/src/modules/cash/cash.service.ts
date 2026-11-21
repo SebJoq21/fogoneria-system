@@ -10,6 +10,7 @@ import { TenantContextService } from '../../common/context/tenant-context.servic
 import { AuditService } from '../audit/index.js';
 import { ORDERS_PORT, type OrdersPort } from '../orders/index.js';
 import { paginationOf } from '../../common/dto/pagination.dto.js';
+import { TenantScopedService } from '../../common/tenant/branch-scope.js';
 import type { metodo_pago } from '../../generated/prisma/enums.js';
 import type {
   ChargeOrderDto,
@@ -51,13 +52,15 @@ interface MovimientoResumen {
  * llevan denormalizados durante el turno para no tener dos verdades.
  */
 @Injectable()
-export class CashService {
+export class CashService extends TenantScopedService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly tenantContext: TenantContextService,
+    protected readonly prisma: PrismaService,
+    protected readonly tenantContext: TenantContextService,
     @Inject(ORDERS_PORT) private readonly orders: OrdersPort,
     private readonly audit: AuditService,
-  ) {}
+  ) {
+    super();
+  }
 
   async current(solicitada?: string) {
     const sucursalId = this.resolveSucursalFiltro(solicitada);
@@ -503,50 +506,6 @@ export class CashService {
       );
     }
     return turno;
-  }
-
-  private tenant(): { empresaId: string; userId: string | null } {
-    const context = this.tenantContext.get();
-    if (!context?.empresaId) {
-      throw new BadRequestException('La operación requiere empresa en el token');
-    }
-    return { empresaId: context.empresaId, userId: context.userId ?? null };
-  }
-
-  private resolveSucursalFiltro(solicitada?: string): string | null {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
-    return solicitada ?? null;
-  }
-
-  private async resolveSucursal(solicitada?: string): Promise<string> {
-    const delToken = this.tenantContext.get()?.sucursalId ?? null;
-    if (delToken) {
-      if (solicitada && solicitada !== delToken) {
-        throw new BadRequestException(
-          'El token está atado a otra sucursal: no se puede indicar sucursalId',
-        );
-      }
-      return delToken;
-    }
-    if (!solicitada) {
-      throw new BadRequestException(
-        'Indica sucursalId: tu usuario no está atado a una sucursal',
-      );
-    }
-    const sucursal = await this.prisma.scoped.sucursales.findFirst({
-      where: { id: solicitada, deleted_at: null },
-      select: { id: true },
-    });
-    if (!sucursal) throw new NotFoundException('Sucursal no encontrada');
-    return sucursal.id;
   }
 
   /** Métodos válidos, para mensajes de error claros en la UI. */
