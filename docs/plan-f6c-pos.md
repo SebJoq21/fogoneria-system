@@ -1,7 +1,7 @@
 # Plan F6c — POS: cuentas, caja, comprobantes y promociones
 
-Estado: **F6c1 y F6c2 implementados** (`AccountsProvider`, `CashProvider`, `ReceiptsProvider`, `PromotionsProvider` y `CheckoutCoordinator`). F6c3 (`scopes`/retiro de `ModulesProvider`) queda pendiente.
-Base: `origin/development` en `85b0a7e` (#135 mergeado, F6c1 cerrado).
+Estado: **F6c1, F6c2 y F6c3 implementados**. `ModulesProvider` queda como fachada sin estado propio (ver §10); su retiro físico está bloqueado por las ~20 vistas que usan `useModules()`.
+Base: `origin/development` en `47301f7` (#136 mergeado, F6c2 cerrado).
 
 ## 1. Punto de partida
 
@@ -96,13 +96,14 @@ El piloto demuestra lo importante: persistencia, sync, migración/purga y que el
 
 **Compensación:** cada paso apila su reverso (`restoreAccount`, `removeCashMovements`, `removeReceipt`, `restoreCoupon`) y, si un paso lanza, se deshacen en orden inverso antes de relanzar. Los puntos se aplican al final (`addPoints` no lanza en el demo) y `afterCommit` corre fuera del `try`: un fallo de SUNAT o de la API no revierte una venta ya cobrada.
 
-### 3.6 `scopes` (F6c3, fuera de este plan)
+### 3.6 `scopes`, reservas y tickets (F6c3, implementado)
 
-Para mover `openAccount`/`sendToKitchen`/`advanceOrder` completos hace falta dueño de `scopes.orders` y `scopes.tables`:
-
-- `scopes.orders` → `OrdersProvider` (o `AccountsProvider`, mismo feature) con persistencia `fogoneria:orders-demo:v1`.
-- `scopes.tables` → feature `tables` (hoy es estado derivado + parches de estado; con sesión la API manda). Antes hay que decidir si el parche `ocupada`/`libre` sigue: `deriveTableStatus` ya deriva `ocupada` de las cuentas abiertas, así que probablemente se elimine en vez de migrarse.
-- Con eso, `ModulesProvider` se queda solo con `tickets`, `payments` y la composición.
+- `scopes.orders` → `features/orders/provider.tsx` (segundo store del módulo, `fogoneria:orders-demo:v1:<tenant>`); `useOrdersDemo` expone `ordersByBranch`, `setOrdersForBranches` (vista activa/agregada con `lib/branch-scope.ts`), `setBranchOrders`, `ensureDemoOrders` y `resetOrdersDemo`.
+- `scopes.tables` → `features/tables/provider.tsx` (`fogoneria:tables-demo:v1:<tenant>`); `patchStatus` replica el parche slug/UUID que hacía `ModulesProvider`.
+- `reservations` → `features/reservations/provider.tsx` (`fogoneria:reservations:v1:<tenant>`). La API sigue mandando con sesión (`liveReservations` en `ModulesProvider`).
+- `tickets` → `components/dashboard/providers/tickets.tsx` (capa compartida, `fogoneria:tickets:v1:<tenant>`): no hay módulo backend de soporte. Se monta en `app/layout.tsx`.
+- El loader de `ModulesProvider` migra los cuatro slices, borra `fogoneria:erp:v2:<tenant>` y deja de escribir estado propio. `ErpState` queda solo como tipo legacy de lectura.
+- El provider de órdenes compone dos stores (cuentas + comandas demo) porque `module.ts` declara un único provider por feature.
 
 ## 4. Migración y purga (contrato común)
 
@@ -112,6 +113,12 @@ Para mover `openAccount`/`sendToKitchen`/`advanceOrder` completos hace falta due
 | `cashShifts` + `scopes.cash` | `fogoneria:cash:v1:<tenant>` | `cashShifts`, `scopes[*].cash` | merge por `id`; `scopes` se guarda sin `cash` |
 | `receipts` + `sunatContingencia` | `fogoneria:receipts:v1:<tenant>` | `receipts`, `sunatContingencia` | merge por `id` (los recibos no se reescriben entre tenants) |
 | `combos` + `coupons` | `fogoneria:promotions:v1:<tenant>` | `combos`, `coupons` | merge por `id`/`code`; poda de combos al refrescar catálogo |
+| `scopes.orders` | `fogoneria:orders-demo:v1:<tenant>` | `scopes[*].orders` | merge por `id` por sucursal |
+| `scopes.tables` | `fogoneria:tables-demo:v1:<tenant>` | `scopes[*].tables` | merge por `id` por sucursal |
+| `reservations` | `fogoneria:reservations:v1:<tenant>` | `reservations` | merge por `id` |
+| `tickets` | `fogoneria:tickets:v1:<tenant>` | `tickets` | merge por `id` |
+
+F6c3: el loader migra **todo** y después borra `fogoneria:erp:v2:<tenant>`; ya no se guarda un estado vacío. Los providers tienen su propio `BroadcastChannel`, así que el canal `fogoneria:erp-sync` desaparece.
 
 Reglas:
 
@@ -122,26 +129,23 @@ Reglas:
 
 ## 5. Tests
 
-- **Unit (puros):** `lib/checkout.test.ts` (9): orden de escrituras, comprobante/IGV, propina, cupón, puntos, idempotencia por comprobante, cuenta no abierta, compensación en cada fallo (caja, comprobante, cupón, CRM) y post-efecto que no revierte.
-- **Provider:** `features/cash|receipts|promotions/provider.test.tsx`: hidratación demo/legacy, persistencia por tenant, turnos/arqueo, SUNAT, cupones con compensación y reset. `features/orders/provider.test.tsx` sigue cubriendo cuentas.
-- **Migración (unit):** `lib/module-store.test.ts` cubre `migrateLegacyCash`, `migrateLegacyReceipts`, `migrateLegacyPromotions` y `mergeByKey`.
-- **Integración:** `module-migration.integration.test.tsx` siembra un `ErpState` legacy con todos los slices (cuentas, caja con movimientos, comprobantes + contingencia, combos/cupones), verifica las claves nuevas, la purga (`scopes[*].cash` incluido) y que remontar no duplica. Incluye el remapeo slug→UUID de cuentas (sucursales al montar y después).
+- **Unit (puros):** `lib/checkout.test.ts` (9): orden de escrituras, comprobante/IGV, propina, cupón, puntos, idempotencia, cuenta no abierta, compensación en cada fallo (incluido el reverso de puntos) y post-efecto que no revierte.
+- **Hook del coordinador:** `components/dashboard/providers/checkout.test.tsx` (4): doble clic (M1), reintento del post-commit sin revertir (M2) y limpieza de la idempotencia al resetear/cambiar de empresa (L2).
+- **Providers:** `features/{orders,tables,reservations,cash,receipts,promotions}/provider.test.tsx` y `components/dashboard/providers/tickets.test.tsx`: hidratación demo, persistencia por tenant, sync y cambio de tenant, turnos/arqueo, SUNAT, cupones y escritura por sucursal.
+- **Helpers:** `lib/branch-scope.test.ts` (vista activa/agregada) y `lib/module-store.test.ts` (migración de caja, comprobantes, promociones, scopes, reservas y tickets).
+- **Integración:** `module-migration.integration.test.tsx` siembra el `ErpState` legacy completo, verifica todas las claves nuevas, el borrado del `ErpState` y que remontar no duplica; cubre el remapeo slug→UUID de cuentas y caja con sucursales al montar y después.
 - **Regresión:** `ModulesProvider.actions.test.tsx` (11) sigue cubriendo abrir → items → enviar → cobrar con cupón → anular → caja → SUNAT montando todos los providers reales.
-
-### L1 (fallo entre slices durante el cobro) — cubierto
-
-`runCheckout` es una función pura con puertos inyectados: los tests hacen lanzar `addCashMovements`, `addReceipt`, `consumeCoupon` y `addPoints`, y verifican que se deshacen los pasos previos y que la cuenta vuelve a su estado original (no queda `cobrada` sin comprobante ni movimiento). El doble cobro se cubre con el comprobante `Pagada` + los espejos síncronos del hook; el cupón no se consume dos veces porque la segunda llamada sale por la guardia de idempotencia.
 
 
 ## 6. Criterios para retirar `ModulesProvider`
 
-- [x] `accounts`, `cashShifts`/`cash`, `receipts` y `combos`/`coupons` tienen provider dueño.
-- [ ] `scopes` (orders/tables) tiene dueño → F6c3.
+- [x] `accounts`, `cashShifts`/`cash`, `receipts`, `combos`/`coupons`, `scopes` (orders/tables), `reservations` y `tickets` tienen provider dueño.
 - [x] El checkout vive en `useCheckout` y `ModulesProvider` solo lo reexporta.
-- [ ] `ErpState` queda en `tickets` + `payments` (hoy conserva `reservations`, `tickets` y `scopes` demo).
-- [x] `fogoneria:erp:v2:<tenant>` ya no recibe escrituras de POS (caja, comprobantes y promociones salieron).
+- [x] `ErpState` ya no se escribe: el loader migra y borra la clave legacy.
+- [x] `fogoneria:erp:v2:<tenant>` no recibe escrituras de negocio.
 - [x] `checkoutAccount` conserva orden, idempotencia y errores con tests de regresión y de compensación.
 - [x] `check:boundaries` sigue en 0 y ninguna feature importa otra.
+- [ ] `ModulesProvider` eliminado del layout (bloqueado: ~20 vistas usan `useModules()`; ver §10).
 
 ## 7. Riesgos y mitigaciones
 
@@ -158,9 +162,21 @@ Reglas:
 
 **F6c1 (mergeado en #135).** `AccountsProvider` con estado + persistencia/sync + migración/purga + remapeo; acciones y checkout siguen en `ModulesProvider` consumiendo el provider.
 
-**F6c2 (este PR).** `CashProvider` + `ReceiptsProvider` + `PromotionsProvider` + `CheckoutCoordinator`; `scopes` se reduce a `orders`/`tables` y `ErpState` pierde caja, comprobantes y promociones. Tests del coordinador (fallos y compensación) y de regresión del cobro.
+**F6c2 (mergeado en #136).** `CashProvider` + `ReceiptsProvider` + `PromotionsProvider` + `CheckoutCoordinator`; `scopes` se reduce a `orders`/`tables` y `ErpState` pierde caja, comprobantes y promociones.
 
-**F6c3 (fuera de F6c).** Dueño de `scopes.orders` y `scopes.tables`; retiro de `ModulesProvider` según el checklist de §6.
+**F6c3 (este PR).** Fixes M1/M2/L1/L2, `scopes.orders`/`scopes.tables`/`reservations`/`tickets` con provider, `ErpState` vaciado y borrado. `ModulesProvider` queda como fachada; su retiro físico es el único pendiente (§10).
+
+## 10. Retiro de `ModulesProvider` (bloqueado)
+
+`ModulesProvider` ya **no posee estado de negocio**: solo conserva el estado derivado de la API (`liveOrders`, `liveTables`, `liveReservations` y sus errores/loading) y la orquestación (abrir/enviar/anular/cobrar, `branchOf`, `resetDemoData`). El `ErpState` se migra y se borra; no hay `save` propio.
+
+Para eliminarlo del layout hay que sustituir `useModules()` en ~20 vistas y rutas. Propuesta:
+
+1. `useCheckout` ya cubre el cobro; exponer `useBranchScope()` (sucursal activa + `branchOf`) y `useOrdersLive()`/`useTablesLive()`/`useReservationsLive()` en la capa compartida.
+2. Migrar las vistas módulo a módulo (mesas, reservas, mozo/KDS, caja, comprobantes, gastos, inventario, promociones, CRM, RRHH, BI, configuración).
+3. Cuando no queden consumidores, borrar `ModulesProvider`, `lib/persistence.ts` y la entrada de `app/layout.tsx`; los tests de integración pasan a montar solo `FeatureProviders` + `CatalogoProvider` + `TicketsProvider`.
+
+No se hace en este PR para no tocar >20 vistas en el mismo cambio que mueve scopes/reservas/tickets (riesgo de regresión y revisión).
 
 ## 9. Decisiones
 
