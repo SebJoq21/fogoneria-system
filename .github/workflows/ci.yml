@@ -113,6 +113,13 @@ jobs:
           pnpm --filter @fogoneria/contracts test:coverage
           sed -i 's|^SF:src/|SF:packages/contracts/src/|' packages/contracts/coverage/lcov.info
 
+      - name: Pruebas de SDK y kernel (con cobertura)
+        run: |
+          pnpm --filter @fogoneria/sdk test:coverage
+          sed -i 's|^SF:src/|SF:packages/sdk/src/|' packages/sdk/coverage/lcov.info
+          pnpm --filter @fogoneria/kernel test:coverage
+          sed -i 's|^SF:src/|SF:packages/kernel/src/|' packages/kernel/coverage/lcov.info
+
       - name: Publicar cobertura de la API
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -134,6 +141,22 @@ jobs:
         with:
           name: coverage-contracts
           path: packages/contracts/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publicar cobertura del SDK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: coverage-sdk
+          path: packages/sdk/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publicar cobertura del kernel
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: coverage-kernel
+          path: packages/kernel/coverage/lcov.info
           if-no-files-found: error
           retention-days: 7
 
@@ -243,6 +266,18 @@ jobs:
         with:
           name: coverage-contracts
           path: coverage/contracts
+
+      - name: Descargar cobertura del SDK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: coverage-sdk
+          path: coverage/sdk
+
+      - name: Descargar cobertura del kernel
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: coverage-kernel
+          path: coverage/kernel
 
       - name: Descargar cobertura de DB
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
