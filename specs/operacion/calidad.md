@@ -150,7 +150,7 @@ Sonar **`SonarCloud`** - push/PR, `needs: quality`; instala dependencias (el ana
 >
 > **2026-11-20:** cobertura overall Sonar **65.6 %** (nuevo código 81.1 %), 0 vulnerabilidades/code smells/hotspots, ratings A; gate default **OK**. Tests: API 594, Web 646, contratos 111.
 >
-> **2026-11-21:** duplicación **0.0 %**, Sonar overall **~88.7 %** (PR #124), API **98/91.75**, Web **89.4/77.3**, contratos **100/98.3**. El lcov de `test:db` (`apps/api/coverage/db/lcov.info`) se publica como `coverage-db` y entra en Sonar.
+> **2026-11-21:** duplicación **0.0 %**, Sonar overall **87.2 %** (líneas 90.6, ramas 82.6), nuevo código **93.4 %**; API **98.04/91.75**, Web **89.4/77.3**, contratos **100/98.3**. El lcov de `test:db` (`apps/api/coverage/db/lcov.info`) se publica como `coverage-db` y entra en Sonar. Thresholds: API 96/90/96/96, Web 85/75/80/85, contratos 100/95/100/100.
 
 > **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; `pnpm audit --audit-level high` es bloqueante dentro de `quality` (0 altas; queda 1 moderado de `minimatch` 9 en dev tooling).
 

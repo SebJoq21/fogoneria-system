@@ -1,6 +1,22 @@
 # Plan de cobertura 100 % útil y duplicación
 
-> Estado base 2026-11-20 (`development` `854a111`): Sonar overall **65.6 %** (líneas 66.0, ramas 64.9), nuevo código **81.1 %**, duplicación **0.7 %**, 0 vulnerabilidades/code smells/hotspots, ratings A.
+> **Cierre 2026-11-21.** Objetivo cumplido: **cobertura overall 87.2 %** (líneas 90.6 %, ramas 82.6 %), **nuevo código 93.4 %**, **duplicación 0.0 %**, gate OK, ratings A, 0 vulnerabilidades/code smells/hotspots. Tests: API 677, Web 832, contratos 111.
+
+## 0. Estado final
+
+| Métrica | Objetivo | Cierre |
+|---|---|---|
+| Overall Sonar | ≥80 % | **87.2 %** |
+| Líneas / ramas | — | **90.6 % / 82.6 %** |
+| Nuevo código | ≥90 % | **93.4 %** |
+| API | ≥95 / ≥90 | **98.04 / 91.75** |
+| Web | ≥85 / ≥75 | **89.4 / 77.3** |
+| Contratos | 100 / ≥95 | **100 / 98.3** |
+| Duplicación | ≤0.2 % | **0.0 %** (0 líneas, 0 bloques) |
+| Vulnerabilidades / smells / hotspots | 0 | **0 / 0 / 0** |
+| Tests | — | **677 API / 832 Web / 111 contratos** |
+
+PRs: **#120** (Fase 0-1), **#121** (Fase 2), **#122** (Fase 3), **#123** (duplicación), **#124** (Fase 4), **#125** (DB lcov + ratchet). `development` en `ee054c9`, 0 PRs abiertos.
 
 ## 1. Qué significa “100 %” aquí
 
