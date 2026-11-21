@@ -36,6 +36,7 @@ type CrmContextValue = {
   customers: Customer[];
   setCustomers: (customers: Customer[]) => void;
   addPoints: (customerId: number, points: number) => void;
+  restorePoints: (customerId: number, points: number) => void;
   resetCustomers: () => void;
 };
 
@@ -128,6 +129,24 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  /**
+   * Reverso de `addPoints` para la compensación del cobro (F6c3/L1).
+   * Descuenta puntos y la visita; `lastVisit` no se puede reconstruir y se deja.
+   */
+  const restorePoints = useCallback((customerId: number, points: number) => {
+    setCustomersState((previous) =>
+      previous.map((customer) =>
+        customer.id === customerId
+          ? {
+              ...customer,
+              points: Math.max(0, customer.points - points),
+              visits: Math.max(0, customer.visits - 1),
+            }
+          : customer,
+      ),
+    );
+  }, []);
+
   const resetCustomers = useCallback(() => {
     try {
       localStorage.removeItem(crmStorageKey(tenantKey));
@@ -145,8 +164,8 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   }, [tenantKey, sourceId]);
 
   const value = useMemo(
-    () => ({ customers, setCustomers, addPoints, resetCustomers }),
-    [customers, setCustomers, addPoints, resetCustomers],
+    () => ({ customers, setCustomers, addPoints, restorePoints, resetCustomers }),
+    [customers, setCustomers, addPoints, restorePoints, resetCustomers],
   );
 
   return <CrmContext.Provider value={value}>{children}</CrmContext.Provider>;

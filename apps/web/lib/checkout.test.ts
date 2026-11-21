@@ -85,6 +85,7 @@ function escrituras(overrides: Partial<CheckoutWrites> = {}): Escrituras {
     consumeCoupon: vi.fn(() => calls.push('consumeCoupon')),
     restoreCoupon: vi.fn(() => calls.push('restoreCoupon')),
     addPoints: vi.fn(() => calls.push('addPoints')),
+    restorePoints: vi.fn(() => calls.push('restorePoints')),
   };
   return { ...base, ...overrides, calls };
 }
@@ -186,20 +187,23 @@ describe('runCheckout', () => {
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('cupón caído');
+    expect(writes.addPoints).not.toHaveBeenCalled();
+    expect(writes.restorePoints).not.toHaveBeenCalled();
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);
     expect(writes.restoreAccount).toHaveBeenCalled();
     expect(writes.restoreCoupon).not.toHaveBeenCalled();
-    expect(writes.addPoints).not.toHaveBeenCalled();
   });
 
-  it('compensa cupón, comprobante, caja y cuenta si falla CRM', () => {
+  it('compensa puntos, cupón, comprobante, caja y cuenta si falla CRM', () => {
     const writes = escrituras({
       addPoints: vi.fn(() => {
         throw new Error('CRM caído');
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('CRM caído');
+    expect(writes.consumeCoupon).toHaveBeenCalledWith('C10');
+    expect(writes.restorePoints).toHaveBeenCalledWith(7, 44);
     expect(writes.restoreCoupon).toHaveBeenCalledWith('C10');
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);

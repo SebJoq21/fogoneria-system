@@ -2,12 +2,36 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const sesion = vi.hoisted(() => ({
+  currentUser: null as null | { empresaId: string },
+}));
+
 vi.mock('@/components/dashboard/providers/session', () => ({
-  useSession: () => ({ currentUser: null }),
+  useSession: () => sesion,
 }));
 
 import { CashProvider, useCash } from './provider';
 import { initialCashMovementsByBranch, initialCashShifts } from '@/lib/tenancy';
+
+type Posted = { type: 'state' | 'reset'; source: string; value: unknown };
+
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+  readonly name: string;
+  onmessage: ((event: MessageEvent<Posted>) => void) | null = null;
+  readonly posted: Posted[] = [];
+
+  constructor(name: string) {
+    this.name = name;
+    FakeBroadcastChannel.instances.push(this);
+  }
+
+  postMessage(data: Posted): void {
+    this.posted.push(data);
+  }
+
+  close(): void {}
+}
 
 function Probe() {
   const cash = useCash();
@@ -36,8 +60,15 @@ function Probe() {
   );
 }
 
-beforeEach(() => localStorage.clear());
-afterEach(cleanup);
+beforeEach(() => {
+  localStorage.clear();
+  sesion.currentUser = null;
+  FakeBroadcastChannel.instances = [];
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('CashProvider', () => {
   it('hidrata turnos y movimientos demo, y persiste por tenant', async () => {
@@ -114,5 +145,65 @@ describe('CashProvider', () => {
         String(initialCashMovementsByBranch.miraflores.length),
       ),
     );
+  });
+
+  it('sincroniza con otra pestaña sin reemitir el eco', async () => {
+    vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel);
+    render(
+      <CashProvider>
+        <Probe />
+      </CashProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('shifts').textContent).toBeTruthy());
+
+    const channel = FakeBroadcastChannel.instances.find(
+      (item) => item.name === 'fogoneria:cash-sync:anon' && item.onmessage !== null,
+    );
+    expect(channel).toBeTruthy();
+    const postedBefore = FakeBroadcastChannel.instances.reduce(
+      (total, item) => total + item.posted.length,
+      0,
+    );
+
+    act(() => {
+      channel!.onmessage?.({
+        data: {
+          type: 'state',
+          source: 'otra-pestana',
+          value: { shifts: [], movementsByBranch: { 'b-9': [{ id: 7 }] } },
+        },
+      } as MessageEvent<Posted>);
+    });
+
+    await waitFor(() => expect(screen.getByTestId('shifts').textContent).toBe('0'));
+    const postedAfter = FakeBroadcastChannel.instances.reduce(
+      (total, item) => total + item.posted.length,
+      0,
+    );
+    expect(postedAfter).toBe(postedBefore);
+  });
+
+  it('no escribe la caja del tenant anterior en la clave nueva', async () => {
+    const { rerender } = render(
+      <CashProvider>
+        <Probe />
+      </CashProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('shifts').textContent).toBeTruthy());
+
+    sesion.currentUser = { empresaId: 'emp-2' };
+    rerender(
+      <CashProvider>
+        <Probe />
+      </CashProvider>,
+    );
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('fogoneria:cash:v1:emp-2') ?? 'null')).toEqual({
+        shifts: [],
+        movementsByBranch: {},
+      }),
+    );
+    expect(localStorage.getItem('fogoneria:cash:v1:anon')).toContain('CH-miraflores-hoy');
   });
 });

@@ -2,6 +2,10 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const sesion = vi.hoisted(() => ({
+  currentUser: null as null | { empresaId: string },
+}));
+
 const port = vi.hoisted(() => ({
   setContingencia: vi.fn(),
   enviar: vi.fn().mockResolvedValue({ estado: 'aceptado', mensaje: 'ok' }),
@@ -9,7 +13,7 @@ const port = vi.hoisted(() => ({
 }));
 
 vi.mock('@/components/dashboard/providers/session', () => ({
-  useSession: () => ({ currentUser: null }),
+  useSession: () => sesion,
 }));
 vi.mock('@/lib/facturacion', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/facturacion')>();
@@ -18,6 +22,26 @@ vi.mock('@/lib/facturacion', async (importOriginal) => {
 
 import { ReceiptsProvider, useReceipts } from './provider';
 import { initialReceipts, type Receipt } from '@/lib/erp';
+
+type Posted = { type: 'state' | 'reset'; source: string; value: unknown };
+
+class FakeBroadcastChannel {
+  static instances: FakeBroadcastChannel[] = [];
+  readonly name: string;
+  onmessage: ((event: MessageEvent<Posted>) => void) | null = null;
+  readonly posted: Posted[] = [];
+
+  constructor(name: string) {
+    this.name = name;
+    FakeBroadcastChannel.instances.push(this);
+  }
+
+  postMessage(data: Posted): void {
+    this.posted.push(data);
+  }
+
+  close(): void {}
+}
 
 const recibo: Receipt = {
   id: 'B001-77',
@@ -67,10 +91,15 @@ function Probe() {
 
 beforeEach(() => {
   localStorage.clear();
+  sesion.currentUser = null;
+  FakeBroadcastChannel.instances = [];
   port.enviar.mockClear();
   port.enviarBaja.mockClear();
 });
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 describe('ReceiptsProvider', () => {
   it('hidrata el demo y persiste por tenant', async () => {
@@ -137,5 +166,66 @@ describe('ReceiptsProvider', () => {
     await waitFor(() =>
       expect(screen.getByTestId('count').textContent).toBe(String(initialReceipts.length)),
     );
+  });
+
+  it('sincroniza con otra pestaña sin reemitir el eco', async () => {
+    vi.stubGlobal('BroadcastChannel', FakeBroadcastChannel);
+    render(
+      <ReceiptsProvider>
+        <Probe />
+      </ReceiptsProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBeTruthy());
+
+    const channel = FakeBroadcastChannel.instances.find(
+      (item) => item.name === 'fogoneria:receipts-sync:anon' && item.onmessage !== null,
+    );
+    expect(channel).toBeTruthy();
+    const postedBefore = FakeBroadcastChannel.instances.reduce(
+      (total, item) => total + item.posted.length,
+      0,
+    );
+
+    act(() => {
+      channel!.onmessage?.({
+        data: {
+          type: 'state',
+          source: 'otra-pestana',
+          value: { receipts: [{ id: 'B001-REMOTA' }], sunatContingencia: true },
+        },
+      } as MessageEvent<Posted>);
+    });
+
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'));
+    expect(screen.getByTestId('contingencia').textContent).toBe('true');
+    const postedAfter = FakeBroadcastChannel.instances.reduce(
+      (total, item) => total + item.posted.length,
+      0,
+    );
+    expect(postedAfter).toBe(postedBefore);
+  });
+
+  it('no escribe los comprobantes del tenant anterior en la clave nueva', async () => {
+    const { rerender } = render(
+      <ReceiptsProvider>
+        <Probe />
+      </ReceiptsProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('count').textContent).toBeTruthy());
+
+    sesion.currentUser = { empresaId: 'emp-2' };
+    rerender(
+      <ReceiptsProvider>
+        <Probe />
+      </ReceiptsProvider>,
+    );
+
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem('fogoneria:receipts:v1:emp-2') ?? 'null')).toEqual({
+        receipts: [],
+        sunatContingencia: false,
+      }),
+    );
+    expect(localStorage.getItem('fogoneria:receipts:v1:anon')).toContain('sunatContingencia');
   });
 });

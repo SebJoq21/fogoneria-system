@@ -60,6 +60,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- F6c3: `ReservationsProvider`/`useReservations` (`features/reservations/provider.tsx`) es dueño de la agenda demo (`fogoneria:reservations:v1`); con sesión la agenda real viene de `GET /reservations` (`liveReservations` en `ModulesProvider`).
+
 - Fase 3 de paridad (2026-11-21): `reservations` es feature propia y contrato `reservations.ts`; la vista compartida del salón sigue en `components/dashboard/salon` hasta el split fino de UI.
 - No hay vista de calendario mensual ni recordatorios (WhatsApp/email).
 - El aforo se controla por mesa; no hay aforo global del salón.

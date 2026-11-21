@@ -1,18 +1,10 @@
-/* Persistencia del estado ERP (mocks realistas).
-   localStorage versionado + BroadcastChannel para sincronizar
-   varias pestañas (tablet del mesero vs pantalla de cocina).
-
-   El estado y el canal se namespacan por empresa (`empresaId` del token) para
-   que dos cuentas en el mismo navegador no compartan operación ni tickets.
-   Las notificaciones son avisos en memoria (`NotificationsProvider`) y no se
-   persisten. Sin sesión (offline/demo) se usa `ANON_TENANT_KEY`. */
-
-import type { Reservation } from "./erp";
-import type { Ticket } from "./dashboard";
-import type { BranchScope } from "./tenancy";
+/* Persistencia legacy del ERP.
+   F6c3: todo el estado de negocio vive en los providers
+   (`fogoneria:<id>:v1:<tenant>`). Este archivo solo conserva la lectura del
+   `ErpState` v2 que dejaron las versiones anteriores, para que el loader de
+   `ModulesProvider` migre y borre la clave una última vez. */
 
 export const ERP_STORAGE_KEY = "fogoneria:erp:v2";
-export const ERP_SYNC_CHANNEL = "fogoneria:erp-sync";
 
 /** Clave de tenant para el estado mostrado sin sesión (demo offline). */
 export const ANON_TENANT_KEY = "anon";
@@ -21,19 +13,9 @@ export function erpStorageKey(tenantKey: string): string {
   return `${ERP_STORAGE_KEY}:${tenantKey}`;
 }
 
-export function erpSyncChannel(tenantKey: string): string {
-  return `${ERP_SYNC_CHANNEL}:${tenantKey}`;
-}
-
-/* El catálogo (platos, categorías, modificadores y precios) ya no se
-   persiste en el cliente: es la fuente de verdad de la API (tarea 63).
-   F6c2: caja, comprobantes y promociones viven en sus providers; aquí solo
-   quedan la operación demo por sucursal (comandas/mesas) y el shell. */
+/** Estado legacy: sin campos propios, solo la marca de versión. */
 export type ErpState = {
   version: 2;
-  reservations: Reservation[];
-  tickets: Ticket[];
-  scopes: Record<string, BranchScope>;
 };
 
 export function loadErpState(tenantKey: string): ErpState | null {
@@ -41,52 +23,18 @@ export function loadErpState(tenantKey: string): ErpState | null {
     const raw = localStorage.getItem(erpStorageKey(tenantKey));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ErpState;
-    if (parsed?.version !== 2 || !parsed.scopes) return null;
+    if (parsed?.version !== 2) return null;
     return parsed;
   } catch {
     return null;
   }
 }
 
-export function saveErpState(tenantKey: string, state: ErpState): void {
-  try {
-    localStorage.setItem(erpStorageKey(tenantKey), JSON.stringify(state));
-  } catch {
-    /* almacenamiento no disponible */
-  }
-}
-
+/** Borra el `ErpState` legacy del tenant (tras migrarlo a los providers). */
 export function resetErpState(tenantKey: string): void {
   try {
     localStorage.removeItem(erpStorageKey(tenantKey));
-    if (typeof BroadcastChannel !== "undefined") {
-      const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
-      ch.postMessage({ type: "reset" });
-      ch.close();
-    }
   } catch {
     /* almacenamiento no disponible */
   }
 }
-
-type SyncMessage = { type: "state"; state: ErpState } | { type: "reset" };
-
-/** Sincroniza el estado entre pestañas de la misma empresa. Devuelve el cleanup. */
-export function subscribeErpSync(
-  tenantKey: string,
-  onMessage: (msg: SyncMessage) => void,
-): () => void {
-  if (typeof BroadcastChannel === "undefined") return () => {};
-  const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
-  ch.onmessage = (ev: MessageEvent<SyncMessage>) => onMessage(ev.data);
-  return () => ch.close();
-}
-
-export function broadcastErpState(tenantKey: string, state: ErpState): void {
-  if (typeof BroadcastChannel === "undefined") return;
-  const ch = new BroadcastChannel(erpSyncChannel(tenantKey));
-  ch.postMessage({ type: "state", state });
-  ch.close();
-}
-
-export type { SyncMessage };

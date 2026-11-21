@@ -10,13 +10,11 @@ import {
   useState,
 } from "react";
 import {
-  initialTickets,
   type Notification,
   type Payment as PlanPayment,
   type Ticket,
 } from "@/lib/dashboard";
 import {
-  initialReservations,
   type CashMovement,
   type Coupon,
   type Customer,
@@ -31,12 +29,8 @@ import {
   type Table,
 } from "@/lib/erp";
 import {
-  DEMO_EMPRESA_ID,
   GENERAL_BRANCH,
-  SEED_BRANCH_SLUGS,
   SEED_SLUG_BRANCH_IDS,
-  demoScopeFor,
-  initialScopes,
   type Branch,
   type BranchScope,
 } from "@/lib/tenancy";
@@ -72,6 +66,7 @@ import {
   migrateLegacyInventory,
   migrateLegacyPromotions,
   migrateLegacyReceipts,
+  migrateLegacyScopes,
   readModuleValue,
   saveModuleValue,
   type CashStoreState,
@@ -84,14 +79,17 @@ import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
 import { useCatalogoState } from "./providers/catalog";
 import { useCheckout } from "./providers/checkout";
+import { useTickets } from "./providers/tickets";
 import { useCrm } from "@/features/crm/provider";
 import { useCash } from "@/features/cash/provider";
 import { useExpenses } from "@/features/expenses/provider";
 import { useInventory } from "@/features/inventory/provider";
-import { useAccounts } from "@/features/orders/provider";
+import { useAccounts, useOrdersDemo } from "@/features/orders/provider";
 import { usePromotions } from "@/features/promotions/provider";
+import { useReservations } from "@/features/reservations/provider";
 import { useReceipts } from "@/features/receipts/provider";
 import { useStaff } from "@/features/staff/provider";
+import { useTables } from "@/features/tables/provider";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
 import { useTenant } from "@/features/tenant/provider";
@@ -110,11 +108,7 @@ import type { CheckoutInput } from "@/lib/checkout";
 export type { CheckoutInput } from "@/lib/checkout";
 import {
   loadErpState,
-  saveErpState,
   resetErpState,
-  subscribeErpSync,
-  broadcastErpState,
-  type ErpState,
 } from "@/lib/persistence";
 
 const TERMINAL_API_STATES: readonly ordersApi.ApiOrderStatus[] = [
@@ -237,63 +231,6 @@ type ModulesContext = CatalogoActions & {
 
 const Ctx = createContext<ModulesContext | null>(null);
 
-type ScopeItem = { id: number | string };
-
-function applyWrite(
-  prev: Record<string, BranchScope>,
-  branchIds: string[],
-  activeId: string,
-  key: "orders",
-  value: React.SetStateAction<Order[]>,
-): Record<string, BranchScope>;
-function applyWrite(
-  prev: Record<string, BranchScope>,
-  branchIds: string[],
-  activeId: string,
-  key: "tables",
-  value: React.SetStateAction<Table[]>,
-): Record<string, BranchScope>;
-function applyWrite(
-  prev: Record<string, BranchScope>,
-  branchIds: string[],
-  activeId: string,
-  key: "orders" | "tables",
-  value: unknown,
-): Record<string, BranchScope> {
-  const asItems = value as React.SetStateAction<ScopeItem[]>;
-  if (activeId !== "todas") {
-    const current = ((prev[activeId]?.[key] ?? []) as ScopeItem[]);
-    const next = typeof asItems === "function" ? asItems(current) : asItems;
-    return { ...prev, [activeId]: { ...prev[activeId], [key]: next } };
-  }
-  // Vista general: se aplica sobre el combinado y se reparte por id;
-  // los ítems nuevos (id desconocido) van a la matriz.
-  const combined = branchIds.flatMap((id) => ((prev[id]?.[key] ?? []) as ScopeItem[]));
-  const next = typeof asItems === "function" ? asItems(combined) : asItems;
-  const knownIds = new Set(combined.map((o) => o.id));
-  const fresh = next.filter((o) => !knownIds.has(o.id));
-  const out = { ...prev };
-  branchIds.forEach((id, i) => {
-    const own = new Set((((prev[id] as BranchScope | undefined)?.[key] ?? []) as ScopeItem[]).map((o) => o.id));
-    const slice = next.filter((o) => own.has(o.id));
-    out[id] = { ...out[id], [key]: i === 0 ? [...slice, ...fresh] : slice };
-  });
-  return out;
-}
-
-/**
- * Alinea la operación mock con las sucursales reales: el tenant demo del seed
- * recibe sus datos de ejemplo (remapeados a UUID) y los tenants nuevos arrancan
- * con la operación vacía.
- */
-function prepareOps(state: ErpState, branchIds: string[]): ErpState {
-  const scopes = { ...state.scopes };
-  for (const id of branchIds) {
-    if (!scopes[id]) scopes[id] = demoScopeFor(id) ?? { orders: [], tables: [] };
-  }
-  return { ...state, scopes };
-}
-
 /**
  * Remapea las cuentas del seed (slug) a las sucursales reales (UUID).
  * Idempotente: devuelve el mismo array si no hay nada que remapear.
@@ -307,27 +244,6 @@ function remapAccountBranches(accounts: TableAccount[]): TableAccount[] {
     return { ...account, branchId };
   });
   return changed ? next : accounts;
-}
-
-/** Estado de arranque de un tenant nuevo: sin mocks compartidos. */
-function buildEmptyState(): ErpState {
-  return {
-    version: 2,
-    reservations: [],
-    tickets: [],
-    scopes: {},
-  };
-}
-
-/** Estado inicial: demo para offline o el tenant demo del seed; vacío para el resto. */
-function buildInitialState(empresaId: string | null): ErpState {
-  if (empresaId !== null && empresaId !== DEMO_EMPRESA_ID) return buildEmptyState();
-  return {
-    version: 2,
-    reservations: initialReservations,
-    tickets: initialTickets,
-    scopes: initialScopes,
-  };
 }
 
 export function ModulesProvider({
@@ -364,6 +280,28 @@ export function ModulesProvider({
   } = useInventory();
   const { roles, setRoles, resetRoles } = useStaff();
   const { accounts, setAccounts, resetAccounts } = useAccounts();
+  const {
+    ordersByBranch,
+    setOrdersForBranches,
+    setBranchOrders,
+    ensureDemoOrders,
+    remapBranches: remapOrdersBranches,
+    resetOrdersDemo,
+  } = useOrdersDemo();
+  const {
+    tablesByBranch,
+    setTablesForBranches,
+    patchStatus,
+    ensureDemoTables,
+    remapBranches: remapTablesBranches,
+    resetTables,
+  } = useTables();
+  const {
+    reservations: demoReservations,
+    setReservations: setDemoReservations,
+    resetReservations,
+  } = useReservations();
+  const { tickets, setTickets, resetTickets } = useTickets();
   const cash = useCash();
   const {
     cashShifts: allCashShifts,
@@ -393,33 +331,25 @@ export function ModulesProvider({
     resetPromotions,
   } = usePromotions();
   const [payments] = useState<PlanPayment[]>(initialPayments);
-  const [state, setState] = useState<ErpState>(() => buildInitialState(null));
-  const applyingRemote = useRef(false);
   /** Namespace de persistencia: una empresa no comparte estado con otra. */
   const tenantKey = tenantKeyOf(currentUser);
   const empresaId = currentUser?.empresaId ?? null;
 
-  /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
+  /**
+   * Migración final del `ErpState` legacy (F6c3). Los providers ya hidrataron
+   * sus propias claves; aquí se extraen los slices que quedaban (scopes demo,
+   * reservas y tickets) y se borra la clave para no volver a migrar.
+   */
   useEffect(() => {
     const saved = loadErpState(tenantKey) as LegacyErpState | null;
-    if (!saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
-      setState(buildInitialState(currentUser?.empresaId ?? null));
-      return;
-    }
+    if (!saved) return;
 
-    // Migra los slices que ya tienen provider antes de que el guardado escriba.
     let next = saved as LegacyModuleState;
-    let changed = false;
 
-    const crm = migrateLegacyCustomers(
-      next as LegacyErpState,
-      readCrmCustomers(tenantKey),
-    );
+    const crm = migrateLegacyCustomers(next as LegacyErpState, readCrmCustomers(tenantKey));
     if (crm.migrated) {
       saveCrmCustomers(tenantKey, crm.migrated);
       next = crm.state as LegacyModuleState;
-      changed = true;
     }
 
     const expensesMigration = migrateLegacyArray(
@@ -430,7 +360,6 @@ export function ModulesProvider({
     if (expensesMigration.migrated) {
       saveModuleValue("expenses", tenantKey, expensesMigration.migrated);
       next = expensesMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const inventoryMigration = migrateLegacyInventory(
@@ -440,7 +369,6 @@ export function ModulesProvider({
     if (inventoryMigration.migrated) {
       saveModuleValue("inventory", tenantKey, inventoryMigration.migrated);
       next = inventoryMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const staffMigration = migrateLegacyArray(
@@ -451,7 +379,6 @@ export function ModulesProvider({
     if (staffMigration.migrated) {
       saveModuleValue("staff", tenantKey, staffMigration.migrated);
       next = staffMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const accountsMigration = migrateLegacyArray(
@@ -462,7 +389,6 @@ export function ModulesProvider({
     if (accountsMigration.migrated) {
       saveModuleValue("orders", tenantKey, accountsMigration.migrated);
       next = accountsMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const cashMigration = migrateLegacyCash(
@@ -472,7 +398,6 @@ export function ModulesProvider({
     if (cashMigration.migrated) {
       saveModuleValue("cash", tenantKey, cashMigration.migrated);
       next = cashMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const receiptsMigration = migrateLegacyReceipts(
@@ -482,7 +407,6 @@ export function ModulesProvider({
     if (receiptsMigration.migrated) {
       saveModuleValue("receipts", tenantKey, receiptsMigration.migrated);
       next = receiptsMigration.state as LegacyModuleState;
-      changed = true;
     }
 
     const promotionsMigration = migrateLegacyPromotions(
@@ -492,12 +416,42 @@ export function ModulesProvider({
     if (promotionsMigration.migrated) {
       saveModuleValue("promotions", tenantKey, promotionsMigration.migrated);
       next = promotionsMigration.state as LegacyModuleState;
-      changed = true;
     }
 
-    if (changed) saveErpState(tenantKey, next as ErpState);
-    setState(next as ErpState);
-  }, [tenantKey, currentUser]);
+    const scopesMigration = migrateLegacyScopes(
+      next,
+      readModuleValue<Record<string, Order[]>>("orders-demo", tenantKey),
+      readModuleValue<Record<string, Table[]>>("tables-demo", tenantKey),
+    );
+    if (scopesMigration.migrated) {
+      saveModuleValue("orders-demo", tenantKey, scopesMigration.migrated.ordersByBranch);
+      saveModuleValue("tables-demo", tenantKey, scopesMigration.migrated.tablesByBranch);
+      next = scopesMigration.state as LegacyModuleState;
+    }
+
+    const reservationsMigration = migrateLegacyArray(
+      next,
+      "reservations",
+      readModuleValue<Reservation[]>("reservations", tenantKey),
+    );
+    if (reservationsMigration.migrated) {
+      saveModuleValue("reservations", tenantKey, reservationsMigration.migrated);
+      next = reservationsMigration.state as LegacyModuleState;
+    }
+
+    const ticketsMigration = migrateLegacyArray(
+      next,
+      "tickets",
+      readModuleValue<Ticket[]>("tickets", tenantKey),
+    );
+    if (ticketsMigration.migrated) {
+      saveModuleValue("tickets", tenantKey, ticketsMigration.migrated);
+      next = ticketsMigration.state as LegacyModuleState;
+    }
+
+    // Todo migrado: el ErpState legacy ya no es la fuente de nada.
+    resetErpState(tenantKey);
+  }, [tenantKey]);
 
   /* Alinea la operación demo con las sucursales reales cuando llegan de la API. */
   const preparedBranches = useRef<string | null>(null);
@@ -507,8 +461,17 @@ export function ModulesProvider({
     const signature = `${empresaId}:${ids.join(",")}`;
     if (preparedBranches.current === signature) return;
     preparedBranches.current = signature;
-    setState((prev) => prepareOps(prev, ids));
-  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches]);
+    ensureDemoOrders(ids);
+    ensureDemoTables(ids);
+  }, [
+    ensureDemoOrders,
+    ensureDemoTables,
+    empresaId,
+    hasSession,
+    realBranches,
+    tenantError,
+    tenantLoading,
+  ]);
 
   /**
    * Remapeo slug→UUID de las cuentas (F6c1). Corre cuando cambian las cuentas
@@ -548,23 +511,36 @@ export function ModulesProvider({
     tenantLoading,
   ]);
 
-  /* Persistir + difundir a otras pestañas de la misma empresa */
+  /** Remapeo slug→UUID de las claves de comandas y mesas demo (F6c3/H2). */
   useEffect(() => {
-    saveErpState(tenantKey, state);
-    if (applyingRemote.current) {
-      applyingRemote.current = false;
-      return;
-    }
-    broadcastErpState(tenantKey, state);
-  }, [state, tenantKey]);
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    remapOrdersBranches(SEED_SLUG_BRANCH_IDS);
+  }, [
+    empresaId,
+    hasSession,
+    ordersByBranch,
+    realBranches,
+    remapOrdersBranches,
+    tenantError,
+    tenantLoading,
+  ]);
 
-  /* Estado compartido entre pestañas del mismo tenant (mesero ↔ cocina) */
   useEffect(() => {
-    return subscribeErpSync(tenantKey, (msg) => {
-      applyingRemote.current = true;
-      setState(msg.type === "state" ? msg.state : buildInitialState(currentUser?.empresaId ?? null));
-    });
-  }, [tenantKey, currentUser]);
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    remapTablesBranches(SEED_SLUG_BRANCH_IDS);
+  }, [
+    empresaId,
+    hasSession,
+    realBranches,
+    remapTablesBranches,
+    tablesByBranch,
+    tenantError,
+    tenantLoading,
+  ]);
+
+  /* Persistencia y sync: las tienen los providers por módulo (F6b/F6c). */
 
   /* ---------- Catálogo y precios (Fase 4 etapa 3: `CatalogoProvider`) ---------- */
 
@@ -789,12 +765,17 @@ export function ModulesProvider({
   const writeBranchId = isGeneral ? branchIds[0] : activeBranchId;
 
   const activeScope: BranchScope = useMemo(() => {
-    if (!isGeneral) return scopesOf(state.scopes, activeBranchId);
+    if (!isGeneral) {
+      return {
+        orders: ordersByBranch[activeBranchId] ?? [],
+        tables: tablesByBranch[activeBranchId] ?? [],
+      };
+    }
     return {
-      orders: branchIds.flatMap((id) => state.scopes[id]?.orders ?? []),
-      tables: branchIds.flatMap((id) => state.scopes[id]?.tables ?? []),
+      orders: branchIds.flatMap((id) => ordersByBranch[id] ?? []),
+      tables: branchIds.flatMap((id) => tablesByBranch[id] ?? []),
     };
-  }, [state.scopes, activeBranchId, isGeneral, branchIds]);
+  }, [ordersByBranch, tablesByBranch, activeBranchId, isGeneral, branchIds]);
 
   const activeAccounts = useMemo(
     () => (isGeneral ? accounts : accounts.filter((a) => matchesBranch(a.branchId, activeBranchId))),
@@ -829,27 +810,26 @@ export function ModulesProvider({
         return branches.find((b) => b.id !== GENERAL_BRANCH.id) ?? null;
       }
       for (const b of branches) {
-        const list = (state.scopes[b.id]?.[kind] ?? []) as Array<{ id: number | string }>;
+        const list =
+          kind === "orders"
+            ? ordersByBranch[b.id] ?? []
+            : tablesByBranch[b.id] ?? [];
         if (list.some((o) => o.id === id)) return b;
       }
       return branches.find((b) => b.id !== GENERAL_BRANCH.id) ?? null;
     },
-    [cash.movementsByBranch, state.scopes, branches],
+    [cash.movementsByBranch, ordersByBranch, tablesByBranch, branches],
   );
 
   /* ---------- Setters (API compatible con las vistas) ---------- */
 
-  const setPlain = useCallback(<K extends keyof ErpState>(key: K, value: ErpState[K]) => {
-    setState((s) => ({ ...s, [key]: value }));
-  }, []);
-
   const setOrders = useCallback<React.Dispatch<React.SetStateAction<Order[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "orders", v) })),
-    [activeBranchId, branchIds],
+    (v) => setOrdersForBranches(branchIds, activeBranchId, v),
+    [activeBranchId, branchIds, setOrdersForBranches],
   );
   const setTables = useCallback<React.Dispatch<React.SetStateAction<Table[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "tables", v) })),
-    [activeBranchId, branchIds],
+    (v) => setTablesForBranches(branchIds, activeBranchId, v),
+    [activeBranchId, branchIds, setTablesForBranches],
   );
   const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
     (v) => {
@@ -876,8 +856,10 @@ export function ModulesProvider({
     },
     [activeBranchId, branchIds, isGeneral, setMovementsByBranch, setMovementsOf],
   );
-  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
-  const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
+  const setReservations = useCallback(
+    (r: Reservation[]) => setDemoReservations(r),
+    [setDemoReservations],
+  );
 
   const addTicket = useCallback(
     (subject: string) => {
@@ -887,14 +869,15 @@ export function ModulesProvider({
         status: "Enviado",
         updated: "Justo ahora",
       };
-      setState((s) => ({ ...s, tickets: [ticket, ...s.tickets] }));
+      setTickets((prev) => [ticket, ...prev]);
       notify("Ticket enviado", `Tu solicitud "${subject}" ha sido enviada a soporte.`);
     },
-    [notify],
+    [notify, setTickets],
   );
 
   const resetDemoData = useCallback(() => {
     resetErpState(tenantKey);
+    sunatEnviados.current.clear();
     resetCustomers();
     resetExpenses();
     resetInventory();
@@ -903,19 +886,25 @@ export function ModulesProvider({
     resetCash();
     resetReceipts();
     resetPromotions();
-    setState(buildInitialState(currentUser?.empresaId ?? null));
+    resetOrdersDemo();
+    resetTables();
+    resetReservations();
+    resetTickets();
     void refreshCatalog();
   }, [
-    currentUser,
     refreshCatalog,
     resetAccounts,
     resetCash,
     resetCustomers,
     resetExpenses,
     resetInventory,
+    resetOrdersDemo,
     resetPromotions,
     resetReceipts,
+    resetReservations,
     resetRoles,
+    resetTables,
+    resetTickets,
     tenantKey,
   ]);
 
@@ -952,14 +941,11 @@ export function ModulesProvider({
       };
       setAccounts((prev) => [account, ...prev]);
       if (input.tableId) {
-        setState((s) => ({
-          ...s,
-          scopes: patchTableStatus(s.scopes, writeBranchId, input.tableId!, "ocupada"),
-        }));
+        patchStatus(writeBranchId, input.tableId, "ocupada");
       }
       return id;
     },
-    [setAccounts, writeBranchId],
+    [patchStatus, setAccounts, writeBranchId],
   );
 
   const patchAccount = useCallback(
@@ -1028,19 +1014,10 @@ export function ModulesProvider({
             : a,
         ),
       );
-      setState((s) => ({
-        ...s,
-        scopes: {
-          ...s.scopes,
-          [account.branchId]: {
-            ...s.scopes[account.branchId],
-            orders: [order, ...(s.scopes[account.branchId]?.orders ?? [])],
-          },
-        },
-      }));
+      setBranchOrders(account.branchId, (current) => [order, ...current]);
       return order;
     },
-    [accounts, setAccounts],
+    [accounts, setAccounts, setBranchOrders],
   );
 
   /**
@@ -1217,15 +1194,12 @@ export function ModulesProvider({
         ),
       );
       if (account.tableId) {
-        setState((s) => ({
-          ...s,
-          scopes: patchTableStatus(s.scopes, account.branchId, account.tableId!, "libre"),
-        }));
+        patchStatus(account.branchId, account.tableId, "libre");
       }
 
       void closeAccountOrders(account, "ANULADA");
     },
-    [accounts, closeAccountOrders, setAccounts],
+    [accounts, closeAccountOrders, patchStatus, setAccounts],
   );
 
   /* ---------- Cobro (CheckoutCoordinator) y facturación ---------- */
@@ -1236,16 +1210,25 @@ export function ModulesProvider({
    * resuelve lo que sigue siendo de `ModulesProvider`: liberar mesa y cerrar
    * las comandas de la API después del commit.
    */
+  /** Evita reenviar el mismo CPE si el post-commit se reintenta (M2). */
+  const sunatEnviados = useRef(new Set<string>());
   const { checkoutAccount } = useCheckout({
     onCommitted: (receipt, account) => {
       if (account.tableId) {
-        setState((s) => ({
-          ...s,
-          scopes: patchTableStatus(s.scopes, account.branchId, account.tableId!, "libre"),
-        }));
+        patchStatus(account.branchId, account.tableId, "libre");
       }
-      enviarSunat(receipt);
-      void closeAccountOrders(account, "PAGADA");
+      if (!sunatEnviados.current.has(receipt.id)) {
+        sunatEnviados.current.add(receipt.id);
+        enviarSunat(receipt);
+      }
+      // M2: el cierre de comandas es post-commit y reintentable; si la API
+      // agota los reintentos se informa y la venta no se revierte.
+      return closeAccountOrders(account, "PAGADA");
+    },
+    onPostCommitFailed: (_receipt, _account, error) => {
+      setOrdersError(
+        error instanceof ApiError ? error.message : "No se pudieron cerrar las comandas.",
+      );
     },
   });
 
@@ -1345,7 +1328,7 @@ export function ModulesProvider({
   const value = useMemo<ModulesContext>(
     () => ({
       payments,
-      tickets: state.tickets,
+      tickets,
       addTicket,
       setTickets,
       products,
@@ -1390,7 +1373,7 @@ export function ModulesProvider({
       hasSession,
       roles,
       setRoles,
-      reservations: liveReservations ?? state.reservations,
+      reservations: liveReservations ?? demoReservations,
       setReservations,
       reservationsLoading,
       reservationsError,
@@ -1439,9 +1422,10 @@ export function ModulesProvider({
     }),
     [
       payments,
-      state,
       customers,
       coupons,
+      demoReservations,
+      tickets,
       expenses,
       ingredients,
       movements,
@@ -1535,38 +1519,6 @@ export function ModulesProvider({
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
-}
-
-function scopesOf(scopes: Record<string, BranchScope>, id: string): BranchScope {
-  return (
-    scopes[id] ?? { orders: [], tables: [] }
-  );
-}
-
-function patchTableStatus(
-  scopes: Record<string, BranchScope>,
-  branchId: string,
-  tableId: number,
-  status: Table["status"],
-): Record<string, BranchScope> {
-  const slug = SEED_BRANCH_SLUGS[branchId];
-  const uuid = SEED_SLUG_BRANCH_IDS[branchId];
-  const targets = Array.from(new Set([branchId, slug, uuid].filter((x): x is string => Boolean(x))));
-  let nextScopes = { ...scopes };
-  for (const tid of targets) {
-    if (nextScopes[tid]) {
-      nextScopes = {
-        ...nextScopes,
-        [tid]: {
-          ...nextScopes[tid],
-          tables: (nextScopes[tid]?.tables ?? []).map((t) =>
-            t.id === tableId ? { ...t, status } : t,
-          ),
-        },
-      };
-    }
-  }
-  return nextScopes;
 }
 
 export function useModules() {

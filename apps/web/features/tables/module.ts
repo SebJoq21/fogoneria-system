@@ -9,4 +9,5 @@ export const tablesModule = {
   path: '/app/mesas',
   roles: ['admin', 'sucursal'],
   group: 'Principal',
+  provider: 'TablesProvider',
 };

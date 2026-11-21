@@ -9,4 +9,5 @@ export const reservationsModule = {
   path: '/app/modulos/reservas',
   roles: ['admin', 'sucursal'],
   group: 'Clientes',
+  provider: 'ReservationsProvider',
 };

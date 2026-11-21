@@ -70,6 +70,7 @@ Reglas:
 ## 7. Deuda conocida
 
 - F6c2: `CashProvider`/`useCash` (`features/cash/provider.tsx`) es dueño de turnos y movimientos por sucursal; persiste `fogoneria:cash:v1:<tenant>` y sincroniza por `BroadcastChannel`. `addMovements`/`reverseMovements` son las escrituras del cobro y de la anulación; `ModulesProvider` reexporta la fachada.
+- F6c3: tests de sync entre pestañas y de cambio de tenant (la clave nueva no recibe el estado anterior) y remapeo de turnos/movimientos con sucursales reales.
 
 - Metadata (2026-11-21): `features/cash/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
 

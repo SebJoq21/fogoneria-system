@@ -85,7 +85,10 @@ import { InventoryProvider } from '@/features/inventory/provider';
 import { AccountsProvider } from '@/features/orders/provider';
 import { PromotionsProvider } from '@/features/promotions/provider';
 import { ReceiptsProvider } from '@/features/receipts/provider';
+import { ReservationsProvider } from '@/features/reservations/provider';
 import { StaffProvider } from '@/features/staff/provider';
+import { TablesProvider } from '@/features/tables/provider';
+import { TicketsProvider } from './providers/tickets';
 import { ModulesProvider } from './ModulesProvider';
 
 const legacyCustomer = {
@@ -199,19 +202,25 @@ describe('migración de slices en el arranque del shell', () => {
       <CrmProvider>
         <ExpensesProvider>
           <InventoryProvider>
-            <AccountsProvider>
-              <CashProvider>
-                <ReceiptsProvider>
-                  <PromotionsProvider>
-                    <StaffProvider>
-                      <ModulesProvider initialPayments={[]}>
-                        <div />
-                      </ModulesProvider>
-                    </StaffProvider>
-                  </PromotionsProvider>
-                </ReceiptsProvider>
-              </CashProvider>
-            </AccountsProvider>
+            <TablesProvider>
+              <ReservationsProvider>
+                <AccountsProvider>
+                  <CashProvider>
+                    <ReceiptsProvider>
+                      <PromotionsProvider>
+                        <StaffProvider>
+                          <TicketsProvider>
+                            <ModulesProvider initialPayments={[]}>
+                              <div />
+                            </ModulesProvider>
+                          </TicketsProvider>
+                        </StaffProvider>
+                      </PromotionsProvider>
+                    </ReceiptsProvider>
+                  </CashProvider>
+                </AccountsProvider>
+              </ReservationsProvider>
+            </TablesProvider>
           </InventoryProvider>
         </ExpensesProvider>
       </CrmProvider>
@@ -240,19 +249,16 @@ describe('migración de slices en el arranque del shell', () => {
       combos: [{ id: 50 }],
       coupons: [{ code: 'LEGACY10' }],
     });
-    const legacy = JSON.parse(localStorage.getItem('fogoneria:erp:v2:anon') ?? '{}');
-    expect(legacy.customers).toBeUndefined();
-    expect(legacy.expenses).toBeUndefined();
-    expect(legacy.ingredients).toBeUndefined();
-    expect(legacy.movements).toBeUndefined();
-    expect(legacy.roles).toBeUndefined();
-    expect(legacy.accounts).toBeUndefined();
-    expect(legacy.cashShifts).toBeUndefined();
-    expect(legacy.receipts).toBeUndefined();
-    expect(legacy.coupons).toBeUndefined();
-    expect(legacy.combos).toBeUndefined();
-    expect(legacy.sunatContingencia).toBeUndefined();
-    expect(legacy.scopes.miraflores.cash).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}')).toMatchObject({
+      miraflores: [],
+    });
+    expect(JSON.parse(localStorage.getItem('fogoneria:tables-demo:v1:anon') ?? '{}')).toMatchObject({
+      miraflores: [],
+    });
+    expect(JSON.parse(localStorage.getItem('fogoneria:reservations:v1:anon') ?? 'null')).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('fogoneria:tickets:v1:anon') ?? 'null')).toEqual([]);
+    // F6c3: el ErpState legacy se migra completo y se borra.
+    expect(localStorage.getItem('fogoneria:erp:v2:anon')).toBeNull();
 
     unmount();
     render(shell);
@@ -265,6 +271,9 @@ describe('migración de slices en el arranque del shell', () => {
     expect(JSON.parse(localStorage.getItem('fogoneria:cash:v1:anon') ?? '{}').shifts).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:receipts:v1:anon') ?? '{}').receipts).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:promotions:v1:anon') ?? '{}').combos).toHaveLength(1);
+    expect(
+      JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}').miraflores,
+    ).toHaveLength(0);
   });
 });
 
@@ -284,19 +293,25 @@ function shell() {
     <CrmProvider>
       <ExpensesProvider>
         <InventoryProvider>
-          <AccountsProvider>
-            <CashProvider>
-              <ReceiptsProvider>
-                <PromotionsProvider>
-                  <StaffProvider>
-                    <ModulesProvider initialPayments={[]}>
-                      <div />
-                    </ModulesProvider>
-                  </StaffProvider>
-                </PromotionsProvider>
-              </ReceiptsProvider>
-            </CashProvider>
-          </AccountsProvider>
+          <TablesProvider>
+            <ReservationsProvider>
+              <AccountsProvider>
+                <CashProvider>
+                  <ReceiptsProvider>
+                    <PromotionsProvider>
+                      <StaffProvider>
+                        <TicketsProvider>
+                          <ModulesProvider initialPayments={[]}>
+                            <div />
+                          </ModulesProvider>
+                        </TicketsProvider>
+                      </StaffProvider>
+                    </PromotionsProvider>
+                  </ReceiptsProvider>
+                </CashProvider>
+              </AccountsProvider>
+            </ReservationsProvider>
+          </TablesProvider>
         </InventoryProvider>
       </ExpensesProvider>
     </CrmProvider>
@@ -328,12 +343,81 @@ function sembrarCuentaLegacy() {
       receipts: [],
       combos: [],
       tickets: [],
-      scopes: {},
-      cashShifts: [],
+      scopes: {
+        miraflores: {
+          orders: [
+            {
+              id: 'ORD-legacy',
+              customer: 'Mesa 1',
+              items: [],
+              amount: 10,
+              time: '12:00',
+              elapsed: 'hoy',
+              createdAt: '2026-11-20T12:00:00.000Z',
+              status: 'pendiente',
+              channel: 'Mesa',
+            },
+          ],
+          tables: [
+            {
+              id: 77,
+              label: 'Mesa 77',
+              seats: 4,
+              shape: 'round',
+              zone: 'Salón',
+              status: 'libre',
+            },
+          ],
+          cash: [
+            {
+              id: 70,
+              at: '2026-11-20T12:00:00.000Z',
+              datetime: 'Hoy 12:00',
+              concept: 'Venta remap',
+              kind: 'Ingreso',
+              amount: 20,
+              method: 'Efectivo',
+            },
+          ],
+        },
+      },
+      cashShifts: [
+        {
+          id: 'CH-remap',
+          branchId: 'miraflores',
+          status: 'abierto',
+          openedBy: 'Rosa',
+          openedAt: '2026-11-20T09:00:00.000Z',
+          openingFund: 100,
+          closedBy: null,
+          closedAt: null,
+          countedCash: null,
+          expectedCash: null,
+          difference: null,
+          observations: '',
+        },
+      ],
       sunatContingencia: false,
       accounts: [{ ...legacyAccount, id: 'CT-remap', branchId: SLUG }],
     }),
   );
+}
+
+function cajaGuardada() {
+  return JSON.parse(localStorage.getItem(`fogoneria:cash:v1:${EMPRESA}`) ?? '{}') as {
+    shifts?: Array<{ id: string; branchId: string }>;
+    movementsByBranch?: Record<string, Array<{ id: number }>>;
+  };
+}
+
+type ScopesGuardados = Record<string, Array<{ id: number | string }>>;
+
+function ordersDemoGuardadas(): ScopesGuardados {
+  return JSON.parse(localStorage.getItem(`fogoneria:orders-demo:v1:${EMPRESA}`) ?? '{}');
+}
+
+function tablesDemoGuardadas(): ScopesGuardados {
+  return JSON.parse(localStorage.getItem(`fogoneria:tables-demo:v1:${EMPRESA}`) ?? '{}');
 }
 
 function cuentasGuardadas() {
@@ -368,6 +452,19 @@ describe('remapeo slug→UUID de cuentas (F6c1)', () => {
     const guardadas = cuentasGuardadas();
     expect(guardadas).toHaveLength(1);
     expect(guardadas[0]).toMatchObject({ id: 'CT-remap', branchId: UUID, tableId: 2 });
+
+    await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(UUID));
+    expect(cajaGuardada().movementsByBranch?.[UUID]).toHaveLength(1);
+    expect(cajaGuardada().movementsByBranch?.[SLUG]).toBeUndefined();
+
+    await waitFor(() =>
+      expect(ordersDemoGuardadas()[UUID]?.some((o) => o.id === 'ORD-legacy')).toBe(true),
+    );
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    await waitFor(() =>
+      expect(tablesDemoGuardadas()[UUID]?.some((t) => t.id === 77)).toBe(true),
+    );
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
   });
 
   it('remapea cuando las sucursales llegan después y no remapea dos veces', async () => {
@@ -376,19 +473,38 @@ describe('remapeo slug→UUID de cuentas (F6c1)', () => {
 
     const { rerender } = render(shell());
     await waitFor(() => expect(cuentasGuardadas()[0]?.branchId).toBe(SLUG));
+    await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(SLUG));
+    expect(ordersDemoGuardadas()[SLUG]?.some((o) => o.id === 'ORD-legacy')).toBe(true);
+    expect(tablesDemoGuardadas()[SLUG]?.some((t) => t.id === 77)).toBe(true);
 
     activarSucursalReal();
     rerender(shell());
     await waitFor(() => expect(cuentasGuardadas()[0]?.branchId).toBe(UUID));
+    await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(UUID));
+    await waitFor(() =>
+      expect(ordersDemoGuardadas()[UUID]?.some((o) => o.id === 'ORD-legacy')).toBe(true),
+    );
+    await waitFor(() =>
+      expect(tablesDemoGuardadas()[UUID]?.some((t) => t.id === 77)).toBe(true),
+    );
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
 
-    // Nueva referencia con el mismo contenido: el efecto vuelve a correr y
-    // debe ser idempotente (ni duplica ni pierde la cuenta).
+    // Nueva referencia con el mismo contenido: idempotente (ni duplica ni pierde).
+    const ordenesAntes = ordersDemoGuardadas()[UUID]?.length;
+    const mesasAntes = tablesDemoGuardadas()[UUID]?.length;
     tenant.realBranches = [{ ...rama }];
     rerender(shell());
     await waitFor(() => {
       const guardadas = cuentasGuardadas();
       expect(guardadas).toHaveLength(1);
       expect(guardadas[0]).toMatchObject({ id: 'CT-remap', branchId: UUID, tableId: 2 });
+      expect(cajaGuardada().shifts).toHaveLength(1);
+      expect(cajaGuardada().movementsByBranch?.[UUID]).toHaveLength(1);
     });
+    expect(ordersDemoGuardadas()[UUID]).toHaveLength(ordenesAntes ?? 0);
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    expect(tablesDemoGuardadas()[UUID]).toHaveLength(mesasAntes ?? 0);
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
   });
 });

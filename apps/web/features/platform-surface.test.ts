@@ -35,6 +35,8 @@ describe('superficies de plataforma', () => {
     expect(featureModules).toHaveLength(20);
     expect(featureProviders.map((provider) => provider.id)).toEqual([
       'tenant',
+      'tables',
+      'reservations',
       'orders',
       'cash',
       'receipts',

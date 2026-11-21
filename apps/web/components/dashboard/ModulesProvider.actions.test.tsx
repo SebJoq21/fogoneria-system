@@ -135,6 +135,9 @@ import { AccountsProvider } from '@/features/orders/provider';
 import { CashProvider } from '@/features/cash/provider';
 import { ReceiptsProvider } from '@/features/receipts/provider';
 import { PromotionsProvider } from '@/features/promotions/provider';
+import { ReservationsProvider } from '@/features/reservations/provider';
+import { TablesProvider } from '@/features/tables/provider';
+import { TicketsProvider } from './providers/tickets';
 
 let ctx: ReturnType<typeof useModules>;
 
@@ -148,17 +151,23 @@ function Sonda() {
 
 function montar() {
   return render(
-    <AccountsProvider>
-      <CashProvider>
-        <ReceiptsProvider>
-          <PromotionsProvider>
-            <ModulesProvider initialPayments={[]}>
-              <Sonda />
-            </ModulesProvider>
-          </PromotionsProvider>
-        </ReceiptsProvider>
-      </CashProvider>
-    </AccountsProvider>,
+    <TablesProvider>
+      <ReservationsProvider>
+        <AccountsProvider>
+          <CashProvider>
+            <ReceiptsProvider>
+              <PromotionsProvider>
+                <TicketsProvider>
+                  <ModulesProvider initialPayments={[]}>
+                    <Sonda />
+                  </ModulesProvider>
+                </TicketsProvider>
+              </PromotionsProvider>
+            </ReceiptsProvider>
+          </CashProvider>
+        </AccountsProvider>
+      </ReservationsProvider>
+    </TablesProvider>,
   );
 }
 

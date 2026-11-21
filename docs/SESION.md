@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — F6c3: scopes, reservas y tickets + fixes de auditoría
+
+- **M1/M2/L1/L2:** `useCheckout` con guard `checkingOut`, cola de post-commit que acepta promesas y reintenta 3 veces con backoff (avisa con `onPostCommitFailed`), `restorePoints` (CRM) y `paidByAccount` reconstruido desde el estado (se limpia al resetear/cambiar de empresa).
+- **Scopes:** `scopes.orders` → segundo store de `features/orders` (`useOrdersDemo`, `fogoneria:orders-demo:v1`); `scopes.tables` → `features/tables` (`fogoneria:tables-demo:v1`, `patchStatus`); `reservations` → `features/reservations`; `tickets` → `components/dashboard/providers/tickets.tsx`. Ambos stores remapean sus claves slug→UUID (`remapBranches`) desde `ModulesProvider`, al montar o cuando llegan las sucursales.
+- **Migración:** el loader de `ModulesProvider` migra todos los slices, borra `fogoneria:erp:v2:<tenant>` y ya no guarda estado propio. `lib/persistence.ts` queda solo como lectura legacy.
+- **Retiro de `ModulesProvider`:** bloqueado; queda como fachada sin estado (estado de API + orquestación). Plan en `docs/plan-f6c-pos.md` §10.
+- Verificado: web **963** tests, types, lint, build, paridad 20/20/20/20, boundaries 0 y specs.
+
 ## 2026-11-21 — F6c2: caja, comprobantes y promociones + coordinador de cobro
 
 - **Providers:** `CashProvider` (turnos + movimientos por sucursal con `addMovements`/`reverseMovements` y `remapBranches`), `ReceiptsProvider` (comprobantes + contingencia SUNAT) y `PromotionsProvider` (combos/cupones con `consumeCoupon`/`restoreCoupon`), todos sobre `lib/module-store.ts`.
