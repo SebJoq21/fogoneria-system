@@ -8,6 +8,7 @@
 
 export { CombosPage } from './CombosPage';
 export { PromocionesPage } from './PromocionesPage';
+export { PromotionsProvider, usePromotions } from './provider';
 export {
   horaDeApi,
   promocionesApi,

@@ -36,8 +36,11 @@ describe('superficies de plataforma', () => {
     expect(featureProviders.map((provider) => provider.id)).toEqual([
       'tenant',
       'orders',
+      'cash',
+      'receipts',
       'expenses',
       'inventory',
+      'promotions',
       'crm',
       'staff',
     ]);

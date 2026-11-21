@@ -6,6 +6,7 @@
  */
 
 export { CajaPage } from './CajaPage';
+export { CashProvider, useCash } from './provider';
 export { CheckoutModal } from './CheckoutModal';
 export {
   cajaApi,

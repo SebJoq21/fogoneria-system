@@ -16,8 +16,6 @@ import {
   type Ticket,
 } from "@/lib/dashboard";
 import {
-  initialCoupons,
-  initialReceipts,
   initialReservations,
   type CashMovement,
   type Coupon,
@@ -27,7 +25,6 @@ import {
   type Order,
   type OrderStatus,
   type Receipt,
-  type ReceiptType,
   type Reservation,
   type Role,
   type StockMovement,
@@ -39,7 +36,6 @@ import {
   SEED_BRANCH_SLUGS,
   SEED_SLUG_BRANCH_IDS,
   demoScopeFor,
-  initialCashShifts,
   initialScopes,
   type Branch,
   type BranchScope,
@@ -47,31 +43,23 @@ import {
 import type { Tenant } from "@/lib/tenant-api";
 import type { AppUser } from "@/lib/auth";
 import {
-  accountTotals,
-  expectedCashFor,
   fmtDateTime,
   itemLineTotal,
   newId,
   nextReceiptNumber,
   nowIso,
-  parseCouponDiscount,
   round2,
-  splitIgv,
   type AccountItem,
   type CashShift,
-  type Payment,
-  type PaymentMethod,
   type TableAccount,
 } from "@/lib/domain";
 import {
-  initialCombos,
   type Combo,
   type ModifierGroup,
   type PriceList,
   type Product,
   type ProductCategory,
-} from "@/lib/erp-catalog";
-import { ApiError } from "@/lib/api";
+} from "@/lib/erp-catalog";import { ApiError } from "@/lib/api";
 import {
   migrateLegacyCustomers,
   readCrmCustomers,
@@ -80,19 +68,29 @@ import {
 } from "@/lib/crm-storage";
 import {
   migrateLegacyArray,
+  migrateLegacyCash,
   migrateLegacyInventory,
+  migrateLegacyPromotions,
+  migrateLegacyReceipts,
   readModuleValue,
   saveModuleValue,
+  type CashStoreState,
   type InventoryStoreState,
   type LegacyErpState as LegacyModuleState,
+  type PromotionsStoreState,
+  type ReceiptsStoreState,
 } from "@/lib/module-store";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
 import { useCatalogoState } from "./providers/catalog";
+import { useCheckout } from "./providers/checkout";
 import { useCrm } from "@/features/crm/provider";
+import { useCash } from "@/features/cash/provider";
 import { useExpenses } from "@/features/expenses/provider";
 import { useInventory } from "@/features/inventory/provider";
 import { useAccounts } from "@/features/orders/provider";
+import { usePromotions } from "@/features/promotions/provider";
+import { useReceipts } from "@/features/receipts/provider";
 import { useStaff } from "@/features/staff/provider";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
@@ -108,10 +106,8 @@ import { connectOrdersRealtime } from "@/lib/realtime";
 import { listReservations } from "@/lib/reservations-api";
 import { limaTodayKey, reservationsFromApi, tablesFromApi } from "@/lib/table-mapping";
 import { listTables } from "@/lib/tables-api";
-import {
-  cpeFromReceipt,
-  getFacturacionPort,
-} from "@/lib/facturacion";
+import type { CheckoutInput } from "@/lib/checkout";
+export type { CheckoutInput } from "@/lib/checkout";
 import {
   loadErpState,
   saveErpState,
@@ -127,19 +123,8 @@ const TERMINAL_API_STATES: readonly ordersApi.ApiOrderStatus[] = [
   "ANULADA",
 ];
 
-export type CheckoutInput = {
-  accountId: string;
-  payments: { method: PaymentMethod; amount: number }[];
-  tip: number;
-  couponCode: string | null;
-  customerId: number | null;
-  receiptType: ReceiptType;
-  docType: "1" | "6" | "";
-  docNumber: string;
-};
-
-/* El tipo se mantiene exportado desde aquí por compatibilidad; el estado de
-   catálogo vive en `CatalogoProvider` (Fase 4 etapa 3). */
+/* `CheckoutInput` se reexporta desde `lib/checkout` (F6c2). El tipo de
+   catálogo se mantiene exportado desde aquí por compatibilidad. */
 import type { CatalogoActions } from "./providers/catalog";
 
 export type { ProductInput } from "./providers/catalog";
@@ -164,7 +149,7 @@ type ModulesContext = CatalogoActions & {
   activeBranchId: string;
   isGeneral: boolean;
   setActiveBranch: (id: string) => void;
-  branchOf: (kind: keyof BranchScope, id: number | string) => Branch | null;
+  branchOf: (kind: keyof BranchScope | "cash", id: number | string) => Branch | null;
   /* Operación por sucursal (órdenes, mesas, caja) */
   orders: Order[];
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
@@ -272,14 +257,7 @@ function applyWrite(
   prev: Record<string, BranchScope>,
   branchIds: string[],
   activeId: string,
-  key: "cash",
-  value: React.SetStateAction<CashMovement[]>,
-): Record<string, BranchScope>;
-function applyWrite(
-  prev: Record<string, BranchScope>,
-  branchIds: string[],
-  activeId: string,
-  key: "orders" | "tables" | "cash",
+  key: "orders" | "tables",
   value: unknown,
 ): Record<string, BranchScope> {
   const asItems = value as React.SetStateAction<ScopeItem[]>;
@@ -311,14 +289,9 @@ function applyWrite(
 function prepareOps(state: ErpState, branchIds: string[]): ErpState {
   const scopes = { ...state.scopes };
   for (const id of branchIds) {
-    if (!scopes[id]) scopes[id] = demoScopeFor(id) ?? { orders: [], tables: [], cash: [] };
+    if (!scopes[id]) scopes[id] = demoScopeFor(id) ?? { orders: [], tables: [] };
   }
-  const remap = (branchId: string) => SEED_SLUG_BRANCH_IDS[branchId] ?? branchId;
-  return {
-    ...state,
-    scopes,
-    cashShifts: state.cashShifts.map((shift) => ({ ...shift, branchId: remap(shift.branchId) })),
-  };
+  return { ...state, scopes };
 }
 
 /**
@@ -341,13 +314,8 @@ function buildEmptyState(): ErpState {
   return {
     version: 2,
     reservations: [],
-    coupons: [],
-    receipts: [],
-    combos: [],
     tickets: [],
     scopes: {},
-    cashShifts: [],
-    sunatContingencia: false,
   };
 }
 
@@ -357,13 +325,8 @@ function buildInitialState(empresaId: string | null): ErpState {
   return {
     version: 2,
     reservations: initialReservations,
-    coupons: initialCoupons,
-    receipts: initialReceipts,
-    combos: initialCombos,
     tickets: initialTickets,
     scopes: initialScopes,
-    cashShifts: initialCashShifts,
-    sunatContingencia: false,
   };
 }
 
@@ -390,7 +353,7 @@ export function ModulesProvider({
     loading: tenantLoading,
     error: tenantError,
   } = useTenant();
-  const { customers, setCustomers, addPoints, resetCustomers } = useCrm();
+  const { customers, setCustomers, resetCustomers } = useCrm();
   const { expenses, setExpenses, resetExpenses } = useExpenses();
   const {
     ingredients,
@@ -401,6 +364,34 @@ export function ModulesProvider({
   } = useInventory();
   const { roles, setRoles, resetRoles } = useStaff();
   const { accounts, setAccounts, resetAccounts } = useAccounts();
+  const cash = useCash();
+  const {
+    cashShifts: allCashShifts,
+    activeShift,
+    reverseMovements,
+    setMovements: setMovementsOf,
+    setMovementsByBranch,
+    remapBranches: remapCashBranches,
+    resetCash,
+  } = cash;
+  const {
+    receipts,
+    sunatContingencia,
+    addReceipt,
+    setReceipts,
+    patchReceipt,
+    enviarSunat,
+    generarResumenDiario,
+    toggleSunatContingencia,
+    resetReceipts,
+  } = useReceipts();
+  const {
+    combos,
+    setCombos,
+    coupons,
+    setCoupons,
+    resetPromotions,
+  } = usePromotions();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const applyingRemote = useRef(false);
@@ -474,6 +465,36 @@ export function ModulesProvider({
       changed = true;
     }
 
+    const cashMigration = migrateLegacyCash(
+      next,
+      readModuleValue<CashStoreState>("cash", tenantKey),
+    );
+    if (cashMigration.migrated) {
+      saveModuleValue("cash", tenantKey, cashMigration.migrated);
+      next = cashMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
+    const receiptsMigration = migrateLegacyReceipts(
+      next,
+      readModuleValue<ReceiptsStoreState>("receipts", tenantKey),
+    );
+    if (receiptsMigration.migrated) {
+      saveModuleValue("receipts", tenantKey, receiptsMigration.migrated);
+      next = receiptsMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
+    const promotionsMigration = migrateLegacyPromotions(
+      next,
+      readModuleValue<PromotionsStoreState>("promotions", tenantKey),
+    );
+    if (promotionsMigration.migrated) {
+      saveModuleValue("promotions", tenantKey, promotionsMigration.migrated);
+      next = promotionsMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
     if (changed) saveErpState(tenantKey, next as ErpState);
     setState(next as ErpState);
   }, [tenantKey, currentUser]);
@@ -507,6 +528,22 @@ export function ModulesProvider({
     hasSession,
     realBranches,
     setAccounts,
+    tenantError,
+    tenantLoading,
+  ]);
+
+  /** Mismo remapeo idempotente para turnos y claves de movimientos de caja. */
+  useEffect(() => {
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    remapCashBranches(SEED_SLUG_BRANCH_IDS);
+  }, [
+    allCashShifts,
+    cash.movementsByBranch,
+    empresaId,
+    hasSession,
+    realBranches,
+    remapCashBranches,
     tenantError,
     tenantLoading,
   ]);
@@ -569,13 +606,11 @@ export function ModulesProvider({
     }
     prunedCombos.current = { key: tenantKey, version: catalogVersion };
     const ids = new Set(products.map((product) => product.id));
-    setState((prev) => {
-      const combos = prev.combos.filter((combo) =>
-        combo.productIds.every((productId) => ids.has(productId)),
-      );
-      return combos.length === prev.combos.length ? prev : { ...prev, combos };
-    });
-  }, [hasSession, catalogVersion, products, tenantKey]);
+    const pruned = combos.filter((combo) =>
+      combo.productIds.every((productId) => ids.has(productId)),
+    );
+    if (pruned.length !== combos.length) setCombos(pruned);
+  }, [combos, hasSession, catalogVersion, products, setCombos, tenantKey]);
 
   /* ---------- Comandas reales de la API (AYCDS-25) ---------- */
 
@@ -758,7 +793,6 @@ export function ModulesProvider({
     return {
       orders: branchIds.flatMap((id) => state.scopes[id]?.orders ?? []),
       tables: branchIds.flatMap((id) => state.scopes[id]?.tables ?? []),
-      cash: branchIds.flatMap((id) => state.scopes[id]?.cash ?? []),
     };
   }, [state.scopes, activeBranchId, isGeneral, branchIds]);
 
@@ -768,24 +802,39 @@ export function ModulesProvider({
   );
 
   const cashShifts = useMemo(
-    () => (isGeneral ? state.cashShifts : state.cashShifts.filter((s) => s.branchId === activeBranchId)),
-    [state.cashShifts, activeBranchId, isGeneral],
+    () => (isGeneral ? allCashShifts : allCashShifts.filter((s) => s.branchId === activeBranchId)),
+    [allCashShifts, activeBranchId, isGeneral],
   );
 
   const openCashShift = useMemo(
-    () => state.cashShifts.find((s) => s.branchId === writeBranchId && s.status === "abierto") ?? null,
-    [state.cashShifts, writeBranchId],
+    () => activeShift(writeBranchId),
+    [activeShift, writeBranchId],
+  );
+
+  const cashMovements = useMemo(
+    () =>
+      isGeneral
+        ? branchIds.flatMap((id) => cash.movementsByBranch[id] ?? [])
+        : cash.movementsByBranch[activeBranchId] ?? [],
+    [activeBranchId, branchIds, cash.movementsByBranch, isGeneral],
   );
 
   const branchOf = useCallback(
-    (kind: keyof BranchScope, id: number | string): Branch | null => {
+    (kind: keyof BranchScope | "cash", id: number | string): Branch | null => {
+      if (kind === "cash") {
+        for (const b of branches) {
+          const list = cash.movementsByBranch[b.id] ?? [];
+          if (list.some((m) => m.id === id)) return b;
+        }
+        return branches.find((b) => b.id !== GENERAL_BRANCH.id) ?? null;
+      }
       for (const b of branches) {
         const list = (state.scopes[b.id]?.[kind] ?? []) as Array<{ id: number | string }>;
         if (list.some((o) => o.id === id)) return b;
       }
       return branches.find((b) => b.id !== GENERAL_BRANCH.id) ?? null;
     },
-    [state.scopes, branches],
+    [cash.movementsByBranch, state.scopes, branches],
   );
 
   /* ---------- Setters (API compatible con las vistas) ---------- */
@@ -803,13 +852,31 @@ export function ModulesProvider({
     [activeBranchId, branchIds],
   );
   const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
-    (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "cash", v) })),
-    [activeBranchId, branchIds],
+    (v) => {
+      const applyList = (current: CashMovement[]) =>
+        typeof v === "function" ? v(current) : v;
+      if (!isGeneral) {
+        setMovementsOf(activeBranchId, applyList);
+        return;
+      }
+      // Vista general: se aplica sobre el combinado y se reparte por id.
+      setMovementsByBranch((prev) => {
+        const combined = branchIds.flatMap((id) => prev[id] ?? []);
+        const next = applyList(combined);
+        const knownIds = new Set(combined.map((m) => m.id));
+        const fresh = next.filter((m) => !knownIds.has(m.id));
+        const out = { ...prev };
+        branchIds.forEach((id, i) => {
+          const own = new Set((prev[id] ?? []).map((m) => m.id));
+          const slice = next.filter((m) => own.has(m.id));
+          out[id] = i === 0 ? [...slice, ...fresh] : slice;
+        });
+        return out;
+      });
+    },
+    [activeBranchId, branchIds, isGeneral, setMovementsByBranch, setMovementsOf],
   );
   const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
-  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
-  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);
-  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
   const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
 
   const addTicket = useCallback(
@@ -833,15 +900,21 @@ export function ModulesProvider({
     resetInventory();
     resetRoles();
     resetAccounts();
+    resetCash();
+    resetReceipts();
+    resetPromotions();
     setState(buildInitialState(currentUser?.empresaId ?? null));
     void refreshCatalog();
   }, [
     currentUser,
     refreshCatalog,
     resetAccounts,
+    resetCash,
     resetCustomers,
     resetExpenses,
     resetInventory,
+    resetPromotions,
+    resetReceipts,
     resetRoles,
     tenantKey,
   ]);
@@ -1155,186 +1228,31 @@ export function ModulesProvider({
     [accounts, closeAccountOrders, setAccounts],
   );
 
-  /* ---------- Facturación electrónica SUNAT ---------- */
+  /* ---------- Cobro (CheckoutCoordinator) y facturación ---------- */
 
-  const toggleSunatContingencia = useCallback(() => {
-    setState((s) => ({ ...s, sunatContingencia: !s.sunatContingencia }));
-  }, []);
-
-  /** Envía un CPE al OSE: nunca bloquea la venta (cola + reintentos). */
-  const enviarSunat = useCallback(
-    (receipt: Receipt) => {
-      const port = getFacturacionPort();
-      port.setContingencia(state.sunatContingencia);
-      setState((s) => ({
-        ...s,
-        receipts: s.receipts.map((r) =>
-          r.id === receipt.id
-            ? {
-                ...r,
-                estadoSunat: "enviado" as const,
-                intentosEnvio: r.intentosEnvio + 1,
-                ultimoEnvio: nowIso(),
-              }
-            : r,
-        ),
-      }));
-      void port.enviar(cpeFromReceipt(receipt)).then((res) => {
+  /**
+   * Cobro coordinado (F6c2): `lib/checkout.ts` aplica cuenta → caja →
+   * comprobante → cupón → puntos con idempotencia y compensación. Aquí solo se
+   * resuelve lo que sigue siendo de `ModulesProvider`: liberar mesa y cerrar
+   * las comandas de la API después del commit.
+   */
+  const { checkoutAccount } = useCheckout({
+    onCommitted: (receipt, account) => {
+      if (account.tableId) {
         setState((s) => ({
           ...s,
-          receipts: s.receipts.map((r) =>
-            r.id === receipt.id
-              ? {
-                  ...r,
-                  estadoSunat: res.estado,
-                  cdr: res.cdr ?? r.cdr,
-                  mensajeSunat: res.mensaje,
-                }
-              : r,
-          ),
+          scopes: patchTableStatus(s.scopes, account.branchId, account.tableId!, "libre"),
         }));
-      });
-    },
-    [state.sunatContingencia],
-  );
-
-  /** Resumen diario: da de baja las boletas anuladas pendientes. */
-  const generarResumenDiario = useCallback((): {
-    count: number;
-    resumenId: string;
-  } | null => {
-    const pendientes = state.receipts.filter(
-      (r) => r.type === "03" && r.status === "Anulada" && r.bajaResumenId === "RC-pendiente",
-    );
-    if (pendientes.length === 0) return null;
-    const at = nowIso();
-    const dayKey = at.slice(0, 10).replace(/-/g, "");
-    const seq =
-      state.receipts.filter((r) => (r.bajaResumenId ?? "").startsWith(`RC-${dayKey}-`)).length + 1;
-    const resumenId = `RC-${dayKey}-${String(seq).padStart(2, "0")}`;
-    const port = getFacturacionPort();
-    port.setContingencia(state.sunatContingencia);
-    void port.enviarBaja(pendientes.map((r) => r.id)).then((res) => {
-      if (res.estado !== "aceptado") return;
-      setState((s) => ({
-        ...s,
-        receipts: s.receipts.map((r) =>
-          pendientes.some((p) => p.id === r.id) ? { ...r, bajaResumenId: resumenId } : r,
-        ),
-      }));
-    });
-    return { count: pendientes.length, resumenId };
-  }, [state.receipts, state.sunatContingencia]);
-
-  const checkoutAccount = useCallback(
-    (input: CheckoutInput): Receipt | null => {
-      const account = accounts.find((a) => a.id === input.accountId);
-      if (!account || account.status !== "abierta") return null;
-      const base = accountTotals(account);
-      const coupon = input.couponCode
-        ? state.coupons.find((c) => c.code === input.couponCode) ?? null
-        : null;
-      const discount = coupon ? parseCouponDiscount(coupon, base.subtotal) : 0;
-      const total = round2(base.subtotal - discount);
-      const { subtotal, igv } = splitIgv(total);
-      const at = nowIso();
-      const receiptId = nextReceiptNumber(state.receipts, input.receiptType);
-
-      const receipt: Receipt = {
-        id: receiptId,
-        type: input.receiptType,
-        at,
-        date: fmtDateTime(at),
-        customer: account.customer || account.label,
-        docType: input.docType,
-        docNumber: input.docNumber,
-        subtotal,
-        igv,
-        total,
-        status: "Pagada",
-        source: `Cuenta ${account.id} · ${account.label}`,
-        accountId: account.id,
-        estadoSunat: "en_cola",
-        intentosEnvio: 0,
-      };
-
-      const payments: Payment[] = input.payments.map((p) => ({
-        method: p.method,
-        amount: round2(p.amount),
-        tip: 0,
-        at,
-      }));
-
-      const movements: CashMovement[] = input.payments.map((p, i) => ({
-        id: Date.now() + i,
-        at,
-        datetime: fmtDateTime(at),
-        concept: `Cobro ${account.label} · ${account.id}`,
-        kind: "Ingreso",
-        amount: round2(p.amount),
-        method: p.method,
-        shiftId: openCashShift?.id,
-        accountId: account.id,
-      }));
-
-      if (input.customerId) addPoints(input.customerId, Math.floor(total));
-
-      setAccounts((prev) =>
-        prev.map((a) =>
-          a.id === account.id
-            ? {
-                ...a,
-                status: "cobrada",
-                closedAt: at,
-                payments,
-                tip: round2(input.tip),
-                discount,
-                discountConcept: coupon ? `Cupón ${coupon.code}` : "",
-                couponCode: coupon?.code ?? null,
-                customerId: input.customerId,
-              }
-            : a,
-        ),
-      );
-      setState((s) => {
-        const scopes = account.tableId
-          ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
-          : s.scopes;
-        return {
-          ...s,
-          receipts: [receipt, ...s.receipts],
-          coupons: coupon
-            ? s.coupons.map((c) => (c.code === coupon.code ? { ...c, used: c.used + 1 } : c))
-            : s.coupons,
-          scopes: {
-            ...scopes,
-            [account.branchId]: {
-              ...scopes[account.branchId],
-              cash: [...movements, ...(scopes[account.branchId]?.cash ?? [])],
-            },
-          },
-        };
-      });
+      }
       enviarSunat(receipt);
       void closeAccountOrders(account, "PAGADA");
-      return receipt;
     },
-    [
-      accounts,
-      state.coupons,
-      state.receipts,
-      openCashShift,
-      enviarSunat,
-      closeAccountOrders,
-      addPoints,
-      setAccounts,
-    ],
-  );
+  });
 
   /** Anulación tributaria: NC si es factura, baja en resumen si es boleta. */
   const annulReceipt = useCallback(
     (id: string, motivo: string) => {
-      const receipt = state.receipts.find((r) => r.id === id);
+      const receipt = receipts.find((r) => r.id === id);
       if (!receipt || receipt.status === "Anulada") return;
       const at = nowIso();
       const account = receipt.accountId
@@ -1357,7 +1275,7 @@ export function ModulesProvider({
       const nota: Receipt | null =
         receipt.type === "01"
           ? {
-              id: nextReceiptNumber(state.receipts, "07"),
+              id: nextReceiptNumber(receipts, "07"),
               type: "07",
               at,
               date: fmtDateTime(at),
@@ -1376,102 +1294,52 @@ export function ModulesProvider({
               intentosEnvio: 0,
             }
           : null;
-      const patch = (r: Receipt): Receipt =>
-        r.id === id
-          ? {
-              ...r,
-              status: "Anulada",
-              motivoAnulacion: motivo,
-              estadoSunat: "anulado",
-              ...(r.type === "03" ? { bajaResumenId: r.bajaResumenId ?? "RC-pendiente" } : {}),
-            }
-          : r;
-      setState((s) => ({
-        ...s,
-        receipts: nota ? [nota, ...s.receipts.map(patch)] : s.receipts.map(patch),
-        scopes: {
-          ...s.scopes,
-          [branchId]: {
-            ...s.scopes[branchId],
-            cash: [...reverse, ...(s.scopes[branchId]?.cash ?? [])],
-          },
-        },
-      }));
+      patchReceipt(id, {
+        status: "Anulada",
+        motivoAnulacion: motivo,
+        estadoSunat: "anulado",
+        ...(receipt.type === "03"
+          ? { bajaResumenId: receipt.bajaResumenId ?? "RC-pendiente" }
+          : {}),
+      });
+      if (nota) addReceipt(nota);
+      reverseMovements(branchId, reverse);
       if (nota) enviarSunat(nota);
     },
-    [accounts, state.receipts, enviarSunat, branchIds],
+    [
+      accounts,
+      addReceipt,
+      branchIds,
+      enviarSunat,
+      patchReceipt,
+      receipts,
+      reverseMovements,
+    ],
   );
 
-  /* ---------- Turno de caja ---------- */
+  /* ---------- Turno de caja (dueño: CashProvider) ---------- */
 
   const startCashShift = useCallback(
     (fund: number) => {
-      if (openCashShift) return;
-      const at = nowIso();
-      const shift: CashShift = {
-        id: newId("CH"),
+      cash.startShift({
         branchId: writeBranchId,
-        status: "abierto",
+        fund,
         openedBy: currentUser?.name ?? "Caja",
-        openedAt: at,
-        openingFund: round2(fund),
-        closedBy: null,
-        closedAt: null,
-        countedCash: null,
-        expectedCash: null,
-        difference: null,
-        observations: "",
-      };
-      const movement: CashMovement = {
-        id: Date.now(),
-        at,
-        datetime: fmtDateTime(at),
-        concept: "Fondo de apertura",
-        kind: "Ingreso",
-        amount: round2(fund),
-        method: "Efectivo",
-        shiftId: shift.id,
-      };
-      setState((s) => ({
-        ...s,
-        cashShifts: [shift, ...s.cashShifts],
-        scopes: {
-          ...s.scopes,
-          [writeBranchId]: {
-            ...s.scopes[writeBranchId],
-            cash: [movement, ...(s.scopes[writeBranchId]?.cash ?? [])],
-          },
-        },
-      }));
+      });
     },
-    [openCashShift, writeBranchId, currentUser],
+    [cash, currentUser, writeBranchId],
   );
 
   const closeCashShift = useCallback(
     (countedCash: number, observations: string) => {
-      const shift = openCashShift;
-      if (!shift) return;
-      const movements = state.scopes[shift.branchId]?.cash ?? [];
-      const expected = expectedCashFor(shift, movements);
-      setState((s) => ({
-        ...s,
-        cashShifts: s.cashShifts.map((sh) =>
-          sh.id === shift.id
-            ? {
-                ...sh,
-                status: "cerrado",
-                closedBy: currentUser?.name ?? "Caja",
-                closedAt: nowIso(),
-                countedCash: round2(countedCash),
-                expectedCash: expected,
-                difference: round2(countedCash - expected),
-                observations,
-              }
-            : sh,
-        ),
-      }));
+      cash.closeShift({
+        branchId: writeBranchId,
+        countedCash,
+        observations,
+        closedBy: currentUser?.name ?? "Caja",
+      });
     },
-    [openCashShift, state.scopes, currentUser],
+    [cash, currentUser, writeBranchId],
   );
 
   const value = useMemo<ModulesContext>(
@@ -1533,20 +1401,20 @@ export function ModulesProvider({
       setMovements,
       customers,
       setCustomers,
-      coupons: state.coupons,
+      coupons,
       setCoupons,
-      cashMovements: activeScope.cash,
+      cashMovements,
       setCashMovements,
-      receipts: state.receipts,
+      receipts,
       setReceipts,
       annulReceipt,
       enviarSunat,
       generarResumenDiario,
-      sunatContingencia: state.sunatContingencia,
+      sunatContingencia,
       toggleSunatContingencia,
       expenses,
       setExpenses,
-      combos: state.combos,
+      combos,
       setCombos,
       accounts: activeAccounts,
       openAccount,
@@ -1573,10 +1441,15 @@ export function ModulesProvider({
       payments,
       state,
       customers,
+      coupons,
       expenses,
       ingredients,
       movements,
       roles,
+      cashMovements,
+      receipts,
+      sunatContingencia,
+      combos,
       addTicket,
       setTickets,
       products,
@@ -1666,7 +1539,7 @@ export function ModulesProvider({
 
 function scopesOf(scopes: Record<string, BranchScope>, id: string): BranchScope {
   return (
-    scopes[id] ?? { orders: [], tables: [], cash: [] }
+    scopes[id] ?? { orders: [], tables: [] }
   );
 }
 

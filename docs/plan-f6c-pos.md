@@ -1,7 +1,7 @@
 # Plan F6c — POS: cuentas, caja, comprobantes y promociones
 
-Estado: **F6c1 implementado en este PR** (piloto `AccountsProvider`). F6c2 queda diseñado, sin implementar.
-Base: `origin/development` en `7633c3d` (#134 mergeado, F6b cerrado).
+Estado: **F6c1 y F6c2 implementados** (`AccountsProvider`, `CashProvider`, `ReceiptsProvider`, `PromotionsProvider` y `CheckoutCoordinator`). F6c3 (`scopes`/retiro de `ModulesProvider`) queda pendiente.
+Base: `origin/development` en `85b0a7e` (#135 mergeado, F6c1 cerrado).
 
 ## 1. Punto de partida
 
@@ -50,74 +50,51 @@ El nudo es `scopes` (`BranchScope = { orders, tables, cash }`): es un hub por su
 
 El piloto demuestra lo importante: persistencia, sync, migración/purga y que el checkout sigue funcionando leyendo el provider. Las acciones se moverán cuando `scopes` tenga dueño (3.6).
 
-### 3.2 `CashProvider` — `features/cash/provider.tsx` (F6c2)
+### 3.2 `CashProvider` — `features/cash/provider.tsx` (F6c2, implementado)
 
-**Posee:** `cashShifts: CashShift[]` y `cashMovements` por sucursal (hoy `scopes[id].cash`).
+**Posee:** `cashShifts: CashShift[]` y los movimientos por sucursal (antes `scopes[id].cash`).
 
-**Expone:**
+**Expone:** `cashShifts`, `movementsByBranch`, `movementsOf(branchId)`, `allMovements(branchIds)`, `activeShift(branchId)`, `startShift`, `closeShift`, `addMovements`, `reverseMovements`, `setMovements`/`setMovementsByBranch`/`setShifts` (fachada), `remapBranches`, `resetCash`.
 
-```ts
-{
-  cashShifts, movementsOf(branchId), activeShift(branchId),
-  startShift(fund), closeShift(counted, observations),
-  addMovements(branchId, movements), reverseMovements(branchId, movements),
-  setCashShifts, resetCash
-}
-```
+- `activeShift(branchId)` reemplaza el memo `openCashShift` (una sola caja abierta por sucursal) y `closeShift` calcula el arqueo con `expectedCashFor`.
+- El cobro entra por `addMovements`; la anulación de comprobante, por `reverseMovements`. `ModulesProvider` conserva `setCashMovements` como fachada con la misma distribución por sucursal que `applyWrite` (vista `todas`).
+- Persistencia: `fogoneria:cash:v1:<tenant>` con `{ shifts, movementsByBranch }`.
+- **Remapeo slug→UUID:** `remapBranches(map)` es idempotente (turnos y claves de movimientos) y `ModulesProvider` lo invoca en un efecto que depende de los turnos, los movimientos y `realBranches`, con la misma guardia que las cuentas (funciona si las sucursales llegan antes o después del montaje).
 
-- `activeShift(branchId)` reemplaza el memo `openCashShift` (una sola caja abierta por sucursal).
-- `addMovements`/`reverseMovements` son las dos únicas puertas de escritura: el cobro y la anulación dejan de tocar `scopes` a mano.
-- Persistencia: `fogoneria:cash:v1:<tenant>` con `{ shifts, movementsByBranch }`; el loader migra `cashShifts` + `scopes[*].cash` (los scopes quedan sin `cash`).
-- `scopes` se queda con `orders`/`tables` hasta F6c3.
-
-### 3.3 `ReceiptsProvider` — `features/receipts/provider.tsx` (F6c2)
+### 3.3 `ReceiptsProvider` — `features/receipts/provider.tsx` (F6c2, implementado)
 
 **Posee:** `receipts: Receipt[]` y `sunatContingencia: boolean` (el ciclo SUNAT es del documento, no de caja).
 
-**Expone:** `receipts`, `emitReceipt(receipt)`, `patchReceipt(id, patch)`, `annulReceipt(id, motivo, reverse)`, `sunatContingencia`, `toggleSunatContingencia`, `resetReceipts`.
+**Expone:** `receipts`, `sunatContingencia`, `addReceipt`, `setReceipts`, `patchReceipt`, `removeReceipt`, `enviarSunat`, `generarResumenDiario`, `toggleSunatContingencia`, `resetReceipts`.
 
-La anulación **no** revierte caja por sí sola: recibe `reverse` (movimientos ya calculados) o llama a `useCash()` (es ancestro: cash 12 < receipts 13) para insertarlos. La numeración (`nextReceiptNumber`) y el desglose IGV siguen en `lib/domain.ts`; el provider no calcula reglas.
+- `enviarSunat` y `generarResumenDiario` viven aquí (solo tocan comprobantes); el puerto de facturación y `cpeFromReceipt` no cambian.
+- La **anulación** la orquesta `ModulesProvider` (necesita cuentas para los métodos de pago y caja para el egreso): calcula la NC/baja y llama `patchReceipt` + `addReceipt` + `cash.reverseMovements` + `enviarSunat`. El provider no importa caja (una feature no importa otra); recibe las escrituras ya resueltas.
+- Persistencia `fogoneria:receipts:v1:<tenant>`; migra `receipts` + `sunatContingencia`.
 
-Persistencia `fogoneria:receipts:v1:<tenant>`; migra `receipts` + `sunatContingencia`.
-
-### 3.4 `PromotionsProvider` — `features/promotions/provider.tsx` (F6c2)
+### 3.4 `PromotionsProvider` — `features/promotions/provider.tsx` (F6c2, implementado)
 
 **Posee:** `combos` y `coupons` demo (la API manda con sesión vía `promocionesApi`).
 
-**Expone:** `combos`, `setCombos`, `coupons`, `setCoupons`, `consumeCoupon(code)`, `resetPromotions`.
+**Expone:** `combos`, `setCombos`, `coupons`, `setCoupons`, `consumeCoupon(code)`, `restoreCoupon(code)`, `resetPromotions`.
 
-- `consumeCoupon` concentra el incremento de `used` que hoy hace el checkout; el cálculo del descuento (`parseCouponDiscount`) se queda en `lib/domain.ts` y el importe lo sigue resolviendo el servidor cuando hay sesión.
-- La poda de combos huérfanos tras refrescar catálogo (hoy en `ModulesProvider`) se mueve aquí; depende de `useCatalogoState()` (catálogo 6 < promotions 16, es ancestro).
-- Persistencia `fogoneria:promotions:v1:<tenant>`; migra `combos` + `coupons`.
+- `consumeCoupon` concentra el incremento de `used` y `restoreCoupon` lo revierte en la compensación del coordinador; el cálculo del descuento (`parseCouponDiscount`) se queda en `lib/domain.ts` y el importe lo sigue resolviendo el servidor cuando hay sesión.
+- **La poda de combos se queda en `ModulesProvider`**, no aquí: `CatalogoProvider` se monta **debajo** de `FeatureProviders` (el orden del registry no aplica), así que ningún provider de feature ve el catálogo. El efecto de poda usa el `setCombos` del provider.
+- Persistencia `fogoneria:promotions:v1:<tenant>`; migra `combos` + `coupons` (merge por `id`/`code`).
 
-### 3.5 `CheckoutCoordinator` — capa compartida, **no** feature
+### 3.5 `CheckoutCoordinator` — capa compartida, **no** feature (F6c2, implementado)
 
-Ubicación propuesta:
+- `apps/web/lib/checkout.ts`: `runCheckout(input, context, writes, hooks)` puro, sin React.
+- `apps/web/components/dashboard/providers/checkout.tsx`: `useCheckout({ onCommitted })` arma los puertos con `useAccounts`/`useCash`/`useReceipts`/`usePromotions`/`useCrm` y expone `checkoutAccount`. `ModulesProvider` lo reexporta como `useModules().checkoutAccount`.
 
-- `apps/web/lib/checkout.ts`: función pura `runCheckout(input, ports)` con los puertos inyectados (testeable sin React).
-- `apps/web/components/dashboard/providers/checkout.tsx`: hook `useCheckout()` que arma los puertos con `useAccounts`/`useCash`/`useReceipts`/`usePromotions`/`useCrm`/`useCatalogoState` y expone `checkoutAccount(input)`.
-- `ModulesProvider` reexporta `checkoutAccount` (compatibilidad con `useModules()`).
+**Orden aplicado:** validar → cuenta → caja → comprobante → cupón → puntos (CRM). La liberación de mesa, `enviarSunat` y `closeAccountOrders` van en `onCommitted` (post-commit, no se compensan).
 
-**Por qué no es un provider:** necesita ver **todos** los contextos (incluido CRM, que está después de caja/comprobantes) y no posee estado propio; montarlo como provider lo obligaría a estar al final del registry y a mezclar orquestación con estado.
+**Idempotencia:**
 
-**Orden de operaciones (se preserva el actual):**
+- Si existe un comprobante `Pagada` con `accountId`, devuelve ese mismo sin escribir (protege reintentos y estados a medias).
+- `useCheckout` mantiene un mapa síncrono de comprobantes por cuenta y espejos de cuentas/comprobantes/cupones actualizados en efectos y handlers: dos clics en el mismo frame cobran una sola vez.
+- Una cuenta que no está `abierta` devuelve `null` sin efectos.
 
-1. Validar cuenta `abierta`; si no, `null` sin efectos.
-2. Calcular `accountTotals`, cupón y total; `splitIgv`.
-3. Generar el comprobante (`nextReceiptNumber`, estado `en_cola`).
-4. **Efectos de estado en un solo lote:** `accounts` (cobrada + pagos + propina + descuento), `receipts` (nuevo), `promotions` (cupón consumido), `cash` (ingresos con `shiftId` del turno abierto), `tables` (liberar mesa si `tableId`).
-5. Post-efectos: `enviarSunat(receipt)` (nunca bloquea la venta), `addPoints(customerId, floor(total))`, `closeAccountOrders(account, "PAGADA")` (API), `refreshOrders`.
-
-**Idempotencia (nueva, defensa del coordinador):**
-
-- Guard `checkingOut` por `accountId` (Set en un `useRef`) para ignorar el doble clic mientras corre el cobro.
-- Invariante: **una cuenta `cobrada` no se vuelve a cobrar** (ya la garantiza `status === "abierta"`); el coordinador además rechaza si ya existe un comprobante `Pagada` con `accountId` (protege tras un fallo parcial).
-- La anulación es idempotente por estado (`status === "Anulada"` → no-op), como hoy.
-
-**Errores:**
-
-- Los setters de estado del demo no lanzan (localStorage best-effort), así que el lote no deja estados a medias en la práctica; el coordinador igual aplica el orden "dinero antes que comanda" y documenta que un fallo de API en `closeAccountOrders` **no** revierte el cobro (hoy tampoco lo hace: la comanda queda abierta y se cierra al reintentar/entregar).
-- `throw` de `sendToKitchen` no cambia: la UI muestra el error y la cuenta sigue abierta.
+**Compensación:** cada paso apila su reverso (`restoreAccount`, `removeCashMovements`, `removeReceipt`, `restoreCoupon`) y, si un paso lanza, se deshacen en orden inverso antes de relanzar. Los puntos se aplican al final (`addPoints` no lanza en el demo) y `afterCommit` corre fuera del `try`: un fallo de SUNAT o de la API no revierte una venta ya cobrada.
 
 ### 3.6 `scopes` (F6c3, fuera de este plan)
 
@@ -145,30 +122,26 @@ Reglas:
 
 ## 5. Tests
 
-- **Unit (puros):** `runCheckout` con puertos falsos (orden de llamadas, cupón, propina, idempotencia, cuenta no abierta, doble cobro).
-- **Provider:** hidratación demo/legacy, persistencia por tenant, sync sin eco, reset y guardia de cambio de tenant (patrón F6b).
-- **Integración:** `module-migration.integration.test.tsx` siembra un `ErpState` legacy con todos los slices y verifica las claves nuevas, la purga y que remontar no duplica. Incluye el remapeo slug→UUID de `accounts` en los dos órdenes posibles: sucursales disponibles **al montar** y sucursales que **llegan después**; en ambos casos comprueba `branchId`/`tableId` y que una segunda pasada no duplica ni pierde cuentas.
-- **Regresión:** `ModulesProvider.actions.test.tsx` sigue cubriendo el flujo completo (abrir → items → enviar → cobrar → anular → caja) montando los providers reales.
+- **Unit (puros):** `lib/checkout.test.ts` (9): orden de escrituras, comprobante/IGV, propina, cupón, puntos, idempotencia por comprobante, cuenta no abierta, compensación en cada fallo (caja, comprobante, cupón, CRM) y post-efecto que no revierte.
+- **Provider:** `features/cash|receipts|promotions/provider.test.tsx`: hidratación demo/legacy, persistencia por tenant, turnos/arqueo, SUNAT, cupones con compensación y reset. `features/orders/provider.test.tsx` sigue cubriendo cuentas.
+- **Migración (unit):** `lib/module-store.test.ts` cubre `migrateLegacyCash`, `migrateLegacyReceipts`, `migrateLegacyPromotions` y `mergeByKey`.
+- **Integración:** `module-migration.integration.test.tsx` siembra un `ErpState` legacy con todos los slices (cuentas, caja con movimientos, comprobantes + contingencia, combos/cupones), verifica las claves nuevas, la purga (`scopes[*].cash` incluido) y que remontar no duplica. Incluye el remapeo slug→UUID de cuentas (sucursales al montar y después).
+- **Regresión:** `ModulesProvider.actions.test.tsx` (11) sigue cubriendo abrir → items → enviar → cobrar con cupón → anular → caja → SUNAT montando todos los providers reales.
 
-### L1 (fallo entre `accounts` y `receipts`/`cash`) — diferido a F6c2
+### L1 (fallo entre slices durante el cobro) — cubierto
 
-El test de fallo parcial durante `checkoutAccount` **no es viable en F6c1**:
-
-1. No hay punto de inyección. `setAccounts` (provider) y `setState` (receipts/cash/cupones/mesa) se ejecutan en el mismo handler y React los agrupa; los updaters son puros (map/patch) y no hay un puerto que se pueda hacer fallar entre ambos sin mockear internals de React.
-2. Forzar el fallo con un mock del provider de cuentas mediría el mock, no la garantía: la atomicidad real no existe entre providers (no hay transacción), y lo que hoy evita el estado a medias es el batching, no un contrato.
-3. La garantía correcta es de F6c2: `runCheckout` calcula todo, valida idempotencia (cuenta `abierta`, sin comprobante `Pagada` previo) y aplica el lote en un orden fijo. Ahí sí se puede testear con puertos falsos: un puerto que lanza deja `accounts`/`receipts`/`cash` sin cambios y no se duplica al reintentar.
-
-Mientras tanto, la consistencia del camino feliz está cubierta: `ModulesProvider.actions.test.tsx` verifica que tras el cobro hay comprobante `Pagada`, cuenta `cobrada` y movimiento de caja en el turno.
+`runCheckout` es una función pura con puertos inyectados: los tests hacen lanzar `addCashMovements`, `addReceipt`, `consumeCoupon` y `addPoints`, y verifican que se deshacen los pasos previos y que la cuenta vuelve a su estado original (no queda `cobrada` sin comprobante ni movimiento). El doble cobro se cubre con el comprobante `Pagada` + los espejos síncronos del hook; el cupón no se consume dos veces porque la segunda llamada sale por la guardia de idempotencia.
 
 
 ## 6. Criterios para retirar `ModulesProvider`
 
-- [ ] `accounts`, `cashShifts`/`cash`, `receipts`, `combos`/`coupons` y `scopes` tienen provider dueño.
-- [ ] El checkout vive en `useCheckout` y `ModulesProvider` solo lo reexporta.
-- [ ] `ErpState` queda en `tickets` + `payments` (o también migrados).
-- [ ] `fogoneria:erp:v2:<tenant>` no recibe escrituras de negocio (solo datos de shell si quedan).
-- [ ] `checkoutAccount` conserva orden, idempotencia y errores con tests de regresión.
-- [ ] `check:boundaries` sigue en 0 y ninguna feature importa otra.
+- [x] `accounts`, `cashShifts`/`cash`, `receipts` y `combos`/`coupons` tienen provider dueño.
+- [ ] `scopes` (orders/tables) tiene dueño → F6c3.
+- [x] El checkout vive en `useCheckout` y `ModulesProvider` solo lo reexporta.
+- [ ] `ErpState` queda en `tickets` + `payments` (hoy conserva `reservations`, `tickets` y `scopes` demo).
+- [x] `fogoneria:erp:v2:<tenant>` ya no recibe escrituras de POS (caja, comprobantes y promociones salieron).
+- [x] `checkoutAccount` conserva orden, idempotencia y errores con tests de regresión y de compensación.
+- [x] `check:boundaries` sigue en 0 y ninguna feature importa otra.
 
 ## 7. Riesgos y mitigaciones
 
@@ -183,9 +156,9 @@ Mientras tanto, la consistencia del camino feliz está cubierta: `ModulesProvide
 
 ## 8. Fases
 
-**F6c1 (este PR).** `AccountsProvider` con estado + persistencia/sync + migración/purga + remapeo; acciones y checkout siguen en `ModulesProvider` consumiendo el provider. Sin cambios de reglas ni de API.
+**F6c1 (mergeado en #135).** `AccountsProvider` con estado + persistencia/sync + migración/purga + remapeo; acciones y checkout siguen en `ModulesProvider` consumiendo el provider.
 
-**F6c2.** `CashProvider` + `ReceiptsProvider` + `PromotionsProvider` + `CheckoutCoordinator`; `scopes` se reduce a `orders`/`tables`. Tests del coordinador y de regresión del cobro.
+**F6c2 (este PR).** `CashProvider` + `ReceiptsProvider` + `PromotionsProvider` + `CheckoutCoordinator`; `scopes` se reduce a `orders`/`tables` y `ErpState` pierde caja, comprobantes y promociones. Tests del coordinador (fallos y compensación) y de regresión del cobro.
 
 **F6c3 (fuera de F6c).** Dueño de `scopes.orders` y `scopes.tables`; retiro de `ModulesProvider` según el checklist de §6.
 

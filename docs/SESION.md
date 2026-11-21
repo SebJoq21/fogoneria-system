@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — F6c2: caja, comprobantes y promociones + coordinador de cobro
+
+- **Providers:** `CashProvider` (turnos + movimientos por sucursal con `addMovements`/`reverseMovements` y `remapBranches`), `ReceiptsProvider` (comprobantes + contingencia SUNAT) y `PromotionsProvider` (combos/cupones con `consumeCoupon`/`restoreCoupon`), todos sobre `lib/module-store.ts`.
+- **Migración/purga:** el loader de `ModulesProvider` extrae `cashShifts` + `scopes[*].cash`, `receipts` + `sunatContingencia` y `combos` + `coupons` antes del primer guardado; `ErpState` queda en `reservations`, `tickets` y `scopes` (orders/tables). La poda de combos sigue en `ModulesProvider` porque el catálogo se monta debajo de `FeatureProviders`.
+- **Coordinador:** `lib/checkout.ts` (puro) + `components/dashboard/providers/checkout.tsx`; orden cuenta → caja → comprobante → cupón → puntos, idempotencia por comprobante `Pagada` y mapas síncronos, compensación inversa si un paso falla. `onCommitted` libera mesa, envía a SUNAT y cierra comandas (post-commit, no se compensa).
+- **Tests:** `lib/checkout.test.ts` (9, con fallos entre slices), `lib/module-store.test.ts` (+10), providers de caja/comprobantes/promociones e integración de migración ampliada.
+- Verificado: web **942** tests, types, lint, build, paridad 20/20/20/20, boundaries 0 y specs.
+
 ## 2026-11-21 — F6c: diseño POS + piloto `AccountsProvider`
 
 - **Diseño:** `docs/plan-f6c-pos.md` — `AccountsProvider` (orders), `CashProvider` (turnos + movimientos por sucursal), `ReceiptsProvider`, `PromotionsProvider` y `CheckoutCoordinator` en capa compartida (`lib/checkout.ts` + hook), con orden del cobro, idempotencia, migración/purga, tests y fases F6c1–F6c3.

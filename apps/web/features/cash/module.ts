@@ -9,4 +9,5 @@ export const cashModule = {
   path: '/app/caja',
   roles: ['admin', 'sucursal', 'cajero'],
   group: 'Principal',
+  provider: 'CashProvider',
 };
