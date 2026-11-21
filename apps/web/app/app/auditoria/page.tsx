@@ -1,6 +1,15 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { AuditPage } from "@/features/audit";
+import { canViewPath } from "@/lib/auth";
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-export default function AuditoriaRoute() {
+export default async function AuditoriaRoute() {
+  const session = await verifySession((await cookies()).get(SESSION_COOKIE)?.value);
+  if (!session || !canViewPath("/app/auditoria", session.role)) {
+    redirect("/");
+  }
+
   return (
     <div>
       <div className="mb-6">

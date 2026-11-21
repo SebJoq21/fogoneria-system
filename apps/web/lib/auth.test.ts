@@ -49,6 +49,16 @@ describe("canViewPath", () => {
     expect(canViewPath("/saas", "mesero")).toBe(false);
   });
 
+  it("solo admin entra a auditoría; sucursal conserva sus rutas hermanas", () => {
+    expect(canViewPath("/app/auditoria", "admin")).toBe(true);
+    expect(canViewPath("/app/auditoria", "superadmin")).toBe(false);
+    expect(canViewPath("/app/auditoria", "sucursal")).toBe(false);
+    expect(canViewPath("/app/auditoria", "cajero")).toBe(false);
+    expect(canViewPath("/app/auditoria", "cocina")).toBe(false);
+    expect(canViewPath("/app/auditoria", "mesero")).toBe(false);
+    expect(canViewPath("/app/clientes", "sucursal")).toBe(true);
+  });
+
   it("cada rol tiene un home válido según su matriz", () => {
     for (const role of ROLES) {
       expect(ROLE_HOME[role]).toMatch(/^\/(app|saas)/);

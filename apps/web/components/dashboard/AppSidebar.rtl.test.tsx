@@ -51,6 +51,17 @@ describe('AppSidebar', () => {
     expect(screen.getByText('Inicio')).toBeTruthy();
   });
 
+  it('Auditoría solo aparece para admin', () => {
+    sesion.currentUser = { role: 'admin', name: 'Dueño' };
+    render(<AppSidebar />);
+    expect(screen.getByText('Auditoría')).toBeTruthy();
+    cleanup();
+
+    sesion.currentUser = { role: 'sucursal', name: 'Sucursal' };
+    render(<AppSidebar />);
+    expect(screen.queryByText('Auditoría')).toBeNull();
+  });
+
   it('marca el enlace activo por ruta exacta o prefijo', () => {
     nav.pathname = '/app';
     const { unmount } = render(<AppSidebar />);
