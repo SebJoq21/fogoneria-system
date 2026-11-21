@@ -28,11 +28,12 @@ export default defineConfig({
         "**/*.d.ts",
       ],
       // Ratchet aprobado en G3 (medido: 62.61/58.88/57.91/63.73).
+      // 2026-11-21: Fase 3 (medido: 87.26/77.32/83.86/89.41).
       thresholds: {
-        statements: 57,
-        branches: 53,
-        functions: 52,
-        lines: 58,
+        statements: 85,
+        branches: 75,
+        functions: 80,
+        lines: 85,
       },
     },
   },

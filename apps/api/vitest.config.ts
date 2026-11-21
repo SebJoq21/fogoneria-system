@@ -28,11 +28,12 @@ export default defineConfig({
         'scripts/**',
       ],
       // Ratchet aprobado en G3 (medido: 76.02/59.54/69.58/77.55).
+      // 2026-11-21: Fase 4 (medido: 97.76/91.75/98.20/98.04).
       thresholds: {
-        statements: 71,
-        branches: 54,
-        functions: 64,
-        lines: 72,
+        statements: 96,
+        branches: 90,
+        functions: 96,
+        lines: 96,
       },
     },
   },

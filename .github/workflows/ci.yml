@@ -94,6 +94,17 @@ jobs:
       - name: Pruebas de base de datos (RLS, soft delete, email)
         run: pnpm --filter api test:db
 
+      - name: Normalizar rutas de cobertura DB
+        run: sed -i 's|^SF:src/|SF:apps/api/src/|' apps/api/coverage/db/lcov.info
+
+      - name: Publicar cobertura de DB
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: coverage-db
+          path: apps/api/coverage/db/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Pruebas web (con cobertura)
         run: pnpm --filter web test:coverage
 
@@ -232,6 +243,12 @@ jobs:
         with:
           name: coverage-contracts
           path: coverage/contracts
+
+      - name: Descargar cobertura de DB
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: coverage-db
+          path: coverage/db
 
       - name: Analizar con SonarCloud
         if: env.SONAR_TOKEN != ''
