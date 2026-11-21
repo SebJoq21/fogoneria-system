@@ -1,12 +1,8 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const router = vi.hoisted(() => ({ push: vi.fn() }));
-vi.mock('next/navigation', () => ({ useRouter: () => router }));
-
 const sesion = vi.hoisted(() => ({
-  login: vi.fn(),
   logout: vi.fn(),
   notify: vi.fn(),
   currentUser: { id: 'u-1', name: 'Super', email: 'super@fogoneria.pe', role: 'superadmin' },
@@ -14,15 +10,13 @@ const sesion = vi.hoisted(() => ({
 vi.mock('@/components/dashboard/ModulesProvider', () => ({ useModules: () => sesion }));
 
 const api = vi.hoisted(() => ({
-  onboarding: vi.fn(),
   empresas: vi.fn(),
   metricas: vi.fn(),
   suspender: vi.fn(),
   reactivar: vi.fn(),
 }));
-vi.mock('./api', () => ({ plataformaApi: api }));
+vi.mock('./api', () => ({ saasApi: api }));
 
-import { OnboardingPage } from './OnboardingPage';
 import { SaasPage } from './SaasPage';
 
 const empresa = {
@@ -44,80 +38,13 @@ const metricas = {
 
 beforeEach(() => {
   for (const fn of Object.values(api)) fn.mockReset();
-  sesion.login.mockReset().mockResolvedValue({ role: 'admin' });
   sesion.logout.mockReset();
   sesion.notify.mockReset();
-  router.push.mockReset();
   api.empresas.mockResolvedValue({ items: [empresa], total: 1, page: 1, limit: 50 });
   api.metricas.mockResolvedValue(metricas);
 });
 
 afterEach(cleanup);
-
-function llenarPasoUno() {
-  fireEvent.change(screen.getByPlaceholderText('Ej. Parrilla El Fuego S.A.C.'), {
-    target: { value: 'El Fuego SAC' },
-  });
-  fireEvent.change(screen.getByPlaceholderText('20123456786'), {
-    target: { value: '20123456786' },
-  });
-}
-
-function llenarPasoAdmin() {
-  fireEvent.change(screen.getByPlaceholderText(/Mar.a Torres/), { target: { value: 'Ana' } });
-  fireEvent.change(screen.getByPlaceholderText('admin@turestaurante.pe'), {
-    target: { value: 'ana@fuego.pe' },
-  });
-  fireEvent.change(screen.getByPlaceholderText(/nimo 8 caracteres/), {
-    target: { value: 'secreta123' },
-  });
-}
-
-describe('OnboardingPage', () => {
-  it('valida el paso 1 y navega adelante y atrás', () => {
-    render(<OnboardingPage />);
-
-    fireEvent.click(screen.getByText('Siguiente'));
-    expect(screen.getByRole('alert').textContent).toMatch(/Ingresa la raz/);
-
-    llenarPasoUno();
-    fireEvent.click(screen.getByText('Siguiente'));
-    expect(screen.getByText('La Carta')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', { name: /Atr/ }));
-    expect(screen.getByText('Identidad y Local')).toBeTruthy();
-  });
-
-  it('crea la cuenta y entra con el rol nuevo', async () => {
-    api.onboarding.mockResolvedValue({ empresaId: 'e-1' });
-    render(<OnboardingPage />);
-    llenarPasoUno();
-    fireEvent.click(screen.getByText('Siguiente'));
-    fireEvent.click(screen.getByText('Siguiente'));
-    llenarPasoAdmin();
-    fireEvent.click(screen.getByText('Finalizar y Enviar'));
-
-    await waitFor(() => expect(api.onboarding).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(sesion.login).toHaveBeenCalledWith('ana@fuego.pe', 'secreta123'),
-    );
-    expect(router.push).toHaveBeenCalled();
-  });
-
-  it('muestra el error de la API al finalizar', async () => {
-    api.onboarding.mockRejectedValue(new Error('RUC ya registrado'));
-    render(<OnboardingPage />);
-    llenarPasoUno();
-    fireEvent.click(screen.getByText('Siguiente'));
-    fireEvent.click(screen.getByText('Siguiente'));
-    llenarPasoAdmin();
-    fireEvent.click(screen.getByText('Finalizar y Enviar'));
-
-    await waitFor(() => expect(api.onboarding).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('RUC ya registrado'));
-    expect(sesion.login).not.toHaveBeenCalled();
-  });
-});
 
 describe('SaasPage', () => {
   it('carga empresas y métricas', async () => {
@@ -170,5 +97,13 @@ describe('SaasPage', () => {
         'No se pudo cargar la consola SaaS.',
       ),
     );
+  });
+
+  it('compone la sección de facturación', async () => {
+    render(
+      <SaasPage billing={<div>Facturación embebida</div>} />,
+    );
+    await waitFor(() => expect(screen.getByText('El Fuego')).toBeTruthy());
+    expect(screen.getByText('Facturación embebida')).toBeTruthy();
   });
 });

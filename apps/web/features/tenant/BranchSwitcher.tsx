@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Building2, Check, ChevronDown, LayoutGrid } from "lucide-react";
+import { useModules } from "@/components/dashboard/ModulesProvider";
 import { canSwitchBranch } from "@/lib/auth";
-import { useModules } from "./ModulesProvider";
 
 /** Switcher multitenant: 1 RUC → N sucursales, cada una con su operación. */
 export function BranchSwitcher() {

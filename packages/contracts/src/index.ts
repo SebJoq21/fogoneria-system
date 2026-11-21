@@ -6,6 +6,9 @@
  * extensión de este archivo no resuelven en runtime. Usa siempre el subpath.
  */
 export * from './bi';
+export * from './auth';
+export * from './audit';
+export * from './billing';
 export * from './catalog';
 export * from './pricing';
 export * from './cash';
@@ -15,12 +18,13 @@ export * from './expenses';
 export * from './inventory';
 export * from './tables';
 export * from './orders';
-export * from './plataforma';
+export * from './onboarding';
 export * from './promotions';
+export * from './realtime';
 export * from './reservations';
+export * from './saas';
 export * from './staff';
-export * from './tables';
-export * from './tiempo-real';
+export * from './tenant';
 
 /**
  * `caja` e `inventario` tienen cada uno su `etiquetaTipoMovimiento` (movimientos

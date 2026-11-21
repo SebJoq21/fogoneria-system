@@ -11,8 +11,8 @@ Dar de alta una empresa desde el sitio público con el mínimo fricción: razón
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/onboarding/` | real |
-| Web | `apps/web/features/plataforma/OnboardingPage.tsx` + `DropZone.tsx` | real |
-| Contrato | `packages/contracts/src/plataforma.ts` (`validarOnboarding`, `toOnboardingPayload`, `isValidRuc`) | sí |
+| Web | `apps/web/features/onboarding/OnboardingPage.tsx` + `DropZone.tsx` | real |
+| Contrato | `packages/contracts/src/onboarding.ts` (`validarOnboarding`, `toOnboardingPayload`, `isValidRuc`) | sí |
 | Datos | `empresas`, `sucursales`, `usuarios`, `listas_precios`, `leads_cotizaciones`, `auditoria` | `20261019000000_init`, `20261020120400_rls_onboarding` |
 
 ## 3. API

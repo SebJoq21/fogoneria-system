@@ -39,6 +39,13 @@ const DOCS_INDICE = join(ROOT, 'docs/INDICE.md');
  * son 1:1.
  */
 const FEATURE_SPECS = {
+  auth: ['auth'],
+  tenant: ['tenant'],
+  onboarding: ['onboarding'],
+  saas: ['saas'],
+  billing: ['billing'],
+  audit: ['audit'],
+  realtime: ['realtime'],
   bi: ['bi'],
   cash: ['cash'],
   catalog: ['catalog'],
@@ -48,7 +55,6 @@ const FEATURE_SPECS = {
   inventory: ['inventory'],
   orders: ['orders'],
   pricing: ['pricing'],
-  plataforma: ['plataforma', 'auth', 'tenant', 'saas', 'billing', 'onboarding', 'audit'],
   promotions: ['promotions'],
   staff: ['staff'],
   tables: ['tables'],
@@ -56,6 +62,7 @@ const FEATURE_SPECS = {
   // Nombres anteriores: solo aparecen en diffs de PRs de migración.
   catalogo: ['catalog'],
   salon: ['tables', 'reservations'],
+  plataforma: ['auth', 'tenant', 'onboarding', 'saas', 'billing'],
 };
 
 /** Rutas compartidas: exigen `specs/trazabilidad.md` o una spec de módulo. */
@@ -256,9 +263,9 @@ const seccionesMinimas = [
 // correspondiente no aplica y no se exige (p. ej. `realtime` no tiene tablas,
 // `plataforma` es la web de los módulos de plataforma y `audit`/`billing` no
 // tienen pantalla).
-const SIN_API = new Set(['plataforma']);
-const SIN_UI = new Set(['audit', 'billing']);
-const SIN_DATOS = new Set(['plataforma', 'realtime']);
+const SIN_API = new Set();
+const SIN_UI = new Set();
+const SIN_DATOS = new Set(['realtime']);
 
 let specsRevisadas = 0;
 for (const spec of [...specsExistentes].sort((a, b) => a.localeCompare(b))) {

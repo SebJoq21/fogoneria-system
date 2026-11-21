@@ -61,6 +61,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- Metadata (2026-11-21): `features/receipts/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
+
 - Paridad de módulos (2026-11-21): feature `features/receipts/` y contrato `packages/contracts/src/receipts.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - SUNAT real (OSE) fuera del piloto: no hay XML/UBL, CDR ni resumen diario.

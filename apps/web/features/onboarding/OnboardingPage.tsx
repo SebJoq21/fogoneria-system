@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Field, Select, TextInput, Textarea } from "@/components/ui/fields";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ROLE_HOME } from "@/lib/auth";
-import { isValidEmail, isValidRuc, type RangoSucursales } from "@fogoneria/contracts/plataforma";
-import { plataformaApi } from "./api";
+import { isValidEmail, isValidRuc, type RangoSucursales } from "@fogoneria/contracts/onboarding";
+import { onboardingApi } from "./api";
 
 const steps = ["Identidad y Local", "La Carta", "Pago y Activación"];
 
@@ -144,7 +144,7 @@ export function OnboardingPage() {
       .join(" · ");
 
     try {
-      await plataformaApi.onboarding({
+      await onboardingApi.submit({
         nombreLegal: form.nombreLegal.trim(),
         nombreComercial: form.nombreComercial.trim() || undefined,
         ruc: form.ruc.trim(),

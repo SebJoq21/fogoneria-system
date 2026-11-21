@@ -75,7 +75,7 @@ El gate corre en CI (job **Specs al día**) en cada PR. La excepción `SPECS_SKI
 ## Índice de módulos
 
 ### Plataforma
-- [auth](modulos/auth.md) · [tenant](modulos/tenant.md) · [onboarding](modulos/onboarding.md) · [saas](modulos/saas.md) · [billing](modulos/billing.md) · [audit](modulos/audit.md) · [plataforma (web)](modulos/plataforma.md)
+- [auth](modulos/auth.md) · [tenant](modulos/tenant.md) · [onboarding](modulos/onboarding.md) · [saas](modulos/saas.md) · [billing](modulos/billing.md) · [audit](modulos/audit.md)
 
 ### Operación
 - [tables](modulos/tables.md) · [reservations](modulos/reservations.md) · [orders](modulos/orders.md) · [realtime](modulos/realtime.md)
@@ -102,6 +102,6 @@ El gate corre en CI (job **Specs al día**) en cada PR. La excepción `SPECS_SKI
 |---|---|---|
 | API NestJS | 20 módulos, 17 controladores, 106 endpoints, Swagger en `/api/docs` | [arquitectura](../docs/arquitectura.md) |
 | Datos | 43 modelos Prisma, 14 migraciones, RLS + soft-delete + inmutabilidad | [modelo-datos](../docs/modelo-datos.md), [rls-modelo](../docs/rls-modelo.md) |
-| Web | 38 `page.tsx`, 12 features migradas, resto en `components/erp/*` | [apps/web/AGENTS.md](../apps/web/AGENTS.md) |
+| Web | 20 features canónicas, sin `components/erp/*` | [apps/web/AGENTS.md](../apps/web/AGENTS.md) |
 | Modularización | Fase 3 completa; baseline de fronteras 0 | [MODULARIZACION](../docs/MODULARIZACION.md) |
 | Producción | Vercel (web) + Railway (API + Postgres) | [despliegue](../docs/despliegue.md) |

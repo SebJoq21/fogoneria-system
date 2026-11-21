@@ -6,26 +6,25 @@
  * aquí a propósito: lo emite `/api/session` (BFF + `lib/session.ts`), que sigue
  * siendo la autoridad de la sesión.
  *
- * La API responde snake_case; el mapeo a `@fogoneria/contracts/plataforma` se
- * hace en este archivo. El alta pública (`POST /onboarding`) es la única ruta
+ * La API responde snake_case; el mapeo a `@fogoneria/contracts/{auth,tenant,onboarding,saas,billing}`
+ * se hace en este archivo. El alta pública (`POST /onboarding`) es la única ruta
  * sin sesión que el BFF reenvía.
  */
 
 import { createClient, queryString } from '@fogoneria/sdk';
+import { rolDesdeApi, type UsuarioSesion } from '@fogoneria/contracts/auth';
+import { esPlanEmpresa, type PlanEmpresa } from '@fogoneria/contracts/billing';
 import {
-  esEstadoEmpresa,
-  esPlanEmpresa,
-  rolDesdeApi,
-  type Empresa,
-  type EmpresaSaas,
-  type EstadoEmpresa,
-  type MetricasSaas,
   type OnboardingInput,
   type OnboardingResultado,
-  type PlanEmpresa,
+} from '@fogoneria/contracts/onboarding';
+import { type EmpresaSaas, type MetricasSaas } from '@fogoneria/contracts/saas';
+import {
+  esEstadoEmpresa,
+  type Empresa,
+  type EstadoEmpresa,
   type Sucursal,
-  type UsuarioSesion,
-} from '@fogoneria/contracts/plataforma';
+} from '@fogoneria/contracts/tenant';
 
 export const plataformaClient = createClient({ baseUrl: '/api/backend' });
 

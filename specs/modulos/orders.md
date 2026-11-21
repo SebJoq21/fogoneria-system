@@ -12,7 +12,7 @@ Registrar la comanda, resolver su precio en el servidor, numerarla por empresa y
 |---|---|---|
 | Backend | `apps/api/src/modules/orders/` | real |
 | Web KDS | `apps/web/features/orders/` (`OrdersBoardPage`) | real |
-| Web mesero | `apps/web/components/erp/MozoView.tsx` + `components/erp/mozo/**` | real (comandas), cuentas locales |
+| Web mesero | `apps/web/features/orders/MozoView.tsx` + `features/orders/mozo/**` | real (comandas), cuentas locales |
 | Contrato | `packages/contracts/src/orders.ts` | sí |
 | Datos | `ordenes`, `detalles_orden`, `detalles_orden_modificadores`, `secuencias` | `20261019000000_init`, `20261027120000_secuencias_tenant`, `20261028120000_ordenes_anulacion_estricta`, `20261106120000_ordenes_sla_indice`, `20261106160000_caja_turnos_propina` |
 
@@ -71,7 +71,6 @@ Reglas:
 - «Cerrar cuenta» en el panel del mesero intenta `PAGADA` por `PATCH` y recibe 400 (observación 4 del plan): derivar a Caja o guiar al usuario.
 - Los modificadores viajan como nota; el recargo se cobra en caja. Falta `items[].modificadores` si se quiere recargo en la comanda.
 - La «cuenta» (`TableAccount`) sigue en `localStorage`; no hay API de cuentas.
-- `MozoView` aún no es feature (`components/erp/*`).
 - **Deuda RLS del KDS:** el planificador no ve `pg_statistic` de las tablas con RLS y el tablero recorre ~50k filas en vez de usar `idx_ordenes_estado` (157 ms vs 0,075 ms). Opciones en `docs/explain-orders.md` §6/§7: vista/función `SECURITY DEFINER`, contadores denormalizados o `pg_hint_plan`. No dar `BYPASSRLS` al rol de negocio.
 
 ## 8. Trazabilidad
@@ -84,4 +83,3 @@ Reglas:
 
 1. Cerrar la observación 4 (derivar cobro a Caja).
 2. API de cuentas para sacar `TableAccount` de `localStorage`.
-3. Mover `MozoView` a `features/mozo` en una ola posterior.

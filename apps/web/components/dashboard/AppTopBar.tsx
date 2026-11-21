@@ -25,6 +25,7 @@ const exactTitles: Record<string, string> = {
   "/app/gastos": "Gastos",
   "/app/combos": "Combos",
   "/app/analiticas": "Analíticas",
+  "/app/auditoria": "Auditoría",
   "/app/mesas/maestro": "Maestro de mesas",
   "/app/mesas": "Mapa de mesas",
   "/app/modulos/reservas/agenda": "Agenda de reservas",

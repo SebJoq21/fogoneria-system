@@ -1,19 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import {
-  esEstadoEmpresa,
-  esPlanEmpresa,
   esRolWeb,
-  estadoEmpresaTone,
-  etiquetaEstadoEmpresa,
-  etiquetaPlan,
   etiquetaRol,
+  rolDesdeApi,
+} from '@fogoneria/contracts/auth';
+import {
+  esPlanEmpresa,
+  etiquetaPlan,
+} from '@fogoneria/contracts/billing';
+import {
   isValidEmail,
   isValidRuc,
-  rolDesdeApi,
   toOnboardingPayload,
   validarOnboarding,
   type OnboardingInput,
-} from '@fogoneria/contracts/plataforma';
+} from '@fogoneria/contracts/onboarding';
+import {
+  esEstadoEmpresa,
+  estadoEmpresaTone,
+  etiquetaEstadoEmpresa,
+} from '@fogoneria/contracts/tenant';
 import {
   toEmpresa,
   toEmpresaSaas,
@@ -25,7 +31,7 @@ import {
   type ApiEmpresaSaas,
   type ApiOnboardingResultado,
   type ApiSucursal,
-} from './api';
+} from './platform-api';
 
 const onboarding: OnboardingInput = {
   nombreLegal: 'Parrilla El Fuego S.A.C.',

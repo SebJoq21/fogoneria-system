@@ -9,7 +9,7 @@ const sesion = vi.hoisted(() => ({
   currentUser: null as null | { role: string; name: string },
 }));
 vi.mock('./ModulesProvider', () => ({ useModules: () => sesion }));
-vi.mock('./BranchSwitcher', () => ({ BranchSwitcher: () => <div>sucursal</div> }));
+vi.mock('@/features/tenant', () => ({ BranchSwitcher: () => <div>sucursal</div> }));
 
 import { AppSidebar } from './AppSidebar';
 
@@ -49,6 +49,17 @@ describe('AppSidebar', () => {
     expect(screen.getByText('Cocina')).toBeTruthy();
     expect(screen.getByText('Mis órdenes')).toBeTruthy();
     expect(screen.getByText('Inicio')).toBeTruthy();
+  });
+
+  it('Auditoría solo aparece para admin', () => {
+    sesion.currentUser = { role: 'admin', name: 'Dueño' };
+    render(<AppSidebar />);
+    expect(screen.getByText('Auditoría')).toBeTruthy();
+    cleanup();
+
+    sesion.currentUser = { role: 'sucursal', name: 'Sucursal' };
+    render(<AppSidebar />);
+    expect(screen.queryByText('Auditoría')).toBeNull();
   });
 
   it('marca el enlace activo por ruta exacta o prefijo', () => {

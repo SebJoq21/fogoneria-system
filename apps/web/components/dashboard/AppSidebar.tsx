@@ -18,11 +18,12 @@ import {
   PackagePlus,
   Receipt,
   ReceiptText,
+  ScrollText,
   TrendingDown,
   Users,
   Warehouse,
 } from "lucide-react";
-import { BranchSwitcher } from "./BranchSwitcher";
+import { BranchSwitcher } from "@/features/tenant";
 import { useModules } from "./ModulesProvider";
 import type { AppRole } from "@/lib/auth";
 
@@ -77,6 +78,7 @@ const groups: Group[] = [
       { href: "/app/gastos", label: "Gastos", icon: TrendingDown, roles: STAFF },
       { href: "/app/modulos/personal", label: "Personal", icon: Contact, roles: STAFF },
       { href: "/app/analiticas", label: "Analíticas", icon: ChartColumn, roles: STAFF },
+      { href: "/app/auditoria", label: "Auditoría", icon: ScrollText, roles: ["admin"] },
     ],
   },
 ];

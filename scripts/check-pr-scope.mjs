@@ -52,7 +52,7 @@ const VISTAS = {
   OrdersView: 'orders',
   MozoView: 'orders',
   AccountPanel: 'orders',
-  useOrdersRealtime: 'orders',
+  useOrdersRealtime: 'realtime',
   BookingsModule: 'reservations',
   BookingsWorkspace: 'reservations',
   SalonTablesView: 'tables',
@@ -70,6 +70,7 @@ const VISTAS = {
   StaffModule: 'staff',
   RolesView: 'staff',
   AnaliticasView: 'bi',
+  AuditPage: 'audit',
   CartaVirtualView: 'catalog',
   ProductsView: 'catalog',
   CategoriesView: 'catalog',
@@ -112,7 +113,7 @@ const LIB = {
   promotions: 'promotions',
   orders: 'orders',
   'orders-board': 'orders',
-  'orders-realtime': 'orders',
+  'orders-realtime': 'realtime',
   realtime: 'realtime',
   tables: 'tables',
   reservations: 'reservations',
@@ -143,6 +144,7 @@ const RUTAS = [
   [/^apps\/web\/app\/app\/modulos\/inventario(\/|$)/, () => 'inventory'],
   [/^apps\/web\/app\/app\/modulos\/personal(\/|$)/, () => 'staff'],
   [/^apps\/web\/app\/app\/modulos\/fidelizacion(\/|$)/, () => 'crm'],
+  [/^apps\/web\/app\/app\/auditoria(\/|$)/, () => 'audit'],
 ];
 
 /** Devuelve la clave del módulo o `null` si el archivo es compartido. */

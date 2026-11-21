@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Flame } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -8,16 +8,15 @@ import { KpiCard } from "@/components/ui/KpiCard";
 import { TableCard, THead, TH, TR, TD } from "@/components/ui/data-table";
 import { useModules } from "@/components/dashboard/ModulesProvider";
 import { ApiError } from "@fogoneria/sdk";
+import { etiquetaPlan } from "@fogoneria/contracts/billing";
+import { type EmpresaSaas, type MetricasSaas } from "@fogoneria/contracts/saas";
 import {
   estadoEmpresaTone,
   etiquetaEstadoEmpresa,
-  etiquetaPlan,
-  type EmpresaSaas,
   type EstadoEmpresa,
   type EstadoEmpresaUi,
-  type MetricasSaas,
-} from "@fogoneria/contracts/plataforma";
-import { plataformaApi } from "./api";
+} from "@fogoneria/contracts/tenant";
+import { saasApi } from "./api";
 
 type Company = {
   id: string;
@@ -53,7 +52,7 @@ function errorMessage(error: unknown): string {
 }
 
 /** Consola SaaS del superadmin: empresas, planes y estado. Fuera del shell restaurante. */
-export function SaasPage() {
+export function SaasPage({ billing }: { billing?: ReactNode }) {
   const { currentUser, logout, notify } = useModules();
   const [companies, setCompanies] = useState<Company[] | null>(null);
   const [metrics, setMetrics] = useState<MetricasSaas>(EMPTY_METRICS);
@@ -63,7 +62,7 @@ export function SaasPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([plataformaApi.empresas(), plataformaApi.metricas()])
+    Promise.all([saasApi.empresas(), saasApi.metricas()])
       .then(([list, kpis]) => {
         if (cancelled) return;
         setCompanies(list.items.map(toCompany));
@@ -84,8 +83,8 @@ export function SaasPage() {
     setPendingId(company.id);
     try {
       const updated = suspender
-        ? await plataformaApi.suspender(company.id, "Suspensión manual desde consola SaaS")
-        : await plataformaApi.reactivar(company.id, "Reactivación manual desde consola SaaS");
+        ? await saasApi.suspender(company.id, "Suspensión manual desde consola SaaS")
+        : await saasApi.reactivar(company.id, "Reactivación manual desde consola SaaS");
       setCompanies((prev) =>
         prev
           ? prev.map((item) => (item.id === company.id ? toCompany(updated) : item))
@@ -95,7 +94,7 @@ export function SaasPage() {
         `Empresa ${suspender ? "suspendida" : "reactivada"}`,
         company.name,
       );
-      const kpis = await plataformaApi.metricas();
+      const kpis = await saasApi.metricas();
       setMetrics(kpis);
     } catch (err) {
       notify("No se pudo actualizar la empresa", errorMessage(err));
@@ -157,6 +156,8 @@ export function SaasPage() {
             hint="empresas en prueba"
           />
         </div>
+
+        {billing && <div className="mb-6">{billing}</div>}
 
         {error && (
           <div className="mb-4 rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">

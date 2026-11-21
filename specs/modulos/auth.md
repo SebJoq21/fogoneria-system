@@ -11,8 +11,8 @@ Autenticar usuarios contra la base, emitir el access token JWT y el ticket efím
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/auth/` | real |
-| Web | `apps/web/features/plataforma/LoginPage.tsx` + BFF `app/api/session/` | real |
-| Contrato | `packages/contracts/src/plataforma.ts` (`RespuestaLogin`, `rolDesdeApi`) | sí |
+| Web | `apps/web/features/auth/LoginPage.tsx` + `RecoverPage.tsx` + BFF `app/api/session/` | real |
+| Contrato | `packages/contracts/src/auth.ts` (`RespuestaLogin`, `rolDesdeApi`) | sí |
 | Datos | `usuarios`, `empresas` | `20261019000000_init`, `20261020130000_email_global` |
 
 ## 3. API
@@ -40,6 +40,7 @@ Reglas:
 - `/` login limpio (sin cuentas demo en pantalla); «¿Olvidaste tu contraseña?» → `/recuperar`.
 - `lib/auth.ts` mapea rol API → rol web y **falla cerrado** ante rol/sucursal desconocidos.
 - `proxy.ts` aplica `canViewPath` con la cookie firmada; el rol no se puede alterar desde DevTools.
+- `/app/auditoria` es la única excepción admin-only del shell: `canViewPath` la reserva a `admin` y la página revalida con la misma función (defensa en profundidad).
 - `SessionProvider` (`components/dashboard/providers/session.tsx`) hidrata el usuario y expone `ready` (fin de la hidratación) y `hasSession`; `ModulesProvider` lo reexpone por compatibilidad.
 
 ## 6. Pruebas
@@ -66,7 +67,7 @@ Reglas:
 
 - Jira: AYCDS-48 (auth), AYCDS-55 (sesión), AYCDS-14 (ticket WS).
 - PRs: #2 (`feat/api-david`), #4/#5 (sesión HttpOnly), #13 (ticket WS).
-- Specs: [plataforma](plataforma.md) · [roles](../producto/roles-permisos.md).
+- Specs: [auth](auth.md) · [roles](../producto/roles-permisos.md).
 
 ## 9. Próximos pasos
 

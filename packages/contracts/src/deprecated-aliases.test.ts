@@ -10,9 +10,17 @@ import * as inventory from './inventory';
 import * as inventoryLegacy from './inventario';
 import * as orders from './orders';
 import * as ordersLegacy from './ordenes';
+import * as platform from './auth';
+import * as platformAlias from './plataforma';
+import * as platformBilling from './billing';
+import * as platformOnboarding from './onboarding';
+import * as platformSaas from './saas';
+import * as platformTenant from './tenant';
 import * as pricing from './pricing';
 import * as promotions from './promotions';
 import * as promotionsLegacy from './promociones';
+import * as realtime from './realtime';
+import * as realtimeLegacy from './tiempo-real';
 import * as receipts from './receipts';
 import * as receiptsLegacy from './comprobantes';
 import * as reservations from './reservations';
@@ -34,7 +42,14 @@ const aliases = [
   ['inventario', 'inventory', inventoryLegacy, inventory],
   ['mesas', 'tables', tablesLegacy, tables],
   ['ordenes', 'orders', ordersLegacy, orders],
+  [
+    'plataforma',
+    'auth+tenant+onboarding+saas+billing',
+    platformAlias,
+    { ...platform, ...platformTenant, ...platformOnboarding, ...platformSaas, ...platformBilling },
+  ],
   ['promociones', 'promotions', promotionsLegacy, promotions],
+  ['tiempo-real', 'realtime', realtimeLegacy, realtime],
   ['reservas', 'reservations', reservationsLegacy, reservations],
   ['rrhh', 'staff', staffLegacy, staff],
 ] as const;

@@ -65,6 +65,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- Metadata (2026-11-21): `features/bi/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
+
 - Añadir `pagado_at` permitiría imputar por fecha de cobro (hoy usa `created_at`).
 - Bajo RLS el planificador no ve `pg_statistic`: siempre acotar por fecha (deuda de AYCDS-22).
 - No hay exportación a Excel/CSV ni BI externo.

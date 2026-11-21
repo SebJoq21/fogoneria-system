@@ -2,7 +2,7 @@
   "id": "cash",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "in-progress",
+  "status": "aligned",
   "routes": [
     "/app/caja"
   ]

@@ -12,7 +12,7 @@ vi.mock('@/features/inventory', () => ({ InventoryHubPage: () => <div>inventory-
 vi.mock('@/features/reservations', () => ({
   BookingsWorkspace: () => <div>bookings-workspace</div>,
 }));
-vi.mock('@/components/erp/StaffWorkspace', () => ({
+vi.mock('@/features/staff', () => ({
   StaffWorkspace: () => <div>staff-workspace</div>,
 }));
 

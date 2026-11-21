@@ -5,7 +5,7 @@ import { MODULE_CATALOG, type ModuleId } from "@/lib/erp";
 import { LoyaltyHubPage } from "@/features/crm";
 import { BookingsWorkspace } from "@/features/reservations";
 import { InventoryHubPage } from "@/features/inventory";
-import { StaffWorkspace } from "@/components/erp/StaffWorkspace";
+import { StaffWorkspace } from "@/features/staff";
 
 export function moduleMeta(id: string) {
   const meta = MODULE_CATALOG.find((m) => m.id === (id as ModuleId));

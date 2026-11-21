@@ -2,7 +2,7 @@
   "id": "promotions",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "in-progress",
+  "status": "aligned",
   "routes": [
     "/app/combos",
     "/app/promociones"

@@ -11,7 +11,7 @@
 | 1 | RLS nativo por empresa/sucursal (AYCDS-53/62) | Listo | `runWithTenant`, políticas y FORCE activos; 27 pruebas DB |
 | 2 | Auth JWT + sesión HttpOnly + BFF (AYCDS-48/55) | Listo | Cookie firmada, BFF valida sesión, 37 pruebas web |
 | 3 | Login, onboarding y catálogo reales (AYCDS-57/63) | Listo | Verificado contra PostgreSQL real |
-| 4 | Consola SaaS contra API (AYCDS-65) | Listo | `features/plataforma/api.ts`; métricas, suspender/reactivar verificados |
+| 4 | Consola SaaS contra API (AYCDS-65) | Listo | `lib/platform-api.ts`; métricas, suspender/reactivar verificados |
 | 5 | CI + Docker (AYCDS-58) | En curso (90%) | CI en verde (run `39540565973`); falta smoke completo de Compose en volumen limpio |
 
 ## P1 — Operación y calidad

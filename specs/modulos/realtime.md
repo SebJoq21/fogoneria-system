@@ -1,6 +1,6 @@
 # realtime — especificación
 
-**Estado:** API real (gateway Socket.io) · **Última revisión:** 2026-11-19
+**Estado:** API real (gateway Socket.io) · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Sincronizar mesero ↔ cocina ↔ caja sin refrescar: comanda creada, cambio de 
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/realtime/` (`orders.gateway.ts`, `realtime.service.ts`) | real |
-| Web | `apps/web/lib/realtime.ts` (transporte), `lib/orders-realtime.ts` (hook) | real |
-| Contrato | `packages/contracts/src/tiempo-real.ts` | sí |
+| Web | `apps/web/features/realtime/` (reexporta `lib/realtime.ts` y `lib/orders-realtime.ts`) | real (infra, sin ruta) |
+| Contrato | `packages/contracts/src/realtime.ts` | sí |
 | Datos | ninguna tabla propia | — |
 
 ## 3. Protocolo

@@ -1,5 +1,5 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { StaffModule } from "@/components/erp/StaffModule";
+import { StaffModule } from "@/features/staff";
 
 export default function PersonalPropinasPage() {
   return (
