@@ -80,8 +80,14 @@ afterEach(() => {
 });
 
 function OrdersProbe() {
-  const { ordersByBranch, setOrdersForBranches, setBranchOrders, ensureDemoOrders, resetOrdersDemo } =
-    useOrdersDemo();
+  const {
+    ordersByBranch,
+    setOrdersForBranches,
+    setBranchOrders,
+    ensureDemoOrders,
+    remapBranches,
+    resetOrdersDemo,
+  } = useOrdersDemo();
   return (
     <div>
       <span data-testid="miraflores">{(ordersByBranch.miraflores ?? []).length}</span>
@@ -104,6 +110,9 @@ function OrdersProbe() {
       </button>
       <button type="button" onClick={resetOrdersDemo}>
         reiniciar comandas
+      </button>
+      <button type="button" onClick={() => remapBranches({ miraflores: 'uuid-miraflores' })}>
+        remapear comandas
       </button>
     </div>
   );
@@ -148,6 +157,28 @@ describe('useOrdersDemo', () => {
     await waitFor(() =>
       expect(Number(screen.getByTestId('miraflores').textContent)).toBeGreaterThan(0),
     );
+  });
+
+  it('remapea las claves slug→UUID sin duplicar ni perder comandas', async () => {
+    render(
+      <AccountsProvider>
+        <OrdersProbe />
+      </AccountsProvider>,
+    );
+    await waitFor(() =>
+      expect(Number(screen.getByTestId('miraflores').textContent)).toBeGreaterThan(0),
+    );
+    const antes = JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}');
+    const total = antes.miraflores.length;
+
+    act(() => screen.getByText('remapear comandas').click());
+    const guardado = JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}');
+    expect(guardado['uuid-miraflores']).toHaveLength(total);
+    expect(guardado.miraflores).toBeUndefined();
+
+    act(() => screen.getByText('remapear comandas').click());
+    const otraVez = JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}');
+    expect(otraVez['uuid-miraflores']).toHaveLength(total);
   });
 });
 

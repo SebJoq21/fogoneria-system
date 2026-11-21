@@ -23,6 +23,7 @@ import type { TableAccount } from '@/lib/domain';
 import { applyBranchWrite } from '@/lib/branch-scope';
 import { loadErpState } from '@/lib/persistence';
 import {
+  mergeById,
   migrateLegacyScopes,
   useModuleStore,
   readLegacyErpField,
@@ -88,6 +89,8 @@ type OrdersDemoContextValue = {
   ) => void;
   setBranchOrders: (branchId: string, updater: (current: Order[]) => Order[]) => void;
   ensureDemoOrders: (branchIds: string[]) => void;
+  /** Remapea claves slug→UUID (idempotente; fusiona por id). */
+  remapBranches: (map: Record<string, string>) => void;
   resetOrdersDemo: () => void;
 };
 
@@ -131,6 +134,19 @@ function OrdersDemoProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const remapBranches: OrdersDemoContextValue['remapBranches'] = (map) => {
+    setValue((prev) => {
+      let changed = false;
+      const next: Record<string, Order[]> = {};
+      for (const [branchId, list] of Object.entries(prev)) {
+        const target = map[branchId] ?? branchId;
+        if (target !== branchId) changed = true;
+        next[target] = mergeById(next[target] ?? null, list);
+      }
+      return changed ? next : prev;
+    });
+  };
+
   return (
     <OrdersDemoContext.Provider
       value={{
@@ -138,6 +154,7 @@ function OrdersDemoProvider({ children }: { children: ReactNode }) {
         setOrdersForBranches,
         setBranchOrders,
         ensureDemoOrders,
+        remapBranches,
         resetOrdersDemo: reset,
       }}
     >

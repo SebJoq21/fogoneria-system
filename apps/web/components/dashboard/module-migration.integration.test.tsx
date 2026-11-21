@@ -345,8 +345,29 @@ function sembrarCuentaLegacy() {
       tickets: [],
       scopes: {
         miraflores: {
-          orders: [],
-          tables: [],
+          orders: [
+            {
+              id: 'ORD-legacy',
+              customer: 'Mesa 1',
+              items: [],
+              amount: 10,
+              time: '12:00',
+              elapsed: 'hoy',
+              createdAt: '2026-11-20T12:00:00.000Z',
+              status: 'pendiente',
+              channel: 'Mesa',
+            },
+          ],
+          tables: [
+            {
+              id: 77,
+              label: 'Mesa 77',
+              seats: 4,
+              shape: 'round',
+              zone: 'Salón',
+              status: 'libre',
+            },
+          ],
           cash: [
             {
               id: 70,
@@ -389,6 +410,16 @@ function cajaGuardada() {
   };
 }
 
+type ScopesGuardados = Record<string, Array<{ id: number | string }>>;
+
+function ordersDemoGuardadas(): ScopesGuardados {
+  return JSON.parse(localStorage.getItem(`fogoneria:orders-demo:v1:${EMPRESA}`) ?? '{}');
+}
+
+function tablesDemoGuardadas(): ScopesGuardados {
+  return JSON.parse(localStorage.getItem(`fogoneria:tables-demo:v1:${EMPRESA}`) ?? '{}');
+}
+
 function cuentasGuardadas() {
   return JSON.parse(localStorage.getItem(`fogoneria:orders:v1:${EMPRESA}`) ?? '[]') as Array<{
     id: string;
@@ -425,6 +456,15 @@ describe('remapeo slug→UUID de cuentas (F6c1)', () => {
     await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(UUID));
     expect(cajaGuardada().movementsByBranch?.[UUID]).toHaveLength(1);
     expect(cajaGuardada().movementsByBranch?.[SLUG]).toBeUndefined();
+
+    await waitFor(() =>
+      expect(ordersDemoGuardadas()[UUID]?.some((o) => o.id === 'ORD-legacy')).toBe(true),
+    );
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    await waitFor(() =>
+      expect(tablesDemoGuardadas()[UUID]?.some((t) => t.id === 77)).toBe(true),
+    );
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
   });
 
   it('remapea cuando las sucursales llegan después y no remapea dos veces', async () => {
@@ -434,14 +474,25 @@ describe('remapeo slug→UUID de cuentas (F6c1)', () => {
     const { rerender } = render(shell());
     await waitFor(() => expect(cuentasGuardadas()[0]?.branchId).toBe(SLUG));
     await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(SLUG));
+    expect(ordersDemoGuardadas()[SLUG]?.some((o) => o.id === 'ORD-legacy')).toBe(true);
+    expect(tablesDemoGuardadas()[SLUG]?.some((t) => t.id === 77)).toBe(true);
 
     activarSucursalReal();
     rerender(shell());
     await waitFor(() => expect(cuentasGuardadas()[0]?.branchId).toBe(UUID));
     await waitFor(() => expect(cajaGuardada().shifts?.[0]?.branchId).toBe(UUID));
+    await waitFor(() =>
+      expect(ordersDemoGuardadas()[UUID]?.some((o) => o.id === 'ORD-legacy')).toBe(true),
+    );
+    await waitFor(() =>
+      expect(tablesDemoGuardadas()[UUID]?.some((t) => t.id === 77)).toBe(true),
+    );
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
 
-    // Nueva referencia con el mismo contenido: el efecto vuelve a correr y
-    // debe ser idempotente (ni duplica ni pierde la cuenta ni la caja).
+    // Nueva referencia con el mismo contenido: idempotente (ni duplica ni pierde).
+    const ordenesAntes = ordersDemoGuardadas()[UUID]?.length;
+    const mesasAntes = tablesDemoGuardadas()[UUID]?.length;
     tenant.realBranches = [{ ...rama }];
     rerender(shell());
     await waitFor(() => {
@@ -451,5 +502,9 @@ describe('remapeo slug→UUID de cuentas (F6c1)', () => {
       expect(cajaGuardada().shifts).toHaveLength(1);
       expect(cajaGuardada().movementsByBranch?.[UUID]).toHaveLength(1);
     });
+    expect(ordersDemoGuardadas()[UUID]).toHaveLength(ordenesAntes ?? 0);
+    expect(ordersDemoGuardadas()[SLUG]).toBeUndefined();
+    expect(tablesDemoGuardadas()[UUID]).toHaveLength(mesasAntes ?? 0);
+    expect(tablesDemoGuardadas()[SLUG]).toBeUndefined();
   });
 });

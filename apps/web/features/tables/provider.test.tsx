@@ -10,7 +10,7 @@ import { TablesProvider, useTables } from './provider';
 import { initialScopes } from '@/lib/tenancy';
 
 function Probe() {
-  const { tablesByBranch, setTablesForBranches, patchStatus, ensureDemoTables, resetTables } =
+  const { tablesByBranch, setTablesForBranches, patchStatus, ensureDemoTables, remapBranches, resetTables } =
     useTables();
   const mesa = (tablesByBranch.miraflores ?? [])[0];
   return (
@@ -36,6 +36,9 @@ function Probe() {
       </button>
       <button type="button" onClick={resetTables}>
         reiniciar
+      </button>
+      <button type="button" onClick={() => remapBranches({ miraflores: 'uuid-miraflores' })}>
+        remapear mesas
       </button>
     </div>
   );
@@ -91,5 +94,29 @@ describe('TablesProvider', () => {
         String(initialScopes.miraflores.tables.length),
       ),
     );
+  });
+
+  it('remapea las claves slug→UUID sin duplicar ni perder mesas', async () => {
+    render(
+      <TablesProvider>
+        <Probe />
+      </TablesProvider>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('miraflores').textContent).toBe(
+        String(initialScopes.miraflores.tables.length),
+      ),
+    );
+    const antes = JSON.parse(localStorage.getItem('fogoneria:tables-demo:v1:anon') ?? '{}');
+    const total = antes.miraflores.length;
+
+    act(() => screen.getByText('remapear mesas').click());
+    const guardado = JSON.parse(localStorage.getItem('fogoneria:tables-demo:v1:anon') ?? '{}');
+    expect(guardado['uuid-miraflores']).toHaveLength(total);
+    expect(guardado.miraflores).toBeUndefined();
+
+    act(() => screen.getByText('remapear mesas').click());
+    const otraVez = JSON.parse(localStorage.getItem('fogoneria:tables-demo:v1:anon') ?? '{}');
+    expect(otraVez['uuid-miraflores']).toHaveLength(total);
   });
 });

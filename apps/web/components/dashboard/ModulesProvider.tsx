@@ -285,10 +285,17 @@ export function ModulesProvider({
     setOrdersForBranches,
     setBranchOrders,
     ensureDemoOrders,
+    remapBranches: remapOrdersBranches,
     resetOrdersDemo,
   } = useOrdersDemo();
-  const { tablesByBranch, setTablesForBranches, patchStatus, ensureDemoTables, resetTables } =
-    useTables();
+  const {
+    tablesByBranch,
+    setTablesForBranches,
+    patchStatus,
+    ensureDemoTables,
+    remapBranches: remapTablesBranches,
+    resetTables,
+  } = useTables();
   const {
     reservations: demoReservations,
     setReservations: setDemoReservations,
@@ -500,6 +507,35 @@ export function ModulesProvider({
     hasSession,
     realBranches,
     remapCashBranches,
+    tenantError,
+    tenantLoading,
+  ]);
+
+  /** Remapeo slug→UUID de las claves de comandas y mesas demo (F6c3/H2). */
+  useEffect(() => {
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    remapOrdersBranches(SEED_SLUG_BRANCH_IDS);
+  }, [
+    empresaId,
+    hasSession,
+    ordersByBranch,
+    realBranches,
+    remapOrdersBranches,
+    tenantError,
+    tenantLoading,
+  ]);
+
+  useEffect(() => {
+    if (!hasSession || tenantLoading || tenantError || !empresaId) return;
+    if (realBranches.length === 0) return;
+    remapTablesBranches(SEED_SLUG_BRANCH_IDS);
+  }, [
+    empresaId,
+    hasSession,
+    realBranches,
+    remapTablesBranches,
+    tablesByBranch,
     tenantError,
     tenantLoading,
   ]);
@@ -841,6 +877,7 @@ export function ModulesProvider({
 
   const resetDemoData = useCallback(() => {
     resetErpState(tenantKey);
+    sunatEnviados.current.clear();
     resetCustomers();
     resetExpenses();
     resetInventory();
@@ -1173,19 +1210,25 @@ export function ModulesProvider({
    * resuelve lo que sigue siendo de `ModulesProvider`: liberar mesa y cerrar
    * las comandas de la API después del commit.
    */
+  /** Evita reenviar el mismo CPE si el post-commit se reintenta (M2). */
+  const sunatEnviados = useRef(new Set<string>());
   const { checkoutAccount } = useCheckout({
     onCommitted: (receipt, account) => {
       if (account.tableId) {
         patchStatus(account.branchId, account.tableId, "libre");
       }
-      enviarSunat(receipt);
-      // M2: el cierre de comandas es post-commit; si la API falla se informa y
-      // la venta no se revierte (la comanda se cierra al reintentar/entregar).
-      void closeAccountOrders(account, "PAGADA").catch((error: unknown) => {
-        setOrdersError(
-          error instanceof ApiError ? error.message : "No se pudieron cerrar las comandas.",
-        );
-      });
+      if (!sunatEnviados.current.has(receipt.id)) {
+        sunatEnviados.current.add(receipt.id);
+        enviarSunat(receipt);
+      }
+      // M2: el cierre de comandas es post-commit y reintentable; si la API
+      // agota los reintentos se informa y la venta no se revierte.
+      return closeAccountOrders(account, "PAGADA");
+    },
+    onPostCommitFailed: (_receipt, _account, error) => {
+      setOrdersError(
+        error instanceof ApiError ? error.message : "No se pudieron cerrar las comandas.",
+      );
     },
   });
 

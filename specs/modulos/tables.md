@@ -63,7 +63,7 @@ Reglas:
 
 ## 7. Deuda conocida
 
-- F6c3: `TablesProvider`/`useTables` (`features/tables/provider.tsx`) es dueño de las mesas demo por sucursal (`fogoneria:tables-demo:v1`) y del parche de estado (`patchStatus`). Con sesión la API sigue mandando (`liveTables`).
+- F6c3: `TablesProvider`/`useTables` (`features/tables/provider.tsx`) es dueño de las mesas demo por sucursal (`fogoneria:tables-demo:v1`) y del parche de estado (`patchStatus`). Con sesión la API sigue mandando (`liveTables`). Las claves se remapean slug→UUID con `remapBranches` (fusión por `id`).
 
 - Fase 3 de paridad (2026-11-21): `tables` es feature propia y contrato `tables.ts`; la vista compartida del salón sigue en `components/dashboard/salon` hasta el split fino de UI.
 - La UI de bloqueo está limitada a `sucursal` (`canChangeTableStatus`); el dueño solo lee.

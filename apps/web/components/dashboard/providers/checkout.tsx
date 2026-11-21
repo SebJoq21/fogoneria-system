@@ -28,12 +28,21 @@ import { runCheckout, type CheckoutInput, type CheckoutWrites } from '@/lib/chec
 const MAX_POST_COMMIT_ATTEMPTS = 3;
 
 type UseCheckoutOptions = {
-  onCommitted?: (receipt: Receipt, account: TableAccount) => void;
+  /** Post-commit (mesa, SUNAT, comandas). Puede devolver una promesa. */
+  onCommitted?: (receipt: Receipt, account: TableAccount) => void | Promise<void>;
+  /** Se llama cuando se agotan los reintentos del post-commit. */
+  onPostCommitFailed?: (receipt: Receipt, account: TableAccount, error: unknown) => void;
+  /** Base del backoff (ms); default 300. */
+  retryDelayMs?: number;
 };
 
 type PostCommitTask = { receipt: Receipt; account: TableAccount; attempts: number };
 
-export function useCheckout({ onCommitted }: UseCheckoutOptions = {}) {
+export function useCheckout({
+  onCommitted,
+  onPostCommitFailed,
+  retryDelayMs = 300,
+}: UseCheckoutOptions = {}) {
   const { accounts, setAccounts } = useAccounts();
   const cash = useCash();
   const receiptsCtx = useReceipts();
@@ -51,12 +60,19 @@ export function useCheckout({ onCommitted }: UseCheckoutOptions = {}) {
   const checkingOut = useRef(new Set<string>());
   const pendingPostCommit = useRef<PostCommitTask[]>([]);
   const onCommittedRef = useRef(onCommitted);
+  const onPostCommitFailedRef = useRef(onPostCommitFailed);
+  const retryDelayRef = useRef(retryDelayMs);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flushing = useRef(false);
+  const flushRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     accountsRef.current = accounts;
     receiptsRef.current = receiptsCtx.receipts;
     couponsRef.current = coupons;
     onCommittedRef.current = onCommitted;
+    onPostCommitFailedRef.current = onPostCommitFailed;
+    retryDelayRef.current = retryDelayMs;
     // Reconstruye el mapa desde el estado: limpia cuentas viejas al resetear
     // o cambiar de empresa (L2) sin perder el alta síncrona del cobro.
     const paid = new Map<string, Receipt>();
@@ -66,27 +82,55 @@ export function useCheckout({ onCommitted }: UseCheckoutOptions = {}) {
       }
     }
     paidByAccount.current = paid;
-  }, [accounts, coupons, onCommitted, receiptsCtx.receipts]);
+  }, [accounts, coupons, onCommitted, onPostCommitFailed, receiptsCtx.receipts, retryDelayMs]);
 
-  /** Procesa (y reintenta) los post-efectos fuera de la compensación. */
+  useEffect(
+    () => () => {
+      if (retryTimer.current) clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    },
+    [],
+  );
+
+  /**
+   * Procesa (y reintenta) los post-efectos fuera de la compensación. Acepta
+   * handlers síncronos o promesas: un rechazo se reintenta con backoff
+   * exponencial hasta `MAX_POST_COMMIT_ATTEMPTS` y luego se avisa.
+   */
   const flushPostCommit = useCallback(() => {
+    if (flushing.current) return;
     const queue = pendingPostCommit.current;
     if (queue.length === 0) return;
+    flushing.current = true;
     pendingPostCommit.current = [];
-    for (const task of queue) {
-      try {
-        onCommittedRef.current?.(task.receipt, task.account);
-      } catch {
-        if (task.attempts + 1 < MAX_POST_COMMIT_ATTEMPTS) {
-          pendingPostCommit.current.push({ ...task, attempts: task.attempts + 1 });
+    void (async () => {
+      for (const task of queue) {
+        try {
+          await onCommittedRef.current?.(task.receipt, task.account);
+        } catch (error) {
+          const attempts = task.attempts + 1;
+          if (attempts < MAX_POST_COMMIT_ATTEMPTS) {
+            pendingPostCommit.current.push({ ...task, attempts });
+          } else {
+            onPostCommitFailedRef.current?.(task.receipt, task.account, error);
+          }
         }
       }
-    }
+      flushing.current = false;
+      const pendientes = pendingPostCommit.current;
+      if (pendientes.length === 0 || retryTimer.current) return;
+      const attempts = Math.min(...pendientes.map((task) => task.attempts));
+      const delay = retryDelayRef.current * 2 ** Math.max(0, attempts - 1);
+      retryTimer.current = setTimeout(() => {
+        retryTimer.current = null;
+        flushRef.current();
+      }, delay);
+    })();
   }, []);
 
   useEffect(() => {
-    flushPostCommit();
-  });
+    flushRef.current = flushPostCommit;
+  }, [flushPostCommit]);
 
   const checkoutAccount = useCallback(
     (input: CheckoutInput): Receipt | null => {

@@ -13,6 +13,7 @@ import type { Table } from '@/lib/erp';
 import { applyBranchWrite } from '@/lib/branch-scope';
 import { loadErpState } from '@/lib/persistence';
 import {
+  mergeById,
   migrateLegacyScopes,
   useModuleStore,
   type LegacyErpState,
@@ -45,6 +46,8 @@ type TablesContextValue = {
   /** Cambia el estado de una mesa en la sucursal (y sus alias slug/UUID). */
   patchStatus: (branchId: string, tableId: number, status: Table['status']) => void;
   ensureDemoTables: (branchIds: string[]) => void;
+  /** Remapea claves slug→UUID (idempotente; fusiona por id). */
+  remapBranches: (map: Record<string, string>) => void;
   resetTables: () => void;
 };
 
@@ -103,6 +106,19 @@ export function TablesProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const remapBranches: TablesContextValue['remapBranches'] = (map) => {
+    setValue((prev) => {
+      let changed = false;
+      const next: Record<string, Table[]> = {};
+      for (const [branchId, list] of Object.entries(prev)) {
+        const target = map[branchId] ?? branchId;
+        if (target !== branchId) changed = true;
+        next[target] = mergeById(next[target] ?? null, list);
+      }
+      return changed ? next : prev;
+    });
+  };
+
   return (
     <TablesContext.Provider
       value={{
@@ -110,6 +126,7 @@ export function TablesProvider({ children }: { children: ReactNode }) {
         setTablesForBranches,
         patchStatus,
         ensureDemoTables,
+        remapBranches,
         resetTables: reset,
       }}
     >

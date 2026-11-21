@@ -66,7 +66,7 @@ Reglas:
 
 ## 7. Deuda conocida
 
-- F6c3: `AccountsProvider` compone dos stores: cuentas (`fogoneria:orders:v1`) y comandas demo por sucursal (`fogoneria:orders-demo:v1`, `useOrdersDemo`). El cobro vive en `useCheckout` (idempotente, con compensación y post-commit reintentable).
+- F6c3: `AccountsProvider` compone dos stores: cuentas (`fogoneria:orders:v1`) y comandas demo por sucursal (`fogoneria:orders-demo:v1`, `useOrdersDemo`). El cobro vive en `useCheckout` (idempotente, con compensación y post-commit reintentable). Las claves de comandas se remapean slug→UUID con `remapBranches` (fusión por `id`).
 
 - F6c1: `AccountsProvider`/`useAccounts` (`features/orders/provider.tsx`) es dueño de las cuentas de mesa demo; persiste `fogoneria:orders:v1:<tenant>` y sincroniza por `BroadcastChannel`. Las acciones (abrir/enviar/anular/cobrar) siguen en `ModulesProvider` hasta que `scopes` tenga dueño (ver `docs/plan-f6c-pos.md`).
 

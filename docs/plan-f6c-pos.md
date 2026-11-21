@@ -84,9 +84,9 @@ El piloto demuestra lo importante: persistencia, sync, migración/purga y que el
 ### 3.5 `CheckoutCoordinator` — capa compartida, **no** feature (F6c2, implementado)
 
 - `apps/web/lib/checkout.ts`: `runCheckout(input, context, writes, hooks)` puro, sin React.
-- `apps/web/components/dashboard/providers/checkout.tsx`: `useCheckout({ onCommitted })` arma los puertos con `useAccounts`/`useCash`/`useReceipts`/`usePromotions`/`useCrm` y expone `checkoutAccount`. `ModulesProvider` lo reexporta como `useModules().checkoutAccount`.
+- `apps/web/components/dashboard/providers/checkout.tsx`: `useCheckout({ onCommitted, onPostCommitFailed, retryDelayMs })` arma los puertos con `useAccounts`/`useCash`/`useReceipts`/`usePromotions`/`useCrm` y expone `checkoutAccount`. `ModulesProvider` lo reexporta como `useModules().checkoutAccount`.
 
-**Orden aplicado:** validar → cuenta → caja → comprobante → cupón → puntos (CRM). La liberación de mesa, `enviarSunat` y `closeAccountOrders` van en `onCommitted` (post-commit, no se compensan).
+**Orden aplicado:** validar → cuenta → caja → comprobante → cupón → puntos (CRM). La liberación de mesa, `enviarSunat` y `closeAccountOrders` van en `onCommitted` (post-commit, no se compensan): el coordinador acepta handlers síncronos o promesas, reintenta hasta 3 veces con backoff exponencial y avisa con `onPostCommitFailed` al agotar. El post-commit es idempotente en lo que importa: `patchStatus` se repite sin efecto y `enviarSunat` se ejecuta una sola vez por comprobante (guard en `ModulesProvider`).
 
 **Idempotencia:**
 
@@ -104,6 +104,7 @@ El piloto demuestra lo importante: persistencia, sync, migración/purga y que el
 - `tickets` → `components/dashboard/providers/tickets.tsx` (capa compartida, `fogoneria:tickets:v1:<tenant>`): no hay módulo backend de soporte. Se monta en `app/layout.tsx`.
 - El loader de `ModulesProvider` migra los cuatro slices, borra `fogoneria:erp:v2:<tenant>` y deja de escribir estado propio. `ErpState` queda solo como tipo legacy de lectura.
 - El provider de órdenes compone dos stores (cuentas + comandas demo) porque `module.ts` declara un único provider por feature.
+- **Remapeo slug→UUID de scopes (H2):** `useOrdersDemo.remapBranches` y `TablesProvider.remapBranches` mueven las **claves** (no hay `branchId` interno en `Order`/`Table`) y fusionan por `id` si la clave destino ya existe. `ModulesProvider` los invoca en efectos que dependen de los datos y de `realBranches`, igual que cuentas y caja: funcionan si las sucursales están al montar o llegan después, y son idempotentes.
 
 ## 4. Migración y purga (contrato común)
 
@@ -130,10 +131,10 @@ Reglas:
 ## 5. Tests
 
 - **Unit (puros):** `lib/checkout.test.ts` (9): orden de escrituras, comprobante/IGV, propina, cupón, puntos, idempotencia, cuenta no abierta, compensación en cada fallo (incluido el reverso de puntos) y post-efecto que no revierte.
-- **Hook del coordinador:** `components/dashboard/providers/checkout.test.tsx` (4): doble clic (M1), reintento del post-commit sin revertir (M2) y limpieza de la idempotencia al resetear/cambiar de empresa (L2).
-- **Providers:** `features/{orders,tables,reservations,cash,receipts,promotions}/provider.test.tsx` y `components/dashboard/providers/tickets.test.tsx`: hidratación demo, persistencia por tenant, sync y cambio de tenant, turnos/arqueo, SUNAT, cupones y escritura por sucursal.
+- **Hook del coordinador:** `components/dashboard/providers/checkout.test.tsx` (6): doble clic (M1), reintento del post-commit síncrono, rechazo asíncrono con backoff y aviso al agotar (M2), y limpieza de la idempotencia al resetear/cambiar de empresa (L2).
+- **Providers:** `features/{orders,tables,reservations,cash,receipts,promotions}/provider.test.tsx` y `components/dashboard/providers/tickets.test.tsx`: hidratación demo, persistencia por tenant, sync y cambio de tenant, remapeo slug→UUID de las claves de comandas/mesas, turnos/arqueo, SUNAT, cupones y escritura por sucursal.
 - **Helpers:** `lib/branch-scope.test.ts` (vista activa/agregada) y `lib/module-store.test.ts` (migración de caja, comprobantes, promociones, scopes, reservas y tickets).
-- **Integración:** `module-migration.integration.test.tsx` siembra el `ErpState` legacy completo, verifica todas las claves nuevas, el borrado del `ErpState` y que remontar no duplica; cubre el remapeo slug→UUID de cuentas y caja con sucursales al montar y después.
+- **Integración:** `module-migration.integration.test.tsx` siembra el `ErpState` legacy completo, verifica todas las claves nuevas, el borrado del `ErpState` y que remontar no duplica; cubre el remapeo slug→UUID de cuentas, caja, comandas y mesas con sucursales al montar y después (H2/L1).
 - **Regresión:** `ModulesProvider.actions.test.tsx` (11) sigue cubriendo abrir → items → enviar → cobrar con cupón → anular → caja → SUNAT montando todos los providers reales.
 
 

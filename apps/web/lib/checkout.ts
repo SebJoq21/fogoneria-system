@@ -137,10 +137,10 @@ export function runCheckout(
 
   const points = input.customerId ? Math.floor(total) : 0;
 
-  // Aplicación con compensación en orden inverso. El orden es:
-  // cuenta → caja → comprobante → puntos (CRM) → cupón. Los puntos van antes
-  // del cupón para que un fallo al consumirlo revierta también el CRM; el cupón
-  // cierra la transacción para no dejar usos consumidos.
+  // Aplicación con compensación en orden inverso. El orden es el del contrato:
+  // cuenta → caja → comprobante → cupón → puntos (CRM). Los puntos van al final
+  // y registran su reverso antes de aplicarse, para compensar un fallo parcial
+  // del CRM sin deshacer el cobro ya persistido.
   const undo: Array<() => void> = [];
   try {
     writes.markAccountPaid(account.id, {
@@ -161,14 +161,14 @@ export function runCheckout(
     writes.addReceipt(receipt);
     undo.push(() => writes.removeReceipt(receipt.id));
 
-    if (input.customerId) {
-      writes.addPoints(input.customerId, points);
-      undo.push(() => writes.restorePoints(input.customerId!, points));
-    }
-
     if (coupon) {
       writes.consumeCoupon(coupon.code);
       undo.push(() => writes.restoreCoupon(coupon.code));
+    }
+
+    if (input.customerId) {
+      undo.push(() => writes.restorePoints(input.customerId!, points));
+      writes.addPoints(input.customerId, points);
     }
   } catch (error) {
     for (const step of undo.reverse()) {

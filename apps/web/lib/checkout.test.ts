@@ -91,7 +91,7 @@ function escrituras(overrides: Partial<CheckoutWrites> = {}): Escrituras {
 }
 
 describe('runCheckout', () => {
-  it('cobra en orden cuenta → caja → comprobante → puntos → cupón', () => {
+  it('cobra en orden cuenta → caja → comprobante → cupón → puntos', () => {
     const writes = escrituras();
     const afterCommit = vi.fn();
     const recibo = runCheckout(input, contexto(), writes, { afterCommit });
@@ -100,8 +100,8 @@ describe('runCheckout', () => {
       'markAccountPaid',
       'addCashMovements',
       'addReceipt',
-      'addPoints',
       'consumeCoupon',
+      'addPoints',
     ]);
     expect(afterCommit).toHaveBeenCalledTimes(1);
     expect(recibo).toMatchObject({
@@ -180,29 +180,31 @@ describe('runCheckout', () => {
     expect(writes.consumeCoupon).not.toHaveBeenCalled();
   });
 
-  it('compensa puntos, comprobante, caja y cuenta si falla el cupón', () => {
+  it('compensa comprobante, caja y cuenta si falla el cupón', () => {
     const writes = escrituras({
       consumeCoupon: vi.fn(() => {
         throw new Error('cupón caído');
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('cupón caído');
-    expect(writes.restorePoints).toHaveBeenCalledWith(7, 44);
+    expect(writes.addPoints).not.toHaveBeenCalled();
+    expect(writes.restorePoints).not.toHaveBeenCalled();
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);
     expect(writes.restoreAccount).toHaveBeenCalled();
     expect(writes.restoreCoupon).not.toHaveBeenCalled();
   });
 
-  it('compensa comprobante, caja y cuenta si falla CRM (sin cupón consumido)', () => {
+  it('compensa puntos, cupón, comprobante, caja y cuenta si falla CRM', () => {
     const writes = escrituras({
       addPoints: vi.fn(() => {
         throw new Error('CRM caído');
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('CRM caído');
-    expect(writes.consumeCoupon).not.toHaveBeenCalled();
-    expect(writes.restoreCoupon).not.toHaveBeenCalled();
+    expect(writes.consumeCoupon).toHaveBeenCalledWith('C10');
+    expect(writes.restorePoints).toHaveBeenCalledWith(7, 44);
+    expect(writes.restoreCoupon).toHaveBeenCalledWith('C10');
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);
     expect(writes.restoreAccount).toHaveBeenCalled();

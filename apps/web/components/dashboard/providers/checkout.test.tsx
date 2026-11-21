@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render } from '@testing-library/react';
+import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TableAccount } from '@/lib/domain';
@@ -22,6 +22,7 @@ import { PromotionsProvider } from '@/features/promotions/provider';
 import { ReceiptsProvider, useReceipts } from '@/features/receipts/provider';
 
 const onCommitted = vi.fn();
+const onPostCommitFailed = vi.fn();
 
 type Harness = {
   checkout?: (input: CheckoutInput) => Receipt | null;
@@ -35,7 +36,7 @@ type Harness = {
 const harness: Harness = {};
 
 function Probe() {
-  const checkout = useCheckout({ onCommitted });
+  const checkout = useCheckout({ onCommitted, onPostCommitFailed, retryDelayMs: 1 });
   const { setAccounts, resetAccounts } = useAccounts();
   const receiptsCtx = useReceipts();
   const cash = useCash();
@@ -115,6 +116,7 @@ beforeEach(() => {
   localStorage.clear();
   sesion.currentUser = null;
   onCommitted.mockReset();
+  onPostCommitFailed.mockReset();
 });
 afterEach(cleanup);
 
@@ -143,7 +145,7 @@ describe('useCheckout', () => {
     expect(onCommitted).toHaveBeenCalledTimes(1);
   });
 
-  it('reintenta el post-commit sin revertir la venta (M2)', async () => {
+  it('reintenta el post-commit síncrono sin revertir la venta (M2)', async () => {
     const { rerender } = render(shell());
     await act(async () => harness.setAccounts?.([cuenta()]));
     await act(async () => rerender(shell()));
@@ -155,12 +157,43 @@ describe('useCheckout', () => {
     act(() => {
       harness.checkout?.(input());
     });
-    // El reintento corre en el siguiente render (efecto), dentro del mismo act.
-    expect(onCommitted).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(onCommitted).toHaveBeenCalledTimes(2));
     expect(harness.receipts).toHaveLength(recibosBase + 1);
+    expect(onPostCommitFailed).not.toHaveBeenCalled();
+  });
 
+  it('reintenta el post-commit asíncrono con backoff (M2)', async () => {
+    const { rerender } = render(shell());
+    await act(async () => harness.setAccounts?.([cuenta()]));
     await act(async () => rerender(shell()));
-    expect(onCommitted).toHaveBeenCalledTimes(2);
+    const recibosBase = harness.receipts?.length ?? 0;
+
+    onCommitted
+      .mockRejectedValueOnce(new Error('API caída 1'))
+      .mockRejectedValueOnce(new Error('API caída 2'))
+      .mockResolvedValue(undefined);
+    act(() => {
+      harness.checkout?.(input());
+    });
+
+    await waitFor(() => expect(onCommitted).toHaveBeenCalledTimes(3), { timeout: 2000 });
+    expect(onPostCommitFailed).not.toHaveBeenCalled();
+    expect(harness.receipts).toHaveLength(recibosBase + 1);
+  });
+
+  it('avisa al agotar los reintentos sin revertir la venta (M2)', async () => {
+    const { rerender } = render(shell());
+    await act(async () => harness.setAccounts?.([cuenta()]));
+    await act(async () => rerender(shell()));
+    const recibosBase = harness.receipts?.length ?? 0;
+
+    onCommitted.mockRejectedValue(new Error('API caída'));
+    act(() => {
+      harness.checkout?.(input());
+    });
+
+    await waitFor(() => expect(onPostCommitFailed).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(onCommitted).toHaveBeenCalledTimes(3);
     expect(harness.receipts).toHaveLength(recibosBase + 1);
   });
 
