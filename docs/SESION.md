@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F3 + hardening
+
+- **Hardening:** `check-pr-scope` con IDs canónicos y alias (catalog/pricing, tables/reservations, platform); `check-specs` mapea las 14 features; `gen:modules --check` corre en CI y normaliza EOL (LF/CRLF); `registry.spec` verifica que `AppModule` importa `MODULE_REGISTRY`; README 9/20 corregido.
+- **F3a:** `features/catalog` (Products/Categories/Modifiers + `CartaVirtualView`) y `features/pricing` (PriceListsView); contratos `catalog`+`pricing` con alias `catalogo`; `/app/productos/*` intactas.
+- **F3b:** `features/tables` (MesasPage, SalonTablesPage, SalonTablesView) y `features/reservations` (ReservasPage, BookingsModule, BookingsWorkspace); contratos `tables`/`reservations` con alias `mesas`/`reservas`. La UI compartida mapa/agenda queda en `components/dashboard/salon` hasta el split fino.
+- **Estado:** manifiestos 20/20, backend 20/20, frontend **14/20**, contratos **13/20** (+10 alias), specs 20/20 canónicas.
+- Verificado: api **680** unit + **112** e2e; web **866**; contracts **122**; lint, check-types, builds, `check:boundaries` 0 y `check:specs` OK.
+
 ## 2026-11-21 — Paridad de módulos: Fases 0–2
 
 - **Fase 0:** `modules/<id>/module.json` en los 20 módulos; `scripts/gen-modules.mjs` (`pnpm gen:modules`) genera `apps/api/src/modules/registry.ts` (consumido por `app.module.ts`), `apps/web/features/registry.ts` y `apps/web/lib/modules-nav.ts` (el shell aún usa su lista). `check:modules` valida manifiestos y reporta **backend 20/20, frontend 12/20, contratos 9/20 (+7 alias), specs 20/20**; step advisory en `quality`.

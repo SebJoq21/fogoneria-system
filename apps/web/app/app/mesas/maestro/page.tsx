@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { SalonTablesPage } from "@/features/salon";
+import { SalonTablesPage } from "@/features/tables";
 import type { AppRole } from "@/lib/auth";
 
 export default async function MesasMaestroPage() {

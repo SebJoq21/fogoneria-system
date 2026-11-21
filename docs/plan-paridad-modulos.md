@@ -184,7 +184,7 @@ pnpm check:specs --base origin/development
 
 ## 9. Próximo paso
 
-**Ejecutado (2026-11-21, rama `refactor/paridad-f0-f2`):**
+**Ejecutado (2026-11-21, ramas `refactor/paridad-f0-f2` y `refactor/paridad-f3`):**
 
 - **Fase 0:** `modules/<id>/module.json` en los 20 módulos; `pnpm gen:modules` genera
   el registry de la API (`MODULE_REGISTRY`, consumido por `app.module.ts`), el
@@ -195,7 +195,16 @@ pnpm check:specs --base origin/development
 - **Fase 2 (renombres 1:1):** `orders`, `cash`, `receipts`, `expenses`,
   `inventory`, `promotions` y `staff` en features y contratos, con alias
   deprecados en los subpaths antiguos. Sin splits ni cambios de estado.
+- **Fase 3 (splits de catálogo y salón):** `catalog`+`pricing` y
+  `tables`+`reservations` en features y contratos, alias deprecados de
+  `catalogo`, `mesas` y `reservas`; `CartaVirtualView` y `BookingsWorkspace`
+  movidos a su feature. La UI compartida mapa/agenda queda en
+  `components/dashboard/salon` hasta el split fino. `check:pr-scope` y
+  `check:specs` usan los IDs canónicos; `gen:modules --check` corre en CI con
+  EOL normalizado.
 
-**Siguiente:** Fase 3 (splits `catalog`/`pricing` y `tables`/`reservations`,
-mover `components/erp/*`), después Fase 4 (`plataforma`), Fase 5
-(`audit`/`realtime`), Fase 6 (providers) y Fase 7 (Prisma multi-archivo).
+**Estado:** 20/20 manifiestos y backend, **14/20** frontend, **13/20** contratos
+canónicos (+10 alias), 20/20 specs canónicas.
+
+**Siguiente:** Fase 4 (`plataforma` → auth/tenant/onboarding/saas/billing),
+Fase 5 (`audit`/`realtime`), Fase 6 (providers) y Fase 7 (Prisma multi-archivo).

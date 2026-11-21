@@ -6,18 +6,20 @@
  * extensión de este archivo no resuelven en runtime. Usa siempre el subpath.
  */
 export * from './bi';
+export * from './catalog';
+export * from './pricing';
 export * from './cash';
-export * from './catalogo';
 export * from './receipts';
 export * from './crm';
 export * from './expenses';
 export * from './inventory';
-export * from './mesas';
+export * from './tables';
 export * from './orders';
 export * from './plataforma';
 export * from './promotions';
-export * from './reservas';
+export * from './reservations';
 export * from './staff';
+export * from './tables';
 export * from './tiempo-real';
 
 /**

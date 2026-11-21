@@ -19,7 +19,7 @@
 | AYCDS-60 | API catálogo + PriceList | catalog, pricing | #2 | Listo | `catalog.service.spec.ts`, `pricing.service.spec.ts` |
 | AYCDS-61 | API SaaS + ciclo de suscripción | saas, billing | #2 | Listo | `saas.service.spec.ts`, `billing.service.spec.ts` |
 | AYCDS-62 | Índices, RLS, soft-delete e inmutabilidad | datos | #6 | Listo | `migrations/2026102012*`, `test/db/**`, [rls-modelo](../docs/rls-modelo.md) |
-| AYCDS-63 | UI catálogo contra la API | catalogo | #3 | Listo | `features/catalogo/**` |
+| AYCDS-63 | UI catálogo contra la API | catalog | #3 | Listo | `features/catalog/**` |
 | AYCDS-65 | UI consola SaaS | plataforma | #3, #7 | Listo | `features/plataforma/SaasPage.tsx` |
 | AYCDS-66 | QA aislamiento y RBAC + acta 1 | QA | #7, #8 | **Parcial** (acta sin firmas) | [acta-qa-aycds-66](../docs/acta-qa-aycds-66.md) |
 
@@ -32,7 +32,7 @@
 | AYCDS-20 | Órdenes POS e inmutabilidad | orders, pricing | #12 | Listo | `orders.service.spec.ts`, `orders-pos.db-spec.ts` |
 | AYCDS-22 | Alta de comandas en concurrencia | orders, `common/sequences` | #16 | Listo | [explain-orders](../docs/explain-orders.md), `sequences-concurrency.db-spec.ts` |
 | AYCDS-25 | Panel del mesero contra la API | orders (mozo) | #17 (`b56865b`) | Listo | `components/erp/MozoView.tsx`, `lib/order-mapping.ts` |
-| AYCDS-26 | Mapa de mesas + agenda de reservas | tables, reservations (salon) | #18 | Listo | `features/salon/**`, `lib/table-mapping.ts` |
+| AYCDS-26 | Mapa de mesas + agenda de reservas | tables, reservations | #18 | Listo | `features/tables/**`, `features/reservations/**`, `lib/table-mapping.ts` |
 | AYCDS-28 | E2E del flujo mesero→cocina→mesa | QA | — | **Pendiente** (0 %) | — |
 
 ## 3. Semanas 11–12 (Sprint KDS, caja y comprobantes)
@@ -79,8 +79,8 @@
 |---|---|---|---|
 | 0 | `@fogoneria/{kernel,sdk,contracts}` + gate de fronteras | #48 | `scripts/check-module-boundaries.mjs`, baseline 24 |
 | 1 | Piloto RRHH | #49, #51 | `features/staff/**`, `staff/index.ts` |
-| 2 | Catálogo + precios | #50, #52 | `features/catalogo/**`, `PRICING_PORT` |
-| 3 · salón | mesas, reservas, KDS | #54, #57 | `features/salon`, `features/orders` |
+| 2 | Catálogo + precios | #50, #52 | `features/catalog/**`, `features/pricing/**`, `PRICING_PORT` |
+| 3 · salón | mesas, reservas, KDS | #54, #57 | `features/tables`, `features/reservations`, `features/orders` |
 | 3 · dinero | receipts, cash, expenses | #56, #59 | `features/{cash,receipts,expenses}` |
 | 3 · operación | inventory, promotions | #58, #61 | `features/{inventory,promotions}` |
 | 3 · personas | crm | #60 | `features/crm` |
@@ -88,7 +88,7 @@
 | 3 · plataforma | auth, tenant, saas, billing, onboarding, audit | #64 | baseline **0** |
 | 4 · etapa 1 | `SessionProvider`, `NotificationsProvider` | #66 | `components/dashboard/providers/{session,notifications}.tsx` |
 | 4 · etapa 2 | `TenantProvider` | #70 | `providers/tenant.tsx`, `lib/tenant-scope.ts` |
-| 4 · etapa 3 | `CatalogoProvider` (catálogo/precios) | #73 | `providers/catalog.tsx`, `features/catalogo/hooks.ts` |
+| 4 · etapa 3 | `CatalogoProvider` (catálogo/precios) | #73 | `providers/catalog.tsx`, `features/catalog/hooks.ts` |
 
 ## 7. Infraestructura y despliegue
 

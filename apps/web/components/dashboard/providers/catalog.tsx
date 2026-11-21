@@ -92,7 +92,7 @@ const Ctx = createContext<CatalogoContextValue | null>(null);
  *
  * Única fuente de verdad de los maestros: la API (`lib/catalog-api.ts`) los
  * hidrata al iniciar sesión y los limpia al salir. `ModulesProvider` reexpone
- * este estado por compatibilidad y `features/catalogo` lo consume directo.
+ * este estado por compatibilidad y `features/catalog` lo consume directo.
  * El catálogo es de la empresa, no de la sucursal, así que solo depende de la
  * sesión; la poda de combos huérfanos vive en `ModulesProvider` (dueño de los
  * combos) y reacciona a `catalogVersion`/`products`.

@@ -13,6 +13,12 @@ describe('registry y nav generados', () => {
     expect(featureModules.filter((module) => module.id === 'crm')).toEqual([crmModule]);
   });
 
+  it('incluye los módulos de la Fase 3', () => {
+    expect(featureModules.map((module) => module.id)).toEqual(
+      expect.arrayContaining(['catalog', 'pricing', 'tables', 'reservations']),
+    );
+  });
+
   it('no repite IDs y deja el resto como pendientes', () => {
     const ids = featureModules.map((module) => module.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -27,6 +33,18 @@ describe('registry y nav generados', () => {
       label: crmModule.label,
       icon: crmModule.icon,
       roles: crmModule.roles,
+    });
+  });
+
+  it('el nav de mesas y reservas sale de su module.ts', () => {
+    const entries = modulesNav.flatMap((group) => group.entries);
+    expect(entries.find((item) => item.href === '/app/mesas')).toMatchObject({
+      label: 'Mesas',
+      icon: 'Armchair',
+    });
+    expect(entries.find((item) => item.href === '/app/modulos/reservas')).toMatchObject({
+      label: 'Reservas',
+      icon: 'CalendarDays',
     });
   });
 });

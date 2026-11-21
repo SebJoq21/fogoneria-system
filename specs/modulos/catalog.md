@@ -1,6 +1,6 @@
 # catalog — especificación
 
-**Estado:** API real · catálogo web con `CatalogoProvider` (Fase 4 etapa 3) · **Última revisión:** 2026-11-19
+**Estado:** API real · catálogo web con `CatalogoProvider` (Fase 4 etapa 3) · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Maestro de carta: categorías, platos, grupos y opciones de modificadores, y su 
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/catalog/` | real |
-| Web | `apps/web/features/catalogo/` (`ProductsView`, `CategoriesView`, `ModifiersView`, `PriceListsView`) | real (lectura/escritura vía provider) |
-| Contrato | `packages/contracts/src/catalogo.ts` | sí (tipos, inputs y validadores; el cliente de lectura vive en la feature) |
+| Web | `apps/web/features/catalog/` (`ProductsView`, `CategoriesView`, `ModifiersView`, `CartaVirtualView`) | real (lectura/escritura vía provider) |
+| Contrato | `packages/contracts/src/catalog.ts` | sí (tipos, inputs y validadores; el cliente de lectura vive en la feature) |
 | Datos | `categorias`, `platos`, `grupos_modificadores`, `opciones_modificadores`, `platos_grupos_modificadores` | `20261019000000_init`, `20261020120200_soft_delete` |
 
 ## 3. API
@@ -49,9 +49,9 @@ Reglas:
 ## 5. UI y rutas
 
 - `/app/productos/platos` (+ `/nuevo`) → `ProductsView`.
-- `/app/productos/categorias` → `CategoriesView`; `/modificadores` → `ModifiersView`; `/precios` → `PriceListsView`.
-- `features/catalogo/api.ts` lee por SDK y pagina platos. El **estado y las mutaciones** viven en `CatalogoProvider`/`useCatalogoState` (`components/dashboard/providers/catalog.tsx`), que usa `lib/catalog-api.ts` como cliente de escritura; `ModulesProvider` solo los reexpone por compatibilidad. Layout: `Theme > Session > Notifications > Tenant > Catalogo > Modules`.
-- La carta virtual del demo vive en `app/demo/[id]` (`CartaVirtualView` en `components/erp/catalog`).
+- `/app/productos/categorias` → `CategoriesView`; `/modificadores` → `ModifiersView`; `/precios` → `PriceListsView` de `features/pricing`.
+- `features/catalog/api.ts` lee por SDK y pagina platos. El **estado y las mutaciones** viven en `CatalogoProvider`/`useCatalogoState` (`components/dashboard/providers/catalog.tsx`), que usa `lib/catalog-api.ts` como cliente de escritura; `ModulesProvider` solo los reexpone por compatibilidad. Layout: `Theme > Session > Notifications > Tenant > Catalogo > Modules`.
+- La carta virtual vive en `features/catalog/CartaVirtualView` (y se reutiliza en `app/demo/[id]`).
 
 ## 6. Pruebas
 
@@ -68,12 +68,12 @@ Reglas:
 | Suite | Archivo |
 |---|---|
 | Unit | `src/modules/catalog/catalog.service.spec.ts` (incluye sync de modificadores) |
-| Web | `features/catalogo/catalogo.test.ts` |
+| Web | `features/catalog/catalog.test.ts`, `features/catalog/api.test.ts`, `features/catalog/hooks.test.tsx` |
 
 ## 7. Deuda conocida
 
-- El **cliente de escritura** sigue en `lib/catalog-api.ts`; moverlo a `features/catalogo/api.ts` para que la feature sea dueña de todo el acceso.
-- `CartaVirtualView` sigue en `components/erp/catalog`.
+- Fase 3 de paridad (2026-11-21): `catalog` y `pricing` son features separadas; el contrato antiguo `catalogo.ts` queda como alias `@deprecated`.
+- El **cliente de escritura** sigue en `lib/catalog-api.ts`; moverlo a `features/catalog/api.ts` para que la feature sea dueña de todo el acceso.
 - La poda de combos corre en `ModulesProvider` sobre `catalogVersion` (un render después del snapshot); si se mueve a promociones, ajustar el contrato.
 
 ## 8. Trazabilidad
@@ -84,6 +84,5 @@ Reglas:
 
 ## 9. Próximos pasos
 
-1. Mover el cliente de escritura de `lib/catalog-api.ts` a `features/catalogo/api.ts`.
-2. Retirar `CartaVirtualView` de `components/erp/catalog` cuando la carta virtual tenga feature.
-3. Evaluar mover la poda de combos a promociones.
+1. Mover el cliente de escritura de `lib/catalog-api.ts` a `features/catalog/api.ts`.
+2. Evaluar mover la poda de combos a promociones.

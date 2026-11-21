@@ -1,5 +1,7 @@
 # Decisiones vigentes
 
+- [2026-11-21] **Paridad F3: splits catálogo/precios y mesas/reservas.** `features/catalog`/`features/pricing` y `features/tables`/`features/reservations` son 1:1 con sus módulos y contratos (`catalog`/`pricing`, `tables`/`reservations`); los nombres antiguos (`catalogo`, `mesas`, `reservas`) quedan como alias `@deprecated`. La UI compartida mapa/agenda vive transitoriamente en `components/dashboard/salon` (capa compartida, no feature) hasta el split fino; `CartaVirtualView` y `BookingsWorkspace` ya viven en su feature. `check:pr-scope`/`check:specs` usan IDs canónicos y `gen:modules --check` corre en CI con EOL normalizado.
+
 - [2026-11-21] **Paridad de módulos F0–F2: manifiesto + generadores + renombres con alias.** `modules/<id>/module.json` es la pieza del dueño; `pnpm gen:modules` genera el registry de la API (consumido por `app.module.ts`), el registry de features y `modules-nav.ts`. Los IDs canónicos mandan en las tres capas y los subpaths antiguos de contratos quedan como alias `@deprecated` durante una release. `check:modules` reporta el avance y será gate (`--strict`) en la Fase 8; los splits de `catalogo`/`salon`/`plataforma` y los providers por módulo siguen pendientes.
 
 - [2026-09-12] Fase 3 backend = **Postgres + Prisma**. No introducir otro ORM sin revertir esto. `docker-compose.yml` local levanta PostgreSQL 16 en `localhost:5433` con `fogoneria_shadow` (tarea 58 parcial; faltan Dockerfiles y CI).

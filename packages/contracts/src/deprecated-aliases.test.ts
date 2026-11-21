@@ -2,18 +2,25 @@ import { describe, expect, it } from 'vitest';
 
 import * as cash from './cash';
 import * as cashLegacy from './caja';
+import * as catalog from './catalog';
+import * as catalogLegacy from './catalogo';
 import * as expenses from './expenses';
 import * as expensesLegacy from './gastos';
 import * as inventory from './inventory';
 import * as inventoryLegacy from './inventario';
 import * as orders from './orders';
 import * as ordersLegacy from './ordenes';
+import * as pricing from './pricing';
 import * as promotions from './promotions';
 import * as promotionsLegacy from './promociones';
 import * as receipts from './receipts';
 import * as receiptsLegacy from './comprobantes';
+import * as reservations from './reservations';
+import * as reservationsLegacy from './reservas';
 import * as staff from './staff';
 import * as staffLegacy from './rrhh';
+import * as tables from './tables';
+import * as tablesLegacy from './mesas';
 
 /**
  * Los subpaths antiguos quedan como alias deprecados durante una release.
@@ -21,11 +28,14 @@ import * as staffLegacy from './rrhh';
  */
 const aliases = [
   ['caja', 'cash', cashLegacy, cash],
+  ['catalogo', 'catalog+pricing', catalogLegacy, { ...catalog, ...pricing }],
   ['comprobantes', 'receipts', receiptsLegacy, receipts],
   ['gastos', 'expenses', expensesLegacy, expenses],
   ['inventario', 'inventory', inventoryLegacy, inventory],
+  ['mesas', 'tables', tablesLegacy, tables],
   ['ordenes', 'orders', ordersLegacy, orders],
   ['promociones', 'promotions', promotionsLegacy, promotions],
+  ['reservas', 'reservations', reservationsLegacy, reservations],
   ['rrhh', 'staff', staffLegacy, staff],
 ] as const;
 

@@ -1,4 +1,4 @@
-import { CategoriesView } from "@/features/catalogo";
+﻿import { CategoriesView } from "@/features/catalog";
 
 export default function CategoriasPage() {
   return (

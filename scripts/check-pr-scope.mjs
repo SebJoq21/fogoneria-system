@@ -26,26 +26,26 @@ if (!base || !head) {
 }
 
 const MODULOS = {
-  'api:catalog': 'catalogo',
-  'api:pricing': 'catalogo',
-  'api:promotions': 'promotions',
+  'api:auth': 'auth',
+  'api:tenant': 'tenant',
+  'api:onboarding': 'onboarding',
+  'api:saas': 'saas',
+  'api:billing': 'billing',
+  'api:audit': 'audit',
+  'api:catalog': 'catalog',
+  'api:pricing': 'pricing',
+  'api:tables': 'tables',
+  'api:reservations': 'reservations',
   'api:orders': 'orders',
-  'api:realtime': 'orders',
-  'api:tables': 'mesas',
-  'api:reservations': 'mesas',
+  'api:realtime': 'realtime',
   'api:cash': 'cash',
   'api:receipts': 'receipts',
-  'api:inventory': 'inventory',
   'api:expenses': 'expenses',
+  'api:inventory': 'inventory',
+  'api:promotions': 'promotions',
   'api:crm': 'crm',
   'api:staff': 'staff',
   'api:bi': 'bi',
-  'api:auth': 'plataforma',
-  'api:tenant': 'plataforma',
-  'api:saas': 'plataforma',
-  'api:billing': 'plataforma',
-  'api:onboarding': 'plataforma',
-  'api:audit': 'plataforma',
 };
 
 const VISTAS = {
@@ -53,8 +53,9 @@ const VISTAS = {
   MozoView: 'orders',
   AccountPanel: 'orders',
   useOrdersRealtime: 'orders',
-  BookingsModule: 'mesas',
-  SalonTablesView: 'mesas',
+  BookingsModule: 'reservations',
+  BookingsWorkspace: 'reservations',
+  SalonTablesView: 'tables',
   CajaView: 'cash',
   ComprobantesView: 'receipts',
   InventoryModule: 'inventory',
@@ -69,13 +70,20 @@ const VISTAS = {
   StaffModule: 'staff',
   RolesView: 'staff',
   AnaliticasView: 'bi',
+  CartaVirtualView: 'catalog',
+  ProductsView: 'catalog',
+  CategoriesView: 'catalog',
+  ModifiersView: 'catalog',
+  PriceListsView: 'pricing',
 };
 
 const FEATURES = {
-  catalogo: 'catalogo',
+  catalog: 'catalog',
+  pricing: 'pricing',
+  tables: 'tables',
+  reservations: 'reservations',
   promotions: 'promotions',
   orders: 'orders',
-  mesas: 'mesas',
   cash: 'cash',
   receipts: 'receipts',
   inventory: 'inventory',
@@ -83,8 +91,11 @@ const FEATURES = {
   crm: 'crm',
   staff: 'staff',
   bi: 'bi',
-  plataforma: 'plataforma',
-  // Alias deprecados: los contratos antiguos siguen apuntando a su módulo.
+  // Alias deprecados de contratos y nombres anteriores.
+  catalogo: 'catalog',
+  salon: 'tables',
+  mesas: 'tables',
+  reservas: 'reservations',
   caja: 'cash',
   comprobantes: 'receipts',
   gastos: 'expenses',
@@ -92,16 +103,19 @@ const FEATURES = {
   ordenes: 'orders',
   promociones: 'promotions',
   rrhh: 'staff',
+  'tiempo-real': 'realtime',
 };
 
 const LIB = {
-  catalog: 'catalogo',
-  pricing: 'catalogo',
+  catalog: 'catalog',
+  pricing: 'pricing',
   promotions: 'promotions',
   orders: 'orders',
-  realtime: 'orders',
-  tables: 'mesas',
-  reservations: 'mesas',
+  'orders-board': 'orders',
+  'orders-realtime': 'orders',
+  realtime: 'realtime',
+  tables: 'tables',
+  reservations: 'reservations',
   cash: 'cash',
   receipts: 'receipts',
   inventory: 'inventory',
@@ -109,10 +123,6 @@ const LIB = {
   crm: 'crm',
   staff: 'staff',
   bi: 'bi',
-  auth: 'plataforma',
-  tenant: 'plataforma',
-  saas: 'plataforma',
-  onboarding: 'plataforma',
 };
 
 const RUTAS = [
@@ -126,12 +136,13 @@ const RUTAS = [
     promociones: 'promotions',
   })[m[1]]],
   [/^apps\/web\/app\/app\/(ordenes|cocina|mozo)(\/|$)/, () => 'orders'],
-  [/^apps\/web\/app\/app\/(mesas|modulos\/reservas)(\/|$)/, () => 'mesas'],
-  [/^apps\/web\/app\/app\/productos(\/|$)/, () => 'catalogo'],
+  [/^apps\/web\/app\/app\/productos\/precios(\/|$)/, () => 'pricing'],
+  [/^apps\/web\/app\/app\/productos(\/|$)/, () => 'catalog'],
+  [/^apps\/web\/app\/app\/mesas(\/|$)/, () => 'tables'],
+  [/^apps\/web\/app\/app\/modulos\/reservas(\/|$)/, () => 'reservations'],
   [/^apps\/web\/app\/app\/modulos\/inventario(\/|$)/, () => 'inventory'],
   [/^apps\/web\/app\/app\/modulos\/personal(\/|$)/, () => 'staff'],
   [/^apps\/web\/app\/app\/modulos\/fidelizacion(\/|$)/, () => 'crm'],
-  [/^apps\/web\/app\/api\/(session|backend)(\/|$)/, () => 'plataforma'],
 ];
 
 /** Devuelve la clave del módulo o `null` si el archivo es compartido. */
@@ -144,6 +155,8 @@ function moduloDe(archivo) {
   // Contratos por módulo: `packages/contracts/src/<m>.ts`.
   const contrato = /^packages\/contracts\/src\/([a-z-]+)\.ts$/.exec(archivo);
   if (contrato && contrato[1] !== 'index') {
+    // `plataforma` se reparte en la Fase 4; hasta entonces es compartido.
+    if (contrato[1] === 'plataforma') return null;
     return FEATURES[contrato[1]] ?? contrato[1];
   }
   // Kernel, SDK y UI son plataforma compartida.
@@ -151,7 +164,11 @@ function moduloDe(archivo) {
 
   // Features del frontend: `apps/web/features/<m>/**`.
   const feature = /^apps\/web\/features\/([^/]+)\//.exec(archivo);
-  if (feature) return FEATURES[feature[1]] ?? feature[1];
+  if (feature) {
+    // La feature web de plataforma sigue agrupada hasta la Fase 4.
+    if (feature[1] === 'plataforma') return null;
+    return FEATURES[feature[1]] ?? feature[1];
+  }
   if (
     archivo === 'package.json' ||
     archivo === 'pnpm-lock.yaml' ||
@@ -170,20 +187,21 @@ function moduloDe(archivo) {
   }
 
   const api = /^apps\/api\/src\/modules\/([^/]+)\//.exec(archivo);
-  if (api) return MODULOS[`api:${api[1]}`] ?? 'plataforma';
+  if (api) return MODULOS[`api:${api[1]}`] ?? api[1];
 
-  const lib = /^apps\/web\/lib\/([a-z-]+)(?:-api)?\.tsx?$/.exec(archivo);
+  const lib = /^apps\/web\/lib\/([a-z-]+?)(?:-api)?\.tsx?$/.exec(archivo);
   if (lib) {
-    if (lib[1] === 'session' || lib[1] === 'backend' || lib[1] === 'session-api') return 'plataforma';
+    // Sesión/BFF, RBAC y auth web son la autoridad compartida hasta la Fase 4.
+    if (['session', 'backend', 'auth'].includes(lib[1])) return null;
     if (lib[1] === 'order-mapping') return 'orders';
-    if (lib[1] === 'table-mapping') return 'mesas';
+    if (lib[1] === 'table-mapping') return 'tables';
     if (lib[1] === 'receipt-mapping') return 'receipts';
     return LIB[lib[1]] ?? null;
   }
 
   const vista = /^apps\/web\/components\/erp\/(?:.*\/)?([A-Za-z0-9]+)\.tsx$/.exec(archivo);
   if (vista) {
-    if (archivo.includes('/catalog/')) return 'catalogo';
+    if (archivo.includes('/catalog/')) return 'catalog';
     return VISTAS[vista[1]] ?? null;
   }
 

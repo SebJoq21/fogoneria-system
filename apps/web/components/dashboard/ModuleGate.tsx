@@ -3,7 +3,7 @@
 import { notFound } from "next/navigation";
 import { MODULE_CATALOG, type ModuleId } from "@/lib/erp";
 import { LoyaltyHubPage } from "@/features/crm";
-import { BookingsWorkspace } from "@/components/erp/BookingsWorkspace";
+import { BookingsWorkspace } from "@/features/reservations";
 import { InventoryHubPage } from "@/features/inventory";
 import { StaffWorkspace } from "@/components/erp/StaffWorkspace";
 

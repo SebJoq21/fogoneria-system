@@ -67,6 +67,9 @@ jobs:
       - name: Fronteras de módulos
         run: pnpm check:boundaries
 
+      - name: Registros de módulos al día
+        run: pnpm gen:modules --check
+
       - name: Paridad de módulos (reporte)
         # Advisory hasta la Fase 8: reporta el avance 20/20/20/20 sin bloquear.
         run: pnpm check:modules
