@@ -1,7 +1,18 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const hoy = `${new Date().toISOString().slice(0, 10)}T20:00:00.000Z`;
+// Fija el reloj en un momento donde UTC ya es 21 pero en Lima todavía es 20:
+// la agenda filtra por día de Lima, no por `toISOString()`.
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-21T01:20:00.000Z'));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+const hoy = '2026-11-20T20:00:00.000Z';
 
 const salon = vi.hoisted(() => ({
   tables: [
