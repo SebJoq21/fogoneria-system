@@ -55,6 +55,8 @@ Reglas:
 
 ## 6. Pruebas
 
+- Cobertura p4 (2026-11-20): ramas de datos, errores 400/404/409, filtros y transiciones con Prisma mockeado; sin cambios de comportamiento.
+
 - Cobertura Fase 1 (2026-11-20): tests de hooks (BI, RRHH, catálogo), DTO de precios y componentes del shell con RTL/jsdom; sin cambios de comportamiento.
 
 - Cobertura p2 (2026-11-20): tests de ramas de error y servicios (Prisma/tenant extension, promociones, precios, caja, RRHH, CRM) y SSR de providers/páginas; sin cambios de comportamiento.

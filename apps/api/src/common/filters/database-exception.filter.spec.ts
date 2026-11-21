@@ -68,4 +68,37 @@ describe('DatabaseExceptionFilter (AYCDS-46 p2)', () => {
       expect.objectContaining({ statusCode: HttpStatus.INTERNAL_SERVER_ERROR }),
     );
   });
+
+  it('un error que no es de Prisma o no es objeto responde 500', () => {
+    const { host: h, status } = host();
+    const filtro = new DatabaseExceptionFilter();
+    filtro.catch('boom', h as never);
+    filtro.catch(null, h as never);
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  it('RLS 42501 en meta responde 403', () => {
+    const { host: h, status } = host();
+    new DatabaseExceptionFilter().catch(
+      new Prisma.PrismaClientKnownRequestError('boom', {
+        code: 'P2010',
+        clientVersion: '7.10.1',
+        meta: { code: '42501' },
+      } as never),
+      h as never,
+    );
+    expect(status).toHaveBeenCalledWith(HttpStatus.FORBIDDEN);
+  });
+
+  it('usa el mensaje humano de los códigos sin DETAIL y cae en 409', () => {
+    for (const codigo of [
+      'DB_COMPROBANTE_ANULADO',
+      'DB_GASTO_PAGADO',
+      'DB_CODIGO_DESCONOCIDO',
+    ]) {
+      const { host: h, status } = host();
+      new DatabaseExceptionFilter().catch(errorDb(codigo), h as never);
+      expect(status).toHaveBeenCalledWith(HttpStatus.CONFLICT);
+    }
+  });
 });
