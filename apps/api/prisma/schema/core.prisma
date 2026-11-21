@@ -1,0 +1,206 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model empresas {
+  id                     String                   @id(map: "pk_empresas") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre_legal           String
+  nombre_comercial       String?
+  ruc                    String                   @unique(map: "uq_empresas_ruc") @db.VarChar(11)
+  logo_url               String?
+  limite_sucursales      Int                      @default(3)
+  modulos_habilitados    Json                     @default("[]")
+  estado                 estado_empresa           @default(TRIAL)
+  plan_actual            plan_suscripcion         @default(TRIAL)
+  mrr_monto              Decimal                  @default(0) @db.Decimal(12, 2)
+  trial_inicio           DateTime?                @db.Timestamptz(6)
+  trial_fin              DateTime?                @db.Timestamptz(6)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  deleted_at             DateTime?                @db.Timestamptz(6)
+  deleted_by             String?                  @db.Uuid
+  alertas_stock          alertas_stock[]
+  asistencias            asistencias[]
+  auditoria              auditoria[]
+  canjes_cupones         canjes_cupones[]
+  categorias             categorias[]
+  clientes               clientes[]
+  combos                 combos[]
+  comprobantes           comprobantes[]
+  config_lealtad         config_lealtad?
+  cupones                cupones[]
+  empleados              empleados[]
+  gastos                 gastos[]
+  grupos_modificadores   grupos_modificadores[]
+  insumos                insumos[]
+  leads_cotizaciones     leads_cotizaciones[]
+  listas_precios         listas_precios[]
+  mesas                  mesas[]
+  movimientos_caja       movimientos_caja[]
+  movimientos_inventario movimientos_inventario[]
+  movimientos_puntos     movimientos_puntos[]
+  ordenes                ordenes[]
+  platos                 platos[]
+  pozos_propinas         pozos_propinas[]
+  proveedores            proveedores[]
+  reglas_horarias_promos reglas_horarias_promos[]
+  reservas               reservas[]
+  roles_empresa          roles_empresa[]
+  secuencias             secuencias[]
+  stocks_sucursal        stocks_sucursal[]
+  sucursales             sucursales[]
+  suscripciones_eventos  suscripciones_eventos[]
+  turnos_caja            turnos_caja[]
+  turnos_plan            turnos_plan[]
+  usuarios               usuarios[]
+}
+
+model roles_empresa {
+  id          String      @id(map: "pk_roles") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id  String      @db.Uuid
+  nombre      String
+  descripcion String?
+  activo      Boolean     @default(true)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime?   @db.Timestamptz(6)
+  deleted_by  String?     @db.Uuid
+  empleados   empleados[]
+  empresas    empresas    @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_roles_empresa")
+
+  @@unique([empresa_id, nombre], map: "uq_roles_empresa_nombre", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_roles_empresa")
+}
+
+/// AYCDS-16/20: contadores por empresa (ORD, RSV) con incremento at├â┬│mico.
+model secuencias {
+  empresa_id String   @db.Uuid
+  tipo       String
+  valor      BigInt   @default(0)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  empresas   empresas @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_secuencias_empresa")
+
+  @@id([empresa_id, tipo], map: "pk_secuencias")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model sucursales {
+  id                     String                   @id(map: "pk_sucursales") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id             String                   @db.Uuid
+  nombre                 String
+  nombre_corto           String?
+  direccion              String?
+  telefono               String?
+  aforo                  Int?
+  es_matriz              Boolean                  @default(false)
+  estado                 estado_sucursal          @default(ABIERTA)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  deleted_at             DateTime?                @db.Timestamptz(6)
+  deleted_by             String?                  @db.Uuid
+  alertas_stock          alertas_stock[]
+  asistencias            asistencias[]
+  auditoria              auditoria[]
+  canjes_cupones         canjes_cupones[]
+  comprobantes           comprobantes[]
+  empleados              empleados[]
+  gastos                 gastos[]
+  mesas                  mesas[]
+  movimientos_inventario movimientos_inventario[]
+  movimientos_puntos     movimientos_puntos[]
+  ordenes                ordenes[]
+  pozos_propinas         pozos_propinas[]
+  reservas               reservas[]
+  stocks_sucursal        stocks_sucursal[]
+  empresas               empresas                 @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_sucursales_empresa")
+  turnos_caja            turnos_caja[]
+  turnos_plan            turnos_plan[]
+  usuarios               usuarios[]
+
+  @@unique([empresa_id, nombre], map: "uq_sucursales_empresa_nombre", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_sucursales_empresa")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model usuarios {
+  id                                              String                   @id(map: "pk_usuarios") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id                                      String?                  @db.Uuid
+  sucursal_id                                     String?                  @db.Uuid
+  nombre                                          String
+  email                                           String                   @db.Citext
+  password_hash                                   String
+  rol                                             rol_usuario
+  estado                                          estado_usuario           @default(ACTIVO)
+  ultimo_login                                    DateTime?                @db.Timestamptz(6)
+  created_at                                      DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime                 @default(now()) @db.Timestamptz(6)
+  deleted_at                                      DateTime?                @db.Timestamptz(6)
+  deleted_by                                      String?                  @db.Uuid
+  auditoria                                       auditoria[]
+  canjes_cupones                                  canjes_cupones[]
+  comprobantes_comprobantes_anulado_porTousuarios comprobantes[]           @relation("comprobantes_anulado_porTousuarios")
+  comprobantes_comprobantes_emitido_porTousuarios comprobantes[]           @relation("comprobantes_emitido_porTousuarios")
+  empleados                                       empleados?
+  gastos                                          gastos[]
+  movimientos_caja                                movimientos_caja[]
+  movimientos_inventario                          movimientos_inventario[]
+  ordenes                                         ordenes[]
+  reservas                                        reservas[]
+  suscripciones_eventos                           suscripciones_eventos[]
+  turnos_caja                                     turnos_caja[]
+  empresas                                        empresas?                @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_usuarios_empresa")
+  sucursales                                      sucursales?              @relation(fields: [sucursal_id], references: [id], map: "fk_usuarios_sucursal")
+
+  @@unique([email], map: "uq_usuarios_email_activo", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_usuarios_empresa")
+  @@index([sucursal_id], map: "idx_usuarios_sucursal")
+  @@index([email], map: "idx_usuarios_email")
+  @@index([empresa_id, estado], map: "idx_usuarios_tenant_estado")
+}
+
+enum estado_empresa {
+  LEAD
+  NO_CALIFICADO
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+}
+
+enum estado_sucursal {
+  ABIERTA
+  CERRADA
+}
+
+enum estado_usuario {
+  ACTIVO
+  INVITADO
+  SUSPENDIDO
+}
+
+enum plan_suscripcion {
+  TRIAL
+  BASICO
+  PROFESIONAL
+}
+
+enum rol_usuario {
+  SUPERADMIN
+  ADMIN_GLOBAL
+  GERENTE_SUCURSAL
+  COCINERO
+  MESERO
+  CAJERO
+  ANFITRION
+  BARMAN
+}

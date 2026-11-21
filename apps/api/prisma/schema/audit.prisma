@@ -1,0 +1,27 @@
+// Esquema Prisma del modulo audit.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model auditoria {
+  id          String      @id(map: "pk_auditoria") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id  String?     @db.Uuid
+  sucursal_id String?     @db.Uuid
+  usuario_id  String?     @db.Uuid
+  accion      String
+  entidad     String
+  entidad_id  String?     @db.Uuid
+  detalle     Json        @default("{}")
+  ip          String?     @db.Inet
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  empresas    empresas?   @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_aud_empresa")
+  sucursales  sucursales? @relation(fields: [sucursal_id], references: [id], map: "fk_aud_sucursal")
+  usuarios    usuarios?   @relation(fields: [usuario_id], references: [id], map: "fk_aud_usuario")
+
+  @@index([empresa_id], map: "idx_aud_empresa")
+  @@index([entidad, entidad_id], map: "idx_aud_entidad")
+  @@index([sucursal_id], map: "idx_aud_sucursal")
+  @@index([usuario_id], map: "idx_aud_usuario")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_aud_tenant_fecha")
+  @@index([entidad, entidad_id, created_at(sort: Desc)], map: "idx_aud_entidad_fecha")
+}

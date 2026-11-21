@@ -1,0 +1,40 @@
+// Esquema Prisma del modulo tables.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model mesas {
+  id          String      @id(map: "pk_mesas") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id  String      @db.Uuid
+  sucursal_id String      @db.Uuid
+  numero      String
+  capacidad   Int
+  zona        String      @default("Sal├â┬│n")
+  forma       forma_mesa  @default(RECTANGULAR)
+  estado      estado_mesa @default(LIBRE)
+  created_at  DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime    @default(now()) @db.Timestamptz(6)
+  deleted_at  DateTime?   @db.Timestamptz(6)
+  deleted_by  String?     @db.Uuid
+  empresas    empresas    @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_mesas_empresa")
+  sucursales  sucursales  @relation(fields: [sucursal_id], references: [id], onDelete: Cascade, map: "fk_mesas_sucursal")
+  ordenes     ordenes[]
+  reservas    reservas[]
+
+  @@unique([sucursal_id, numero], map: "uq_mesas_sucursal_numero", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_mesas_empresa")
+  @@index([sucursal_id, estado], map: "idx_mesas_estado")
+  @@index([sucursal_id], map: "idx_mesas_sucursal")
+}
+
+enum estado_mesa {
+  LIBRE
+  OCUPADA
+  RESERVADA
+  MANTENIMIENTO
+}
+
+enum forma_mesa {
+  REDONDA
+  RECTANGULAR
+}

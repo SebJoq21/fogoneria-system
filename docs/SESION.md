@@ -1,5 +1,14 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F7: Prisma multi-archivo por módulo
+
+- **Spike:** Prisma 7.10.1 soporta schema multi-archivo (GA desde 6.7, sin flag); `prisma.config.ts:schema` acepta una carpeta y `generate`/`validate`/`migrate diff` la combinan. El `output` del cliente es relativo a la carpeta, así que quedó `../../src/generated/prisma`.
+- **Split:** `apps/api/prisma/schema/` con `core.prisma` (generator, datasource, `empresas`/`sucursales`/`usuarios`/`roles_empresa`/`secuencias` + enums compartidos) y 15 `<id>.prisma` (audit, billing, cash, catalog, crm, expenses, inventory, orders, pricing, promotions, receipts, reservations, saas, staff, tables). `auth`, `tenant`, `onboarding`, `bi` y `realtime` no tienen tablas propias.
+- **DDL intacto:** `prisma migrate diff --from-schema <monolito> --to-schema prisma/schema` = «No difference detected»; migraciones, RLS y triggers sin tocar. Sin PostgreSQL local en este entorno: `migrate diff --from-migrations` y `test:db` no se pudieron ejecutar (reportado).
+- **Gates:** `check:pr-scope` mapea `schema/<id>.prisma` a su módulo (`core.prisma` compartido). Verificado `api test` 683, `check-types`, `build`, `lint` y `check:modules --strict` 20/20/20/20.
+- **Docs:** `modelo-datos`, `arquitectura`, `plan-paridad-modulos` (Fase 7), `modules/README`, `AGENTS.md` (raíz y api), `apps/api/README` y `docs/decisiones.md`.
+- **Próximo:** Fase 6 (providers por módulo); la convención de migraciones `<timestamp>_<id>_<detalle>` se aplica al agregar la primera tabla nueva.
+
 ## 2026-11-21 — Paridad F4/F5 + strict 20/20/20/20
 
 - **Hardening:** BOM quitado de 5 páginas de productos; duplicado de `tables` fuera del barrel; `module.ts` en las 8 features que faltaban.

@@ -28,6 +28,8 @@ pnpm --filter api db:generate
 
 El `docker-compose.yml` de la raíz levanta PostgreSQL 16 en `localhost:5433` (para no chocar con el 5432 de otros proyectos) y crea la base auxiliar `fogoneria_shadow` que usa `prisma migrate dev`.
 
+El esquema vive en `prisma/schema/`: `core.prisma` (generator, datasource, tenancy y enums compartidos) y un `<id>.prisma` por módulo con sus modelos. `prisma.config.ts` apunta a la carpeta, así que `generate` y `migrate` combinan todos los archivos; agregar tablas de un módulo no toca los demás. Las migraciones siguen en `prisma/migrations` y son forward-only.
+
 | Comando | Uso |
 |---|---|
 | `db:up` | Levanta Postgres y espera a que el healthcheck esté sano |
@@ -36,7 +38,7 @@ El `docker-compose.yml` de la raíz levanta PostgreSQL 16 en `localhost:5433` (p
 | `db:status` | Muestra el estado del contenedor |
 | `db:psql` | Abre `psql` dentro del contenedor |
 | `db:generate` | Genera el cliente en `src/generated/prisma` (ignorado por git) |
-| `db:validate` | Valida `prisma/schema.prisma` |
+| `db:validate` | Valida `prisma/schema/` (multi-archivo por módulo) |
 | `db:deploy` | Aplica migraciones pendientes (CI/producción) |
 | `db:migrate` | Crea una migración en desarrollo |
 | `db:seed` | Carga los datos demo (idempotente) |

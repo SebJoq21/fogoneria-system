@@ -1,0 +1,38 @@
+// Esquema Prisma del modulo saas.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model leads_cotizaciones {
+  id                String           @id(map: "pk_leads") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String
+  apellido          String
+  telefono          String
+  email             String           @db.Citext
+  negocio           String
+  rango_sucursales  rango_sucursales
+  estado            estado_lead      @default(NUEVO)
+  empresa_creada_id String?          @db.Uuid
+  notas             String?
+  created_at        DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime         @default(now()) @db.Timestamptz(6)
+  empresas          empresas?        @relation(fields: [empresa_creada_id], references: [id], map: "fk_leads_empresa")
+
+  @@index([empresa_creada_id], map: "idx_leads_empresa")
+  @@index([estado], map: "idx_leads_estado")
+}
+
+enum estado_lead {
+  NUEVO
+  CONTACTADO
+  PROPUESTA
+  GANADO
+  DESCARTADO
+}
+
+enum rango_sucursales {
+  UNO          @map("1")
+  DOS_A_TRES   @map("2-3")
+  CUATRO_O_MAS @map("4+")
+}
