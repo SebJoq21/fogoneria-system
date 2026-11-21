@@ -17,7 +17,6 @@ import {
 } from "@/lib/dashboard";
 import {
   initialCoupons,
-  initialCustomers,
   initialExpenses,
   initialIngredients,
   initialMovements,
@@ -78,12 +77,19 @@ import {
   type ProductCategory,
 } from "@/lib/erp-catalog";
 import { ApiError } from "@/lib/api";
+import {
+  migrateLegacyCustomers,
+  readCrmCustomers,
+  saveCrmCustomers,
+  type LegacyErpState,
+} from "@/lib/crm-storage";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
 import { useCatalogoState } from "./providers/catalog";
+import { useCrm } from "@/features/crm/provider";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
-import { useTenant } from "./providers/tenant";
+import { useTenant } from "@/features/tenant/provider";
 import * as ordersApi from "@/lib/orders-api";
 import {
   UI_TO_API_STATUS,
@@ -317,7 +323,6 @@ function buildEmptyState(): ErpState {
     reservations: [],
     ingredients: [],
     movements: [],
-    customers: [],
     coupons: [],
     receipts: [],
     expenses: [],
@@ -339,7 +344,6 @@ function buildInitialState(empresaId: string | null): ErpState {
     reservations: initialReservations,
     ingredients: initialIngredients,
     movements: initialMovements,
-    customers: initialCustomers,
     coupons: initialCoupons,
     receipts: initialReceipts,
     expenses: initialExpenses,
@@ -375,6 +379,7 @@ export function ModulesProvider({
     loading: tenantLoading,
     error: tenantError,
   } = useTenant();
+  const { customers, setCustomers, addPoints, resetCustomers } = useCrm();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const applyingRemote = useRef(false);
@@ -384,9 +389,19 @@ export function ModulesProvider({
 
   /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
-    const saved = loadErpState(tenantKey);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
-    setState(saved ?? buildInitialState(currentUser?.empresaId ?? null));
+    const saved = loadErpState(tenantKey) as LegacyErpState | null;
+    if (saved) {
+      // Migra `customers` antes de que el efecto de guardado escriba el estado.
+      const migration = migrateLegacyCustomers(saved, readCrmCustomers(tenantKey));
+      if (migration.migrated) {
+        saveCrmCustomers(tenantKey, migration.migrated);
+        saveErpState(tenantKey, migration.state);
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
+      setState(migration.state);
+    } else {
+      setState(buildInitialState(currentUser?.empresaId ?? null));
+    }
   }, [tenantKey, currentUser]);
 
   /* Alinea la operación demo con las sucursales reales cuando llegan de la API. */
@@ -703,7 +718,6 @@ export function ModulesProvider({
   const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
   const setIngredients = useCallback((i: Ingredient[]) => setPlain("ingredients", i), [setPlain]);
   const setMovements = useCallback((m: StockMovement[]) => setPlain("movements", m), [setPlain]);
-  const setCustomers = useCallback((c: Customer[]) => setPlain("customers", c), [setPlain]);
   const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
   const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);
   const setExpenses = useCallback((e: Expense[]) => setPlain("expenses", e), [setPlain]);
@@ -726,9 +740,10 @@ export function ModulesProvider({
 
   const resetDemoData = useCallback(() => {
     resetErpState(tenantKey);
+    resetCustomers();
     setState(buildInitialState(currentUser?.empresaId ?? null));
     void refreshCatalog();
-  }, [currentUser, refreshCatalog, tenantKey]);
+  }, [currentUser, refreshCatalog, resetCustomers, tenantKey]);
 
   /* ---------- Cuentas de mesa ---------- */
 
@@ -1160,6 +1175,8 @@ export function ModulesProvider({
         accountId: account.id,
       }));
 
+      if (input.customerId) addPoints(input.customerId, Math.floor(total));
+
       setState((s) => {
         const scopes = account.tableId
           ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
@@ -1185,18 +1202,6 @@ export function ModulesProvider({
           coupons: coupon
             ? s.coupons.map((c) => (c.code === coupon.code ? { ...c, used: c.used + 1 } : c))
             : s.coupons,
-          customers: input.customerId
-            ? s.customers.map((c) =>
-                c.id === input.customerId
-                  ? {
-                      ...c,
-                      points: c.points + Math.floor(total),
-                      visits: c.visits + 1,
-                      lastVisit: "Hoy",
-                    }
-                  : c,
-              )
-            : s.customers,
           scopes: {
             ...scopes,
             [account.branchId]: {
@@ -1217,6 +1222,7 @@ export function ModulesProvider({
       openCashShift,
       enviarSunat,
       closeAccountOrders,
+      addPoints,
     ],
   );
 
@@ -1420,7 +1426,7 @@ export function ModulesProvider({
       setIngredients,
       movements: state.movements,
       setMovements,
-      customers: state.customers,
+      customers,
       setCustomers,
       coupons: state.coupons,
       setCoupons,
@@ -1461,6 +1467,7 @@ export function ModulesProvider({
     [
       payments,
       state,
+      customers,
       addTicket,
       setTickets,
       products,

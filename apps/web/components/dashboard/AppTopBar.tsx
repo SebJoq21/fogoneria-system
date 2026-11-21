@@ -5,54 +5,23 @@ import { usePathname, useRouter } from "next/navigation";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme";
 import { ROLE_LABEL } from "@/lib/auth";
+import { featureModules } from "@/features/registry";
+import { moduleTitles, modulesNav } from "@/lib/modules-nav";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useModules } from "./ModulesProvider";
 
-const exactTitles: Record<string, string> = {
-  "/app": "Inicio",
-  "/app/cocina": "Cocina · KDS",
-  "/app/mozo": "Mis órdenes",
-  "/app/productos/platos/nuevo": "Nuevo plato",
-  "/app/productos/platos": "Platos",
-  "/app/productos/categorias": "Categorías",
-  "/app/productos/modificadores": "Modificadores",
-  "/app/productos/precios": "Listas de precios",
-  "/app/modulos/fidelizacion": "Fidelización",
-  "/app/clientes": "Comensales",
-  "/app/promociones": "Promociones",
-  "/app/caja": "Caja",
-  "/app/comprobantes": "Comprobantes",
-  "/app/gastos": "Gastos",
-  "/app/combos": "Combos",
-  "/app/analiticas": "Analíticas",
-  "/app/auditoria": "Auditoría",
-  "/app/mesas/maestro": "Maestro de mesas",
-  "/app/mesas": "Mapa de mesas",
-  "/app/modulos/reservas/agenda": "Agenda de reservas",
-  "/app/modulos/inventario/stock": "Stock",
-  "/app/modulos/inventario/movimientos": "Movimientos de stock",
-  "/app/modulos/personal/directorio": "Directorio del equipo",
-  "/app/modulos/personal/roles": "Roles",
-  "/app/modulos/personal/turnos": "Turnos",
-  "/app/modulos/personal/asistencia": "Asistencia",
-  "/app/modulos/personal/propinas": "Propinas",
-};
-
-const titles: [string, string][] = [
-  ["/app/productos", "Platos"],
-  ["/app/ordenes", "Órdenes"],
-  ["/app/pagos", "Gestión de pagos"],
-  ["/app/soporte", "Soporte Técnico"],
-  ["/app/configuracion", "Configuración de la cuenta"],
-];
+const navEntries = modulesNav.flatMap((group) => group.entries);
 
 function titleFor(pathname: string) {
-  if (exactTitles[pathname]) return exactTitles[pathname];
-  if (/^\/app\/modulos\/[^/]+$/.test(pathname)) return "Módulo ERP";
-  for (const [prefix, title] of titles) {
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return title;
-  }
-  return "Panel";
+  if (moduleTitles[pathname]) return moduleTitles[pathname];
+  const navExact = navEntries.find((entry) => entry.href === pathname);
+  if (navExact) return navExact.label;
+  const feature = featureModules.find((module) => module.path === pathname);
+  if (feature) return feature.label;
+  const navPrefix = [...navEntries]
+    .filter((entry) => entry.href !== "/app" && pathname.startsWith(`${entry.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return navPrefix?.label ?? "Panel";
 }
 
 export function AppTopBar() {

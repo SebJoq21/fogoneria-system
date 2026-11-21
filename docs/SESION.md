@@ -1,5 +1,12 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F6 (timeboxed): shell generado + providers piloto
+
+- **Shell:** `AppSidebar` consume `modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` usa `moduleTitles` generado (incluye `detailTitles`) y `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
+- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes: persiste `fogoneria:crm:v1:<tenant>` y sincroniza entre pestañas con `BroadcastChannel` propio ignorando el eco. La migración/purga de `customers` del `ErpState` v2 corre en el loader de `ModulesProvider`, antes de su primer guardado (evita la carrera padre→hijo). `ModulesProvider` reexporta `customers`/`setCustomers`.
+- **Resto:** órdenes, cuentas, caja, gastos, inventario, promociones y comprobantes siguen en `ModulesProvider` (F6 completo pendiente).
+- Verificado: web **885** tests, `check:modules --strict`, `gen:modules --check`, boundaries 0, types, lint y build.
+
 ## 2026-11-21 — Paridad F7: Prisma multi-archivo por módulo
 
 - **Spike:** Prisma 7.10.1 soporta schema multi-archivo (GA desde 6.7, sin flag); `prisma.config.ts:schema` acepta una carpeta y `generate`/`validate`/`migrate diff` la combinan. El `output` del cliente es relativo a la carpeta, así que quedó `../../src/generated/prisma`.
@@ -7,7 +14,7 @@
 - **DDL intacto:** `prisma migrate diff --from-schema <monolito> --to-schema prisma/schema` = «No difference detected»; migraciones, RLS y triggers sin tocar. Sin PostgreSQL local en este entorno: `migrate diff --from-migrations` y `test:db` no se pudieron ejecutar (reportado).
 - **Gates:** `check:pr-scope` mapea `schema/<id>.prisma` a su módulo (`core.prisma` compartido). Verificado `api test` 683, `check-types`, `build`, `lint` y `check:modules --strict` 20/20/20/20.
 - **Docs:** `modelo-datos`, `arquitectura`, `plan-paridad-modulos` (Fase 7), `modules/README`, `AGENTS.md` (raíz y api), `apps/api/README` y `docs/decisiones.md`.
-- **Próximo:** Fase 6 (providers por módulo); la convención de migraciones `<timestamp>_<id>_<detalle>` se aplica al agregar la primera tabla nueva.
+- **Próximo:** completar F6 (providers por módulo); la convención de migraciones `<timestamp>_<id>_<detalle>` se aplica al agregar la primera tabla nueva.
 
 ## 2026-11-21 — Paridad F4/F5 + strict 20/20/20/20
 

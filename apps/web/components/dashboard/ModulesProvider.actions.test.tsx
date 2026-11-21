@@ -57,6 +57,27 @@ const catalogo = vi.hoisted(() => ({
   categoryNameOf: vi.fn(() => 'Fondos'),
 }));
 
+const crm = vi.hoisted(() => {
+  const customers: { id: number; name: string; phone: string; points: number; visits: number; segment: string; lastVisit: string }[] = [];
+  return {
+    customers,
+    setCustomers: vi.fn((next: typeof customers) => {
+      customers.splice(0, customers.length, ...next);
+    }),
+    addPoints: vi.fn((id: number, points: number) => {
+      const customer = customers.find((item) => item.id === id);
+      if (customer) {
+        customer.points += points;
+        customer.visits += 1;
+        customer.lastVisit = 'Hoy';
+      }
+    }),
+    resetCustomers: vi.fn(() => {
+      customers.splice(0, customers.length);
+    }),
+  };
+});
+
 const api = vi.hoisted(() => ({
   createOrder: vi.fn(),
   updateOrderStatus: vi.fn(),
@@ -69,7 +90,8 @@ const api = vi.hoisted(() => ({
 
 vi.mock('./providers/session', () => ({ useSession: () => sesion }));
 vi.mock('./providers/notifications', () => ({ useNotifications: () => avisos }));
-vi.mock('./providers/tenant', () => ({ useTenant: () => tenant }));
+vi.mock('@/features/tenant/provider', () => ({ useTenant: () => tenant }));
+vi.mock('@/features/crm/provider', () => ({ useCrm: () => crm }));
 vi.mock('./providers/catalog', () => ({ useCatalogoState: () => catalogo }));
 vi.mock('@/lib/realtime', () => ({ connectOrdersRealtime: () => () => {} }));
 vi.mock('@/lib/orders-api', () => ({

@@ -36,7 +36,7 @@ Reglas:
 
 ## 5. UI
 
-- `TenantProvider` hidrata `/tenant` + `/tenant/branches` con `Promise.all` + `AbortController`, **una vez por `empresaId`**.
+- `TenantProvider` vive en `features/tenant/provider.tsx` desde F6 (el path antiguo solo reexporta) y lo compone `FeatureProviders`; hidrata `/tenant` + `/tenant/branches` con `Promise.all` + `AbortController`, **una vez por `empresaId`**.
 - Persiste `fogoneria:branch:<empresaId>`; rechaza ids fuera de `branchIds`.
 - Sin sesión usa `DEMO_COMPANY`/`ALL_BRANCHES`; con sesión nunca demo (si la API falla, `tenant: null` y vista general).
 - Anti-flash: no se pinta demo hasta `ready && !hasSession`; el rol operativo conserva su sucursal mientras hidrata.
