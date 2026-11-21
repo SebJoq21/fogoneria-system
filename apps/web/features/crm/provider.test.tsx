@@ -55,7 +55,7 @@ afterEach(() => {
 });
 
 describe('CrmProvider', () => {
-  it('migra customers del ErpState v2 una sola vez y limpia el legacy', async () => {
+  it('lee el legacy como fallback aislado sin reescribir el ErpState', async () => {
     const legacyCustomer = {
       id: 99,
       name: 'Cliente legacy',
@@ -70,7 +70,7 @@ describe('CrmProvider', () => {
       JSON.stringify({ version: 2, scopes: {}, customers: [legacyCustomer] }),
     );
 
-    const { unmount } = render(
+    render(
       <CrmProvider>
         <Probe />
       </CrmProvider>,
@@ -81,16 +81,7 @@ describe('CrmProvider', () => {
     );
 
     const legacy = JSON.parse(localStorage.getItem('fogoneria:erp:v2:anon') ?? '{}');
-    expect(legacy.customers).toBeUndefined();
-
-    unmount();
-    render(
-      <CrmProvider>
-        <Probe />
-      </CrmProvider>,
-    );
-    await waitFor(() => expect(screen.getByTestId('count').textContent).toBe('1'));
-    expect(JSON.parse(localStorage.getItem('fogoneria:crm:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(legacy.customers).toHaveLength(1);
   });
 
   it('hidrata el demo, suma puntos y persiste por tenant', async () => {

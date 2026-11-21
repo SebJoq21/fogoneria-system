@@ -48,7 +48,7 @@ Reglas:
 - `/app/clientes` → `ClientesPage`: búsqueda por nombre/teléfono, filtro por segmento, ficha con movimientos y ajuste.
 - `/app/modulos/fidelizacion/regla` → `LoyaltyPage` (**demo**); `crmApi.config()`/`actualizarConfig()` listos para conectarla.
 - `/app/modulos/fidelizacion` → `LoyaltyHubPage`.
-- F6: `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) es el dueño del estado demo de clientes; persiste `fogoneria:crm:v1:<tenant>`, migra `customers` del `ErpState` v2 y **purga** el campo legacy para no duplicar la persistencia. Sincroniza entre pestañas con `BroadcastChannel` (`fogoneria:crm-sync:<tenant>`) ignorando el eco propio. `ModulesProvider` reexporta `customers`/`setCustomers` para compatibilidad.
+- F6: `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) es el dueño del estado demo de clientes; persiste `fogoneria:crm:v1:<tenant>`. La migración desde `ErpState` v2 y la **purga** del campo legacy corren en el loader de `ModulesProvider`, antes de su primer guardado; el provider deja un fallback de solo lectura para montajes aislados. Sincroniza entre pestañas con `BroadcastChannel` (`fogoneria:crm-sync:<tenant>`) ignorando el eco propio. `ModulesProvider` reexporta `customers`/`setCustomers` para compatibilidad.
 
 ## 6. Pruebas
 

@@ -5,8 +5,9 @@
  *
  * La API sigue mandando cuando hay sesión (`ClientesPage` lee `/crm/clientes`);
  * este provider conserva la lista demo y la comparte con `ModulesProvider` por
- * compatibilidad (`useModules().customers`). Persiste por empresa y migra la
- * lista antigua del `ErpState` v2 para no perder datos al navegar.
+ * compatibilidad (`useModules().customers`). Persiste por empresa; la migración
+ * desde el `ErpState` v2 (y la purga del campo legacy) corre en el loader de
+ * `ModulesProvider`, antes de su primer guardado.
  */
 
 import {
@@ -22,16 +23,14 @@ import {
 import { useSession } from '@/components/dashboard/providers/session';
 import { initialCustomers, type Customer } from '@/lib/erp';
 import {
-  ANON_TENANT_KEY,
-  loadErpState,
-  saveErpState,
-  type ErpState,
-} from '@/lib/persistence';
+  crmChannelKey,
+  crmStorageKey,
+  readCrmCustomers,
+  readLegacyCustomers,
+  saveCrmCustomers,
+} from '@/lib/crm-storage';
 import { tenantKeyOf } from '@/lib/session-state';
 import { DEMO_EMPRESA_ID } from '@/lib/tenancy';
-
-const CRM_STORAGE_KEY = 'fogoneria:crm:v1';
-const CRM_SYNC_CHANNEL = 'fogoneria:crm-sync';
 
 type CrmContextValue = {
   customers: Customer[];
@@ -42,44 +41,17 @@ type CrmContextValue = {
 
 const CrmContext = createContext<CrmContextValue | null>(null);
 
-function storageKey(tenantKey: string): string {
-  return `${CRM_STORAGE_KEY}:${tenantKey}`;
-}
-
 function demoTenant(tenantKey: string): boolean {
-  return tenantKey === ANON_TENANT_KEY || tenantKey === DEMO_EMPRESA_ID;
+  return tenantKey === 'anon' || tenantKey === DEMO_EMPRESA_ID;
 }
-
-function channelKey(tenantKey: string): string {
-  return `${CRM_SYNC_CHANNEL}:${tenantKey}`;
-}
-
-type LegacyErpState = ReturnType<typeof loadErpState> & { customers?: Customer[] };
 
 /**
- * Lee `customers` del ErpState v2 y lo reescribe sin ese campo. Devuelve la
- * lista para sembrar la nueva clave; una segunda pasada ya no encuentra nada.
+ * Lectura del provider cuando se monta aislado: primero la clave CRM y, si
+ * aún no existe, el fallback legacy de solo lectura. La migración que purga el
+ * ErpState vive en el loader de `ModulesProvider` (orden padre→hijo).
  */
-function purgeLegacyCustomers(tenantKey: string): Customer[] | null {
-  const legacy = loadErpState(tenantKey) as LegacyErpState;
-  if (!legacy || !Array.isArray(legacy.customers)) return null;
-  const { customers, ...rest } = legacy;
-  saveErpState(tenantKey, rest as ErpState);
-  return customers;
-}
-
 function readCustomers(tenantKey: string): Customer[] | null {
-  const legacy = purgeLegacyCustomers(tenantKey);
-  try {
-    const raw = localStorage.getItem(storageKey(tenantKey));
-    if (raw) {
-      const parsed = JSON.parse(raw) as Customer[];
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {
-    /* almacenamiento no disponible o JSON inválido */
-  }
-  return legacy;
+  return readCrmCustomers(tenantKey) ?? readLegacyCustomers(tenantKey);
 }
 
 type CrmSyncMessage = {
@@ -89,11 +61,7 @@ type CrmSyncMessage = {
 };
 
 function saveCustomers(tenantKey: string, customers: Customer[]): void {
-  try {
-    localStorage.setItem(storageKey(tenantKey), JSON.stringify(customers));
-  } catch {
-    /* almacenamiento no disponible */
-  }
+  saveCrmCustomers(tenantKey, customers);
 }
 
 export function CrmProvider({ children }: { children: React.ReactNode }) {
@@ -124,14 +92,14 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     if (typeof BroadcastChannel === 'undefined') return;
-    const channel = new BroadcastChannel(channelKey(tenantKey));
+    const channel = new BroadcastChannel(crmChannelKey(tenantKey));
     channel.postMessage({ type: 'state', source: sourceId, customers } satisfies CrmSyncMessage);
     channel.close();
   }, [customers, hydrated, tenantKey, sourceId]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-    const channel = new BroadcastChannel(channelKey(tenantKey));
+    const channel = new BroadcastChannel(crmChannelKey(tenantKey));
     channel.onmessage = (event: MessageEvent<CrmSyncMessage>) => {
       const message = event.data;
       if (!message || message.source === sourceId) return;
@@ -162,7 +130,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
 
   const resetCustomers = useCallback(() => {
     try {
-      localStorage.removeItem(storageKey(tenantKey));
+      localStorage.removeItem(crmStorageKey(tenantKey));
     } catch {
       /* almacenamiento no disponible */
     }
@@ -170,7 +138,7 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     skipBroadcast.current = true;
     setCustomersState(next);
     if (typeof BroadcastChannel !== 'undefined') {
-      const channel = new BroadcastChannel(channelKey(tenantKey));
+      const channel = new BroadcastChannel(crmChannelKey(tenantKey));
       channel.postMessage({ type: 'reset', source: sourceId, customers: next } satisfies CrmSyncMessage);
       channel.close();
     }

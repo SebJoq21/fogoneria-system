@@ -77,6 +77,12 @@ import {
   type ProductCategory,
 } from "@/lib/erp-catalog";
 import { ApiError } from "@/lib/api";
+import {
+  migrateLegacyCustomers,
+  readCrmCustomers,
+  saveCrmCustomers,
+  type LegacyErpState,
+} from "@/lib/crm-storage";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
 import { useCatalogoState } from "./providers/catalog";
@@ -383,9 +389,19 @@ export function ModulesProvider({
 
   /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
-    const saved = loadErpState(tenantKey);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
-    setState(saved ?? buildInitialState(currentUser?.empresaId ?? null));
+    const saved = loadErpState(tenantKey) as LegacyErpState | null;
+    if (saved) {
+      // Migra `customers` antes de que el efecto de guardado escriba el estado.
+      const migration = migrateLegacyCustomers(saved, readCrmCustomers(tenantKey));
+      if (migration.migrated) {
+        saveCrmCustomers(tenantKey, migration.migrated);
+        saveErpState(tenantKey, migration.state);
+      }
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
+      setState(migration.state);
+    } else {
+      setState(buildInitialState(currentUser?.empresaId ?? null));
+    }
   }, [tenantKey, currentUser]);
 
   /* Alinea la operación demo con las sucursales reales cuando llegan de la API. */
