@@ -7,6 +7,7 @@
  */
 
 export { InventoryPage } from './InventoryPage';
+export { InventoryProvider, useInventory } from './provider';
 export { MovementsPage } from './MovementsPage';
 export { InventoryHubPage } from './InventoryHubPage';
 export {

@@ -9,12 +9,8 @@
 
 import type {
   Coupon,
-  Expense,
-  Ingredient,
   Receipt,
   Reservation,
-  Role,
-  StockMovement,
 } from "./erp";
 import type { Combo } from "./erp-catalog";
 import type { Ticket } from "./dashboard";
@@ -39,13 +35,9 @@ export function erpSyncChannel(tenantKey: string): string {
    persiste en el cliente: es la fuente de verdad de la API (tarea 63). */
 export type ErpState = {
   version: 2;
-  roles: Role[];
   reservations: Reservation[];
-  ingredients: Ingredient[];
-  movements: StockMovement[];
   coupons: Coupon[];
   receipts: Receipt[];
-  expenses: Expense[];
   combos: Combo[];
   tickets: Ticket[];
   scopes: Record<string, BranchScope>;

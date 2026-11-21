@@ -6,6 +6,7 @@
  */
 
 export { GastosPage } from './GastosPage';
+export { ExpensesProvider, useExpenses } from './provider';
 export { gastosApi, gastosClient, toGasto } from './api';
 export type { ResumenGastos } from './api';
 export type {

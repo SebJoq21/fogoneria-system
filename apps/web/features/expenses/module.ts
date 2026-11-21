@@ -9,4 +9,5 @@ export const expensesModule = {
   path: '/app/gastos',
   roles: ['admin', 'sucursal'],
   group: 'Administración',
+  provider: 'ExpensesProvider',
 };

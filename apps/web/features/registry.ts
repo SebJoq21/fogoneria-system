@@ -28,7 +28,10 @@ import { crmModule } from './crm/module';
 import { staffModule } from './staff/module';
 import { biModule } from './bi/module';
 import { TenantProvider } from './tenant/provider';
+import { ExpensesProvider } from './expenses/provider';
+import { InventoryProvider } from './inventory/provider';
 import { CrmProvider } from './crm/provider';
+import { StaffProvider } from './staff/provider';
 
 export type FeatureModule = {
   id: string;
@@ -74,7 +77,10 @@ export const pendingFeatureIds = [];
 /** Providers opcionales por módulo (Fase 6). */
 export const featureProviders: FeatureProvider[] = [
   { id: "tenant", Provider: TenantProvider },
+  { id: "expenses", Provider: ExpensesProvider },
+  { id: "inventory", Provider: InventoryProvider },
   { id: "crm", Provider: CrmProvider },
+  { id: "staff", Provider: StaffProvider },
 ];
 
 /** Envuelve a los hijos con los providers de las features que los declaran. */

@@ -33,7 +33,13 @@ describe('superficies de plataforma', () => {
 
   it('registra las 20 features sin pendientes', () => {
     expect(featureModules).toHaveLength(20);
-    expect(featureProviders.map((provider) => provider.id)).toEqual(['tenant', 'crm']);
+    expect(featureProviders.map((provider) => provider.id)).toEqual([
+      'tenant',
+      'expenses',
+      'inventory',
+      'crm',
+      'staff',
+    ]);
     expect(typeof FeatureProviders).toBe('function');
   });
 });

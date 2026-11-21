@@ -1,4 +1,5 @@
 export { StaffAttendancePage } from './AttendancePage';
+export { StaffProvider, useStaff } from './provider';
 export { StaffShiftsPage } from './ShiftsPage';
 export { StaffModule } from './StaffModule';
 export { StaffWorkspace } from './StaffWorkspace';

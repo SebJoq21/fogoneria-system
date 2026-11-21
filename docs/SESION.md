@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F6b (timeboxed): gastos, inventario y personal fuera de `ModulesProvider`
+
+- **Migrados:** `ExpensesProvider` (gastos demo), `InventoryProvider` (insumos + kardex demo) y `StaffProvider` (roles del maestro de personal), todos sobre `lib/module-store.ts`: persistencia `fogoneria:<id>:v1:<tenant>`, `BroadcastChannel` `fogoneria:<id>-sync:<tenant>` con `sourceId`/dedupe/reset y guardia para no guardar el valor del tenant anterior al cambiar de empresa.
+- **Migración legacy:** el loader de `ModulesProvider` purga `expenses`, `ingredients`/`movements` y `roles` del `ErpState` v2 antes del primer guardado (mismo patrón que CRM). `ModulesProvider` reexporta estado y setters para no tocar las vistas.
+- **Bloqueados:** `orders` y `cash` siguen en `ModulesProvider` porque dependen de `scopes` por sucursal, cuentas locales y el checkout; `receipts`/`promotions` cuelgan del mismo flujo. No se forzó el split.
+- **Estado:** providers fuera de `ModulesProvider`: tenant, crm, expenses, inventory y staff (5/20). PR [#134](https://github.com/kallanka-org/fogoneria-system/pull/134) abierto, sin merge.
+- Verificado: web **906** tests, `check:modules --strict` 20/20/20/20, `gen:modules --check`, boundaries 0, types, lint, build y `check:specs`.
+
 ## 2026-11-21 — Paridad F6 (timeboxed): shell generado + providers piloto
 
 - **Shell:** `AppSidebar` consume `modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` usa `moduleTitles` generado (incluye `detailTitles`) y `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.

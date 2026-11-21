@@ -17,12 +17,8 @@ import {
 } from "@/lib/dashboard";
 import {
   initialCoupons,
-  initialExpenses,
-  initialIngredients,
-  initialMovements,
   initialReceipts,
   initialReservations,
-  initialRoles,
   type CashMovement,
   type Coupon,
   type Customer,
@@ -83,10 +79,21 @@ import {
   saveCrmCustomers,
   type LegacyErpState,
 } from "@/lib/crm-storage";
+import {
+  migrateLegacyArray,
+  migrateLegacyInventory,
+  readModuleValue,
+  saveModuleValue,
+  type InventoryStoreState,
+  type LegacyErpState as LegacyModuleState,
+} from "@/lib/module-store";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
 import { useCatalogoState } from "./providers/catalog";
 import { useCrm } from "@/features/crm/provider";
+import { useExpenses } from "@/features/expenses/provider";
+import { useInventory } from "@/features/inventory/provider";
+import { useStaff } from "@/features/staff/provider";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
 import { useTenant } from "@/features/tenant/provider";
@@ -318,15 +325,8 @@ function prepareOps(state: ErpState, branchIds: string[]): ErpState {
 /** Estado de arranque de un tenant nuevo: sin mocks compartidos. */
 function buildEmptyState(): ErpState {
   return {
-    version: 2,
-    roles: initialRoles,
-    reservations: [],
-    ingredients: [],
-    movements: [],
-    coupons: [],
-    receipts: [],
-    expenses: [],
-    combos: [],
+    version: 2,    reservations: [],    coupons: [],
+    receipts: [],    combos: [],
     tickets: [],
     scopes: {},
     accounts: [],
@@ -339,15 +339,8 @@ function buildEmptyState(): ErpState {
 function buildInitialState(empresaId: string | null): ErpState {
   if (empresaId !== null && empresaId !== DEMO_EMPRESA_ID) return buildEmptyState();
   return {
-    version: 2,
-    roles: initialRoles,
-    reservations: initialReservations,
-    ingredients: initialIngredients,
-    movements: initialMovements,
-    coupons: initialCoupons,
-    receipts: initialReceipts,
-    expenses: initialExpenses,
-    combos: initialCombos,
+    version: 2,    reservations: initialReservations,    coupons: initialCoupons,
+    receipts: initialReceipts,    combos: initialCombos,
     tickets: initialTickets,
     scopes: initialScopes,
     accounts: initialAccounts,
@@ -380,6 +373,15 @@ export function ModulesProvider({
     error: tenantError,
   } = useTenant();
   const { customers, setCustomers, addPoints, resetCustomers } = useCrm();
+  const { expenses, setExpenses, resetExpenses } = useExpenses();
+  const {
+    ingredients,
+    setIngredients,
+    movements,
+    setMovements,
+    resetInventory,
+  } = useInventory();
+  const { roles, setRoles, resetRoles } = useStaff();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const applyingRemote = useRef(false);
@@ -390,18 +392,60 @@ export function ModulesProvider({
   /* Al cambiar de empresa, carga su estado aislado (o arranca demo/vacío). */
   useEffect(() => {
     const saved = loadErpState(tenantKey) as LegacyErpState | null;
-    if (saved) {
-      // Migra `customers` antes de que el efecto de guardado escriba el estado.
-      const migration = migrateLegacyCustomers(saved, readCrmCustomers(tenantKey));
-      if (migration.migrated) {
-        saveCrmCustomers(tenantKey, migration.migrated);
-        saveErpState(tenantKey, migration.state);
-      }
+    if (!saved) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- hidratación por tenant
-      setState(migration.state);
-    } else {
       setState(buildInitialState(currentUser?.empresaId ?? null));
+      return;
     }
+
+    // Migra los slices que ya tienen provider antes de que el guardado escriba.
+    let next = saved as LegacyModuleState;
+    let changed = false;
+
+    const crm = migrateLegacyCustomers(
+      next as LegacyErpState,
+      readCrmCustomers(tenantKey),
+    );
+    if (crm.migrated) {
+      saveCrmCustomers(tenantKey, crm.migrated);
+      next = crm.state as LegacyModuleState;
+      changed = true;
+    }
+
+    const expensesMigration = migrateLegacyArray(
+      next,
+      "expenses",
+      readModuleValue<Expense[]>("expenses", tenantKey),
+    );
+    if (expensesMigration.migrated) {
+      saveModuleValue("expenses", tenantKey, expensesMigration.migrated);
+      next = expensesMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
+    const inventoryMigration = migrateLegacyInventory(
+      next,
+      readModuleValue<InventoryStoreState>("inventory", tenantKey),
+    );
+    if (inventoryMigration.migrated) {
+      saveModuleValue("inventory", tenantKey, inventoryMigration.migrated);
+      next = inventoryMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
+    const staffMigration = migrateLegacyArray(
+      next,
+      "roles",
+      readModuleValue<Role[]>("staff", tenantKey),
+    );
+    if (staffMigration.migrated) {
+      saveModuleValue("staff", tenantKey, staffMigration.migrated);
+      next = staffMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
+    if (changed) saveErpState(tenantKey, next as ErpState);
+    setState(next as ErpState);
   }, [tenantKey, currentUser]);
 
   /* Alinea la operación demo con las sucursales reales cuando llegan de la API. */
@@ -712,16 +756,8 @@ export function ModulesProvider({
   const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
     (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "cash", v) })),
     [activeBranchId, branchIds],
-  );
-
-  const setRoles = useCallback((r: Role[]) => setPlain("roles", r), [setPlain]);
-  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
-  const setIngredients = useCallback((i: Ingredient[]) => setPlain("ingredients", i), [setPlain]);
-  const setMovements = useCallback((m: StockMovement[]) => setPlain("movements", m), [setPlain]);
-  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
-  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);
-  const setExpenses = useCallback((e: Expense[]) => setPlain("expenses", e), [setPlain]);
-  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
+  );  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
+  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
   const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
 
   const addTicket = useCallback(
@@ -741,9 +777,20 @@ export function ModulesProvider({
   const resetDemoData = useCallback(() => {
     resetErpState(tenantKey);
     resetCustomers();
+    resetExpenses();
+    resetInventory();
+    resetRoles();
     setState(buildInitialState(currentUser?.empresaId ?? null));
     void refreshCatalog();
-  }, [currentUser, refreshCatalog, resetCustomers, tenantKey]);
+  }, [
+    currentUser,
+    refreshCatalog,
+    resetCustomers,
+    resetExpenses,
+    resetInventory,
+    resetRoles,
+    tenantKey,
+  ]);
 
   /* ---------- Cuentas de mesa ---------- */
 
@@ -1415,16 +1462,16 @@ export function ModulesProvider({
       tablesError,
       refreshTables,
       hasSession,
-      roles: state.roles,
+      roles,
       setRoles,
       reservations: liveReservations ?? state.reservations,
       setReservations,
       reservationsLoading,
       reservationsError,
       refreshReservations,
-      ingredients: state.ingredients,
+      ingredients,
       setIngredients,
-      movements: state.movements,
+      movements,
       setMovements,
       customers,
       setCustomers,
@@ -1439,7 +1486,7 @@ export function ModulesProvider({
       generarResumenDiario,
       sunatContingencia: state.sunatContingencia,
       toggleSunatContingencia,
-      expenses: state.expenses,
+      expenses,
       setExpenses,
       combos: state.combos,
       setCombos,
@@ -1468,6 +1515,10 @@ export function ModulesProvider({
       payments,
       state,
       customers,
+      expenses,
+      ingredients,
+      movements,
+      roles,
       addTicket,
       setTickets,
       products,
