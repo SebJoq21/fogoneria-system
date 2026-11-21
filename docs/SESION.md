@@ -1,5 +1,16 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Validación final de paridad de módulos
+
+- **Paridad 20/20/20/20** (manifiestos, backend, frontend, contratos) + 20 specs; 12 alias deprecados.
+- **Gates:** `check:modules --strict` bloqueante, `gen:modules --check`, `check:boundaries` 0 y `check:specs` OK; CI de `development` success.
+- **Sesión/BFF:** `lib/session.ts`, `lib/backend.ts`, `proxy.ts` y `app/api/session|backend/**` sin cambios (`git diff` vacío).
+- **Estado:** todo el estado demo está en providers por módulo; `ModulesProvider` es fachada sin `ErpState` (solo API/orquestación). Retiro físico pendiente por 43 usos de `useModules()` — plan §10 de `docs/plan-f6c-pos.md`.
+- **Sonar:** 88.8 % overall (líneas 92.9, ramas 83.2), nuevo código 90.1 %, duplicación 0.0 %, ratings A, 0 vulns/smells/hotspots.
+- **Tests:** API 683 unit + 112 e2e; Web 967; contratos 133.
+- **PRs:** #127 (plan), #129 (F0-F2), #130 (F3), #131 (F4-F5), #132 (F7), #133 (F6), #134 (F6b), #135 (F6c1), #136 (F6c2), #137 (F6c3). 0 PRs abiertos.
+- **Deuda:** retiro de `ModulesProvider`; UI compartida de salón; colisión del registry generado si dos PRs cambian metadata a la vez; convención de migraciones por módulo para tablas nuevas.
+
 ## 2026-11-21 — F6c3: scopes, reservas y tickets + fixes de auditoría
 
 - **M1/M2/L1/L2:** `useCheckout` con guard `checkingOut`, cola de post-commit que acepta promesas y reintenta 3 veces con backoff (avisa con `onPostCommitFailed`), `restorePoints` (CRM) y `paidByAccount` reconstruido desde el estado (se limpia al resetear/cambiar de empresa).
