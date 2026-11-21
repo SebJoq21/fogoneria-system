@@ -200,6 +200,7 @@ Los tres viven fuera del CI a propósito: un deploy que espera los checks del co
 - **Trivy** es bloqueante para **OS/base** (`exit-code: 1`) desde Fase B; el compilador nativo de TypeScript se excluye de la imagen runtime. Los CVEs de paquetes npm de la imagen se cubren con `pnpm audit`/Dependabot y quedan como deuda de actualización de dependencias.
 - **Sonar** ya corre por CI (Automatic Analysis desactivado). El gate custom `Fogoneria` no se pudo asignar por permisos de la organización; el gate efectivo de cobertura son los thresholds de Vitest. Pendiente asignarlo cuando haya permiso/plan.
 - **Cobertura Fase 0 (2026-11-20):** Sonar excluye `apps/api/prisma/seed.ts`, `rls-roles.ts`, `apps/web/app/demo/**`, `**/scripts/**`, `docs/**`, `ops/**`, `db/**`, `docker-compose.yml`, `skills-lock.json` y `**/*.postman_collection.json`; Vitest excluye el mismo conjunto no productivo. `coverage.include` global mediría web en **49.2 % líneas / 45.9 % ramas** (por debajo de los thresholds 58/53), así que no se activa hasta la Fase 6; se documenta la brecha Sonar vs Vitest.
+- **Cobertura Fase 2 (2026-11-20):** RTL/jsdom cubre acciones de `ModulesProvider` (cuentas, caja, SUNAT, persistencia/reset), providers `Session`/`Notifications`/`Tenant`/`Catalogo` y refrescos con API. Web pasa a 67.83 % líneas / 55.4 % ramas; overall estimado ~73.9 %.
 - CODEOWNERS y protección de rama estricta siguen diferidos (decisión del usuario).
 
 ## 7. Enlaces
