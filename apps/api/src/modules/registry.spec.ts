@@ -14,7 +14,10 @@ describe('MODULE_REGISTRY', () => {
   });
 
   it('AppModule consume el registry generado', () => {
-    expect(AppModule).toBeDefined();
+    const imports = (Reflect.getMetadata('imports', AppModule) ?? []) as unknown[];
+    for (const module of MODULE_REGISTRY) {
+      expect(imports).toContain(module);
+    }
   });
 
   it('incluye los módulos de negocio y de infraestructura', () => {

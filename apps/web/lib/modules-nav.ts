@@ -3,7 +3,8 @@
  * Regenera con `pnpm gen:modules`.
  *
  * El shell todavía usa su lista de AppSidebar (Fase 6 conectará este nav).
- * Fase 1: la entrada de `crm` sale de `features/crm/module.ts`.
+ * Las entradas con `module.ts` (crm, catalog, pricing, tables, reservations) salen
+ * de la metadata de la feature; el resto del catálogo, de `modules/catalog.json`.
  */
 export type ModuleNavRole = 'superadmin' | 'admin' | 'sucursal' | 'cajero' | 'cocina' | 'mesero';
 

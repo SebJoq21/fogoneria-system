@@ -1,4 +1,4 @@
-import { MesasPage } from "@/features/salon";
+import { MesasPage } from "@/features/tables";
 
 export default function MesasRoute() {
   return (

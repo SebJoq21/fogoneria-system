@@ -2,7 +2,7 @@
   "id": "catalog",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "pending",
+  "status": "aligned",
   "routes": [
     "/app/productos/platos",
     "/app/productos/categorias",

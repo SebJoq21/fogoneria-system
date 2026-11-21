@@ -1,6 +1,6 @@
 # tables — especificación
 
-**Estado:** API real · **Última revisión:** 2026-11-19
+**Estado:** API real · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Gestionar el salón: mesas por sucursal, su capacidad, zona y forma, y el bloque
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/tables/` | real |
-| Web | `apps/web/features/salon/` (`MesasPage`, `SalonTablesPage`, `SalonTablesView`) | real |
-| Contrato | `packages/contracts/src/mesas.ts` | sí |
+| Web | `apps/web/features/tables/` (`MesasPage`, `SalonTablesPage`, `SalonTablesView`) | real |
+| Contrato | `packages/contracts/src/tables.ts` | sí |
 | Datos | `mesas` | `20261019000000_init`, `20261020120200_soft_delete` |
 
 ## 3. API
@@ -39,7 +39,7 @@ Reglas:
 
 ## 5. UI y rutas
 
-- `/app/mesas` → `MesasPage` (mapa; abre cuenta, registra llegada, bloquea/libera).
+- `/app/mesas` → `MesasPage` de `features/tables` (mapa; abre cuenta, registra llegada, bloquea/libera). La vista compartida vive en `components/dashboard/salon/`.
 - `/app/mesas/maestro` → `SalonTablesPage` (solo `sucursal`; CRUD y estado derivado).
 - `lib/table-mapping.ts` traduce UUID → `Table.id` numérico estable con FNV-1a de 32 bits y resuelve colisiones; `deriveTableStatus` respeta el `OCUPADA` del servidor.
 - Refresco por `order.created`, `order.updated` y `table.status`.
@@ -59,10 +59,11 @@ Reglas:
 | Unit | `src/modules/tables/tables.service.spec.ts` |
 | e2e | `test/tables.e2e-spec.ts` |
 | DB | `test/db/tables-reservas.db-spec.ts` |
-| Web | `features/salon/salon.test.ts`, `lib/table-mapping.test.ts`, `lib/tables-api.test.ts` |
+| Web | `features/tables/tables.test.ts`, `features/tables/tables-api.test.ts`, `features/tables/SalonTablesView.rtl.test.tsx`, `lib/table-mapping.test.ts` |
 
 ## 7. Deuda conocida
 
+- Fase 3 de paridad (2026-11-21): `tables` es feature propia y contrato `tables.ts`; la vista compartida del salón sigue en `components/dashboard/salon` hasta el split fino de UI.
 - La UI de bloqueo está limitada a `sucursal` (`canChangeTableStatus`); el dueño solo lee.
 - No hay plano arrastrable (croquis): el mapa usa zonas y una grilla fija.
 

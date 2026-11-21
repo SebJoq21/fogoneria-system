@@ -1,5 +1,5 @@
 import { ModuleGuard } from "@/components/dashboard/ModuleGate";
-import { ReservasPage } from "@/features/salon";
+import { ReservasPage } from "@/features/reservations";
 
 export default function ReservasAgendaPage() {
   return (

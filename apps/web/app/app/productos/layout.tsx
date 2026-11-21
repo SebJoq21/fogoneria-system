@@ -2,14 +2,9 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { CartaVirtualView } from "@/components/erp/catalog/CartaVirtualView";
+import { CartaVirtualView, CategoriesView, ModifiersView, ProductsView } from "@/features/catalog";
+import { PriceListsView } from "@/features/pricing";
 import { Tabs } from "@/components/ui/Tabs";
-import {
-  CategoriesView,
-  ModifiersView,
-  PriceListsView,
-  ProductsView,
-} from "@/features/catalogo";
 
 const HUB_PATH = "/app/productos";
 

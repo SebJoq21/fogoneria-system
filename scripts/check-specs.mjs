@@ -33,22 +33,28 @@ const DOCS_INDICE = join(ROOT, 'docs/INDICE.md');
 
 /**
  * Mapa explícito feature web → specs de módulo. No siempre es 1:1:
- * `salon` agrupa mesas + reservas, `staff` es RRHH, `plataforma` incluye
- * su spec web y los seis módulos backend (auth, tenant, saas, billing,
- * onboarding, audit) y el resto usa el mismo ID que su módulo backend.
+ * `plataforma` incluye su spec web y los seis módulos backend (auth, tenant,
+ * saas, billing, onboarding, audit) hasta la Fase 4; el resto usa el mismo ID
+ * que su módulo backend. Los splits de catálogo/precios y mesas/reservas ya
+ * son 1:1.
  */
 const FEATURE_SPECS = {
   bi: ['bi'],
   cash: ['cash'],
-  catalogo: ['catalog'],
+  catalog: ['catalog'],
   receipts: ['receipts'],
   crm: ['crm'],
   expenses: ['expenses'],
   inventory: ['inventory'],
   orders: ['orders'],
+  pricing: ['pricing'],
   plataforma: ['plataforma', 'auth', 'tenant', 'saas', 'billing', 'onboarding', 'audit'],
   promotions: ['promotions'],
   staff: ['staff'],
+  tables: ['tables'],
+  reservations: ['reservations'],
+  // Nombres anteriores: solo aparecen en diffs de PRs de migración.
+  catalogo: ['catalog'],
   salon: ['tables', 'reservations'],
 };
 

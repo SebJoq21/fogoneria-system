@@ -31,8 +31,8 @@ vi.mock('@/components/dashboard/summaries/ModuleSummary', () => ({
 }));
 vi.mock('@/components/dashboard/summaries/charts', () => ({ MiniBars: () => null }));
 
-import { BookingsWorkspace } from './BookingsWorkspace';
-import { CartaVirtualView } from './catalog/CartaVirtualView';
+import { BookingsWorkspace } from '@/features/reservations';
+import { CartaVirtualView } from '@/features/catalog';
 import { StaffWorkspace } from './StaffWorkspace';
 
 describe('BookingsWorkspace', () => {

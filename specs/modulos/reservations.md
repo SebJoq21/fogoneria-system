@@ -1,6 +1,6 @@
 # reservations — especificación
 
-**Estado:** API real · **Última revisión:** 2026-11-19
+**Estado:** API real · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Agenda de reservas con aforo y control de solapamiento por mesa. Ocupa y libera 
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/reservations/` | real |
-| Web | `apps/web/features/salon/ReservasPage.tsx` | real |
-| Contrato | `packages/contracts/src/reservas.ts` | sí |
+| Web | `apps/web/features/reservations/` (`ReservasPage`, `BookingsModule`, agenda/mapa) | real |
+| Contrato | `packages/contracts/src/reservations.ts` | sí |
 | Datos | `reservas`, `mesas`, `secuencias` | `20261027120000_secuencias_tenant` |
 
 ## 3. API
@@ -39,7 +39,7 @@ Reglas:
 
 ## 5. UI y rutas
 
-- `/app/modulos/reservas/agenda` → `ReservasPage`: filtro por fecha, alta/edición, confirmar, cancelar, no-show y «Llegó» (abre cuenta en la mesa real).
+- `/app/modulos/reservas/agenda` → `ReservasPage` de `features/reservations`: filtro por fecha, alta/edición, confirmar, cancelar, no-show y «Llegó» (abre cuenta en la mesa real). El mapa/agenda compartido vive en `components/dashboard/salon/`.
 - El estado se refresca con `refreshReservations` y eventos de mesa/orden.
 - Permiso de gestión: `canManageReservations` (admin/sucursal); mesero/cajero pueden crear vía API.
 
@@ -56,10 +56,11 @@ Reglas:
 | Unit | `src/modules/reservations/reservations.service.spec.ts` |
 | e2e | `test/reservations.e2e-spec.ts` |
 | DB | `test/db/tables-reservas.db-spec.ts` |
-| Web | `lib/reservations-api.test.ts`, `features/salon/salon.test.ts` |
+| Web | `features/reservations/reservations.test.ts`, `features/reservations/reservations-api.test.ts`, `lib/reservations-api.test.ts` |
 
 ## 7. Deuda conocida
 
+- Fase 3 de paridad (2026-11-21): `reservations` es feature propia y contrato `reservations.ts`; la vista compartida del salón sigue en `components/dashboard/salon` hasta el split fino de UI.
 - No hay vista de calendario mensual ni recordatorios (WhatsApp/email).
 - El aforo se controla por mesa; no hay aforo global del salón.
 

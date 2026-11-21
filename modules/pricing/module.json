@@ -2,7 +2,7 @@
   "id": "pricing",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "pending",
+  "status": "aligned",
   "routes": [
     "/app/productos/precios"
   ]

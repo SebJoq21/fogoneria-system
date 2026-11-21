@@ -1,6 +1,6 @@
 # pricing — especificación
 
-**Estado:** API real · **Última revisión:** 2026-11-19
+**Estado:** API real · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Listas de precios por canal y resolución del precio de un plato. Es la **única
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/pricing/` | real |
-| Web | `apps/web/features/catalogo/PriceListsView.tsx` | real |
-| Contrato | `packages/contracts/src/catalogo.ts` (tipos de lista/precio) | sí |
+| Web | `apps/web/features/pricing/` (`PriceListsView`, `hooks.ts`, `api.ts`) | real |
+| Contrato | `packages/contracts/src/pricing.ts` (tipos de lista/precio) | sí |
 | Datos | `listas_precios`, `precios_platos` | `20261019000000_init` |
 
 ## 3. API
@@ -41,7 +41,7 @@ Reglas:
 
 ## 5. UI y rutas
 
-- `/app/productos/precios` → `PriceListsView`: crear/activar listas y editar precios con Enter/blur (nunca por tecla).
+- `/app/productos/precios` → `PriceListsView` de `features/pricing`: crear/activar listas y editar precios con Enter/blur (nunca por tecla).
 - El precio se pinta con `priceOf(productId, lists)` de `lib/erp-catalog.ts`.
 
 ## 6. Pruebas
@@ -55,10 +55,11 @@ Reglas:
 | Suite | Archivo |
 |---|---|
 | Unit | `src/modules/pricing/pricing.service.spec.ts` |
-| Web | `features/catalogo/catalogo.test.ts` |
+| Web | `features/pricing/api.test.ts`, `features/pricing/hooks.test.tsx`, `features/pricing/PriceListsView.rtl.test.tsx` |
 
 ## 7. Deuda conocida
 
+- Fase 3 de paridad (2026-11-21): `pricing` es feature propia (`features/pricing`) y contrato `pricing.ts`; el estado compartido sigue en `CatalogoProvider`.
 - No hay historial de cambios de precio.
 - No hay precios por sucursal: la lista es de empresa.
 - Las columnas `vigencia_desde`/`vigencia_hasta` existen en `listas_precios`; la resolución actual usa la lista activa (verificar si la vigencia se aplica al cotizar).

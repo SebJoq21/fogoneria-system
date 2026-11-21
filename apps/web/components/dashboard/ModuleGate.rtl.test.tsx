@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({ notFound }));
 
 vi.mock('@/features/crm', () => ({ LoyaltyHubPage: () => <div>loyalty-hub</div> }));
 vi.mock('@/features/inventory', () => ({ InventoryHubPage: () => <div>inventory-hub</div> }));
-vi.mock('@/components/erp/BookingsWorkspace', () => ({
+vi.mock('@/features/reservations', () => ({
   BookingsWorkspace: () => <div>bookings-workspace</div>,
 }));
 vi.mock('@/components/erp/StaffWorkspace', () => ({

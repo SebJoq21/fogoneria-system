@@ -54,6 +54,7 @@ const syncManifests = args.has('--sync-manifests');
 
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const rel = (path) => relative(ROOT, path).split('\\').join('/');
+const normalizeEol = (text) => text.replace(/\r\n/g, '\n');
 
 const catalog = readJson(CATALOG);
 const modules = catalog.modules ?? [];
@@ -218,7 +219,7 @@ const webRegistry = `/**
  * GENERADO por scripts/gen-modules.mjs — no editar a mano.
  * Regenera con \`pnpm gen:modules\`.
  *
- * Fase 0/1: solo lista las features que ya exponen \`module.ts\`. Los providers
+ * Fase 0–3: lista las features que ya exponen \`module.ts\`. Los providers
  * por módulo llegan en la Fase 6; el layout todavía no consume este registry.
  */
 import type { ComponentType, ReactNode } from 'react';
@@ -308,7 +309,8 @@ const modulesNav = `/**
  * Regenera con \`pnpm gen:modules\`.
  *
  * El shell todavía usa su lista de AppSidebar (Fase 6 conectará este nav).
- * Fase 1: la entrada de \`crm\` sale de \`features/crm/module.ts\`.
+ * Las entradas con \`module.ts\` (crm, catalog, pricing, tables, reservations) salen
+ * de la metadata de la feature; el resto del catálogo, de \`modules/catalog.json\`.
  */
 export type ModuleNavRole = 'superadmin' | 'admin' | 'sucursal' | 'cajero' | 'cocina' | 'mesero';
 
@@ -357,7 +359,7 @@ for (const [path, content] of outputs) {
     if (error.code !== 'ENOENT') throw error;
   }
   if (checkOnly) {
-    if (current !== content) {
+    if (normalizeEol(current ?? '') !== normalizeEol(content)) {
       console.error(`❌ ${path} está desactualizado (ejecuta pnpm gen:modules).`);
       stale++;
     }
