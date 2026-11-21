@@ -7,6 +7,7 @@ import { ModulesProvider } from "@/components/dashboard/ModulesProvider";
 import { CatalogoProvider } from "@/components/dashboard/providers/catalog";
 import { NotificationsProvider } from "@/components/dashboard/providers/notifications";
 import { SessionProvider } from "@/components/dashboard/providers/session";
+import { TicketsProvider } from "@/components/dashboard/providers/tickets";
 import { FeatureProviders } from "@/features/registry";
 import { initialPayments } from "@/lib/dashboard";
 
@@ -38,7 +39,9 @@ export default function RootLayout({
             <NotificationsProvider>
               <FeatureProviders>
                 <CatalogoProvider>
-                  <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+                  <TicketsProvider>
+                    <ModulesProvider initialPayments={initialPayments}>{children}</ModulesProvider>
+                  </TicketsProvider>
                 </CatalogoProvider>
               </FeatureProviders>
             </NotificationsProvider>

@@ -85,12 +85,13 @@ function escrituras(overrides: Partial<CheckoutWrites> = {}): Escrituras {
     consumeCoupon: vi.fn(() => calls.push('consumeCoupon')),
     restoreCoupon: vi.fn(() => calls.push('restoreCoupon')),
     addPoints: vi.fn(() => calls.push('addPoints')),
+    restorePoints: vi.fn(() => calls.push('restorePoints')),
   };
   return { ...base, ...overrides, calls };
 }
 
 describe('runCheckout', () => {
-  it('cobra en orden cuenta → caja → comprobante → cupón → puntos', () => {
+  it('cobra en orden cuenta → caja → comprobante → puntos → cupón', () => {
     const writes = escrituras();
     const afterCommit = vi.fn();
     const recibo = runCheckout(input, contexto(), writes, { afterCommit });
@@ -99,8 +100,8 @@ describe('runCheckout', () => {
       'markAccountPaid',
       'addCashMovements',
       'addReceipt',
-      'consumeCoupon',
       'addPoints',
+      'consumeCoupon',
     ]);
     expect(afterCommit).toHaveBeenCalledTimes(1);
     expect(recibo).toMatchObject({
@@ -179,28 +180,29 @@ describe('runCheckout', () => {
     expect(writes.consumeCoupon).not.toHaveBeenCalled();
   });
 
-  it('compensa comprobante, caja y cuenta si falla el cupón', () => {
+  it('compensa puntos, comprobante, caja y cuenta si falla el cupón', () => {
     const writes = escrituras({
       consumeCoupon: vi.fn(() => {
         throw new Error('cupón caído');
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('cupón caído');
+    expect(writes.restorePoints).toHaveBeenCalledWith(7, 44);
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);
     expect(writes.restoreAccount).toHaveBeenCalled();
     expect(writes.restoreCoupon).not.toHaveBeenCalled();
-    expect(writes.addPoints).not.toHaveBeenCalled();
   });
 
-  it('compensa cupón, comprobante, caja y cuenta si falla CRM', () => {
+  it('compensa comprobante, caja y cuenta si falla CRM (sin cupón consumido)', () => {
     const writes = escrituras({
       addPoints: vi.fn(() => {
         throw new Error('CRM caído');
       }),
     });
     expect(() => runCheckout(input, contexto(), writes)).toThrow('CRM caído');
-    expect(writes.restoreCoupon).toHaveBeenCalledWith('C10');
+    expect(writes.consumeCoupon).not.toHaveBeenCalled();
+    expect(writes.restoreCoupon).not.toHaveBeenCalled();
     expect(writes.removeReceipt).toHaveBeenCalledWith('B001-1');
     expect(writes.removeCashMovements).toHaveBeenCalledTimes(1);
     expect(writes.restoreAccount).toHaveBeenCalled();

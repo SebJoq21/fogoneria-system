@@ -28,6 +28,8 @@ import { crmModule } from './crm/module';
 import { staffModule } from './staff/module';
 import { biModule } from './bi/module';
 import { TenantProvider } from './tenant/provider';
+import { TablesProvider } from './tables/provider';
+import { ReservationsProvider } from './reservations/provider';
 import { AccountsProvider } from './orders/provider';
 import { CashProvider } from './cash/provider';
 import { ReceiptsProvider } from './receipts/provider';
@@ -81,6 +83,8 @@ export const pendingFeatureIds = [];
 /** Providers opcionales por módulo (Fase 6). */
 export const featureProviders: FeatureProvider[] = [
   { id: "tenant", Provider: TenantProvider },
+  { id: "tables", Provider: TablesProvider },
+  { id: "reservations", Provider: ReservationsProvider },
   { id: "orders", Provider: AccountsProvider },
   { id: "cash", Provider: CashProvider },
   { id: "receipts", Provider: ReceiptsProvider },

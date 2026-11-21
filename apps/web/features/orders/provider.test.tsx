@@ -8,6 +8,7 @@ vi.mock('@/components/dashboard/providers/session', () => ({
 }));
 
 import { AccountsProvider, useAccounts } from './provider';
+import { useOrdersDemo } from './provider';
 
 const cuenta = (id: string, label: string): TableAccount => ({
   id,
@@ -76,6 +77,78 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+function OrdersProbe() {
+  const { ordersByBranch, setOrdersForBranches, setBranchOrders, ensureDemoOrders, resetOrdersDemo } =
+    useOrdersDemo();
+  return (
+    <div>
+      <span data-testid="miraflores">{(ordersByBranch.miraflores ?? []).length}</span>
+      <span data-testid="surco">{(ordersByBranch.surco ?? []).length}</span>
+      <button type="button" onClick={() => ensureDemoOrders(['miraflores', 'surco'])}>
+        asegurar
+      </button>
+      <button type="button" onClick={() => setBranchOrders('miraflores', (current) => current.slice(1))}>
+        recortar
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          setOrdersForBranches(['miraflores', 'surco'], 'todas', (current) =>
+            current.map((order) => ({ ...order, status: 'listo' as const })),
+          )
+        }
+      >
+        marcar listo
+      </button>
+      <button type="button" onClick={resetOrdersDemo}>
+        reiniciar comandas
+      </button>
+    </div>
+  );
+}
+
+describe('useOrdersDemo', () => {
+  it('carga el demo, asegura sucursales y escribe por sucursal', async () => {
+    render(
+      <AccountsProvider>
+        <OrdersProbe />
+      </AccountsProvider>,
+    );
+    await waitFor(() =>
+      expect(Number(screen.getByTestId('miraflores').textContent)).toBeGreaterThan(0),
+    );
+
+    act(() => screen.getByText('asegurar').click());
+    expect(Number(screen.getByTestId('surco').textContent)).toBeGreaterThan(0);
+
+    const antes = Number(screen.getByTestId('miraflores').textContent);
+    act(() => screen.getByText('recortar').click());
+    expect(screen.getByTestId('miraflores').textContent).toBe(String(antes - 1));
+  });
+
+  it('aplica la vista general sobre el combinado y reinicia', async () => {
+    render(
+      <AccountsProvider>
+        <OrdersProbe />
+      </AccountsProvider>,
+    );
+    await waitFor(() =>
+      expect(Number(screen.getByTestId('miraflores').textContent)).toBeGreaterThan(0),
+    );
+
+    act(() => screen.getByText('marcar listo').click());
+    const guardado = JSON.parse(localStorage.getItem('fogoneria:orders-demo:v1:anon') ?? '{}');
+    expect(
+      guardado.miraflores.every((o: { status: string }) => o.status === 'listo'),
+    ).toBe(true);
+
+    act(() => screen.getByText('reiniciar comandas').click());
+    await waitFor(() =>
+      expect(Number(screen.getByTestId('miraflores').textContent)).toBeGreaterThan(0),
+    );
+  });
 });
 
 describe('AccountsProvider', () => {

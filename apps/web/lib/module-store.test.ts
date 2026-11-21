@@ -7,6 +7,7 @@ import {
   migrateLegacyInventory,
   migrateLegacyPromotions,
   migrateLegacyReceipts,
+  migrateLegacyScopes,
   moduleChannelKey,
   moduleStorageKey,
   type LegacyErpState,
@@ -188,9 +189,9 @@ describe('migrateLegacyCash', () => {
       movementsByBranch: { miraflores: [{ id: 1 }] },
     });
     expect('cashShifts' in result.state).toBe(false);
-    expect(
-      (result.state.scopes.miraflores as unknown as { cash?: unknown }).cash,
-    ).toBeUndefined();
+    const scopes = (result.state as unknown as { scopes?: Record<string, { cash?: unknown }> })
+      .scopes;
+    expect(scopes?.miraflores?.cash).toBeUndefined();
   });
 
   it('fusiona turnos por id y movimientos por sucursal', () => {
@@ -234,6 +235,33 @@ describe('migrateLegacyReceipts', () => {
     delete (clean as LegacyErpState).receipts;
     delete (clean as LegacyErpState).sunatContingencia;
     expect(migrateLegacyReceipts(clean, null)).toEqual({ state: clean, migrated: null });
+  });
+});
+
+describe('migrateLegacyScopes', () => {
+  it('saca comandas y mesas y elimina scopes', () => {
+    const result = migrateLegacyScopes(state, null, null);
+    expect(result.migrated).toEqual({
+      ordersByBranch: { miraflores: [] },
+      tablesByBranch: { miraflores: [] },
+    });
+    expect('scopes' in result.state).toBe(false);
+  });
+
+  it('fusiona por id con lo ya migrado', () => {
+    const resultado = migrateLegacyScopes(
+      state,
+      { miraflores: [{ id: 'ord-1' } as never] },
+      { miraflores: [{ id: 5 } as never] },
+    );
+    expect(resultado.migrated?.ordersByBranch.miraflores).toHaveLength(1);
+    expect(resultado.migrated?.tablesByBranch.miraflores).toHaveLength(1);
+  });
+
+  it('sin scopes no migra nada', () => {
+    const clean = { ...state } as ErpState;
+    delete (clean as LegacyErpState).scopes;
+    expect(migrateLegacyScopes(clean, null, null)).toEqual({ state: clean, migrated: null });
   });
 });
 

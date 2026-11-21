@@ -21,8 +21,10 @@ import type {
   CashMovement,
   Coupon,
   Ingredient,
+  Order,
   Receipt,
   StockMovement,
+  Table,
 } from '@/lib/erp';
 import type { Combo } from '@/lib/erp-catalog';
 import type { CashShift } from '@/lib/domain';
@@ -144,6 +146,11 @@ export type PromotionsStoreState = {
   coupons: Coupon[];
 };
 
+export type ScopesStoreState = {
+  ordersByBranch: Record<string, Order[]>;
+  tablesByBranch: Record<string, Table[]>;
+};
+
 /**
  * F6c2: saca caja del `ErpState` (`cashShifts` + `scopes[*].cash`). Los scopes
  * quedan solo con comandas/mesas; el resto se fusiona con la clave del módulo.
@@ -175,7 +182,7 @@ export function migrateLegacyCash(
       delete (withoutCash as { cash?: unknown }).cash;
       nextScopes[branchId] = withoutCash as BranchScope;
     }
-    (rest as { scopes: Record<string, BranchScope> }).scopes = nextScopes;
+    (rest as unknown as { scopes: Record<string, BranchScope> }).scopes = nextScopes;
   }
 
   const movementsByBranch: Record<string, CashMovement[]> = {
@@ -215,6 +222,46 @@ export function migrateLegacyReceipts(
         existing?.sunatContingencia ??
         (hasContingencia ? (state.sunatContingencia as boolean) : false),
     },
+  };
+}
+
+/** F6c3: comandas y mesas demo fuera del `ErpState` (una entrada por sucursal). */
+export function migrateLegacyScopes(
+  state: LegacyErpState,
+  existingOrders: Record<string, Order[]> | null,
+  existingTables: Record<string, Table[]> | null,
+): { state: ErpState; migrated: ScopesStoreState | null } {
+  const scopes = state.scopes as
+    | Record<string, { orders?: unknown; tables?: unknown }>
+    | undefined;
+  if (!scopes) return { state, migrated: null };
+
+  let hasScopes = false;
+  const ordersByBranch: Record<string, Order[]> = { ...(existingOrders ?? {}) };
+  const tablesByBranch: Record<string, Table[]> = { ...(existingTables ?? {}) };
+  for (const [branchId, scope] of Object.entries(scopes)) {
+    if (Array.isArray(scope?.orders)) {
+      ordersByBranch[branchId] = mergeById(
+        scope.orders as Order[],
+        ordersByBranch[branchId] ?? null,
+      );
+      hasScopes = true;
+    }
+    if (Array.isArray(scope?.tables)) {
+      tablesByBranch[branchId] = mergeById(
+        scope.tables as Table[],
+        tablesByBranch[branchId] ?? null,
+      );
+      hasScopes = true;
+    }
+  }
+  if (!hasScopes) return { state, migrated: null };
+
+  const rest = { ...state };
+  delete rest.scopes;
+  return {
+    state: rest as ErpState,
+    migrated: { ordersByBranch, tablesByBranch },
   };
 }
 
