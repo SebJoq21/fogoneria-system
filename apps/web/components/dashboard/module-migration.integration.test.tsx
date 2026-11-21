@@ -67,6 +67,9 @@ vi.mock('@/components/dashboard/providers/catalog', () => ({
 vi.mock('@/lib/realtime', () => ({ connectOrdersRealtime: () => () => {} }));
 
 import { CrmProvider } from '@/features/crm/provider';
+import { ExpensesProvider } from '@/features/expenses/provider';
+import { InventoryProvider } from '@/features/inventory/provider';
+import { StaffProvider } from '@/features/staff/provider';
 import { ModulesProvider } from './ModulesProvider';
 
 const legacyCustomer = {
@@ -82,20 +85,20 @@ const legacyCustomer = {
 beforeEach(() => localStorage.clear());
 afterEach(cleanup);
 
-describe('migración CRM en el arranque del shell', () => {
+describe('migración de slices en el arranque del shell', () => {
   it('migra antes del primer save, purga el legacy y no duplica al remontar', async () => {
     localStorage.setItem(
       'fogoneria:erp:v2:anon',
       JSON.stringify({
         version: 2,
-        roles: [],
         reservations: [],
-        ingredients: [],
-        movements: [],
         customers: [legacyCustomer],
+        expenses: [{ id: 8, date: 'Hoy', category: 'Insumos', supplier: 'Proveedor', amount: '$10.00', status: 'Pagado' }],
+        ingredients: [{ id: 8, name: 'Sal', category: 'Insumos', stock: 1, min: 1, unit: 'kg', state: 'Óptimo' }],
+        movements: [{ id: 8, datetime: 'Hoy', type: 'Entrada', ingredient: 'Sal', qty: '+1 kg', reason: 'Compra' }],
+        roles: [{ id: 8, name: 'Rol legacy', description: 'Demo' }],
         coupons: [],
         receipts: [],
-        expenses: [],
         combos: [],
         tickets: [],
         scopes: {},
@@ -105,30 +108,43 @@ describe('migración CRM en el arranque del shell', () => {
       }),
     );
 
-    const { unmount } = render(
+    const shell = (
       <CrmProvider>
-        <ModulesProvider initialPayments={[]}>
-          <div />
-        </ModulesProvider>
-      </CrmProvider>,
+        <ExpensesProvider>
+          <InventoryProvider>
+            <StaffProvider>
+              <ModulesProvider initialPayments={[]}>
+                <div />
+              </ModulesProvider>
+            </StaffProvider>
+          </InventoryProvider>
+        </ExpensesProvider>
+      </CrmProvider>
     );
+    const { unmount } = render(shell);
 
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('fogoneria:crm:v1:anon') ?? '[]')).toHaveLength(1),
     );
+    expect(JSON.parse(localStorage.getItem('fogoneria:expenses:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:inventory:v1:anon') ?? '{}')).toMatchObject({
+      ingredients: [{ id: 8 }],
+      movements: [{ id: 8 }],
+    });
+    expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
     const legacy = JSON.parse(localStorage.getItem('fogoneria:erp:v2:anon') ?? '{}');
     expect(legacy.customers).toBeUndefined();
+    expect(legacy.expenses).toBeUndefined();
+    expect(legacy.ingredients).toBeUndefined();
+    expect(legacy.movements).toBeUndefined();
+    expect(legacy.roles).toBeUndefined();
 
     unmount();
-    render(
-      <CrmProvider>
-        <ModulesProvider initialPayments={[]}>
-          <div />
-        </ModulesProvider>
-      </CrmProvider>,
-    );
+    render(shell);
     await waitFor(() =>
       expect(JSON.parse(localStorage.getItem('fogoneria:crm:v1:anon') ?? '[]')).toHaveLength(1),
     );
+    expect(JSON.parse(localStorage.getItem('fogoneria:expenses:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
   });
 });

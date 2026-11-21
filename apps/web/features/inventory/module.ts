@@ -9,4 +9,5 @@ export const inventoryModule = {
   path: '/app/modulos/inventario',
   roles: ['admin', 'sucursal'],
   group: 'Administración',
+  provider: 'InventoryProvider',
 };

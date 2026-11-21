@@ -9,4 +9,5 @@ export const staffModule = {
   path: '/app/modulos/personal',
   roles: ['admin', 'sucursal'],
   group: 'Administración',
+  provider: 'StaffProvider',
 };

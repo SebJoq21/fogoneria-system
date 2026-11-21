@@ -62,6 +62,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- F6b: `ExpensesProvider`/`useExpenses` (`features/expenses/provider.tsx`) es dueño del estado demo; persiste `fogoneria:expenses:v1:<tenant>` y sincroniza por `BroadcastChannel`. `ModulesProvider` lo reexporta.
+
 - Metadata (2026-11-21): `features/expenses/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
 
 - Paridad de módulos (2026-11-21): feature `features/expenses/` y contrato `packages/contracts/src/expenses.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
