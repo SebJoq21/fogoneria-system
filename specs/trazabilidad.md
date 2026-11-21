@@ -137,6 +137,7 @@
 | `e9dabdc` | Ola dinero (receipts + cash + expenses) |
 | `eb57d76` | Quick wins seguridad/Sonar (CodeQL, S7773/S8786/S6848, checks PR-only) |
 | `e32771d` | CodeQL http-to-file y vulns Sonar restantes (load test, Docker, secrets locales) |
+| `cobertura-100-f1` | Fase 0+1 del plan 100 %: higiene de medición, RTL/jsdom, hooks, shell y SDK |
 | `cobertura-65-p3` | Tercera ola corta: ramas de órdenes/SaaS/reservas/mesas y variantes de sesión web |
 | `cobertura-65-p2` | Segunda ola de cobertura: providers SSR, Prisma/tenant extension, ramas de servicios y páginas de auth/RRHH |
 | `cobertura-65` | Tests de cobertura API/Web/contratos para Sonar (rama `test/cobertura-65`) |

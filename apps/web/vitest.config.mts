@@ -15,6 +15,18 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "lcov"],
       reportsDirectory: "./coverage",
+      // Higiene de medición (Fase 0): demo, e2e y scripts no son producción.
+      // No se activa `coverage.include` global: mediría páginas nunca
+      // importadas y bajaría el reporte a ~49 % líneas / 46 % ramas, por
+      // debajo de los thresholds vigentes (58/53).
+      exclude: [
+        ...configDefaults.exclude,
+        "e2e/**",
+        "app/demo/**",
+        "scripts/**",
+        "**/*.config.*",
+        "**/*.d.ts",
+      ],
       // Ratchet aprobado en G3 (medido: 62.61/58.88/57.91/63.73).
       thresholds: {
         statements: 57,
