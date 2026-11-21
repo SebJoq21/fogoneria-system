@@ -133,3 +133,4 @@ Después: `codeql.yml` sigue con `security-extended` y cron semanal; no activar 
 - `pnpm audit --audit-level high`
 - Sonar: `qualitygates/project_status`, `issues/search`, `measures/component` (branch `development`).
 - Cada PR de este plan actualiza `specs/operacion/calidad.md` y este documento.
+- **Siguiente nivel:** [plan de cobertura 100 % útil y duplicación](plan-cobertura-100.md), con las fases para pasar de 65.6 % a 80 %+ y bajar la duplicación a ≤0.2 %.
