@@ -1,0 +1,110 @@
+// Esquema Prisma del modulo orders.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detalles_orden {
+  id                           String                         @id(map: "pk_detalles") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orden_id                     String                         @db.Uuid
+  tipo                         tipo_detalle_orden
+  plato_id                     String?                        @db.Uuid
+  combo_id                     String?                        @db.Uuid
+  cantidad                     Int                            @default(1)
+  precio_unitario              Decimal                        @default(0) @db.Decimal(12, 2)
+  subtotal                     Decimal                        @default(0) @db.Decimal(12, 2)
+  notas                        String?
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  combos                       combos?                        @relation(fields: [combo_id], references: [id], onDelete: Restrict, map: "fk_detalles_combo")
+  ordenes                      ordenes                        @relation(fields: [orden_id], references: [id], onDelete: Cascade, map: "fk_detalles_orden")
+  platos                       platos?                        @relation(fields: [plato_id], references: [id], onDelete: Restrict, map: "fk_detalles_plato")
+  detalles_orden_modificadores detalles_orden_modificadores[]
+
+  @@index([combo_id], map: "idx_detalles_combo")
+  @@index([orden_id], map: "idx_detalles_orden")
+  @@index([plato_id], map: "idx_detalles_plato")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model detalles_orden_modificadores {
+  detalle_id             String                 @db.Uuid
+  opcion_id              String                 @db.Uuid
+  precio_extra           Decimal                @default(0) @db.Decimal(12, 2)
+  detalles_orden         detalles_orden         @relation(fields: [detalle_id], references: [id], onDelete: Cascade, map: "fk_dom_detalle")
+  opciones_modificadores opciones_modificadores @relation(fields: [opcion_id], references: [id], map: "fk_dom_opcion")
+
+  @@id([detalle_id, opcion_id])
+  @@index([opcion_id], map: "idx_dom_opcion")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model ordenes {
+  id                     String                   @id(map: "pk_ordenes") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id             String                   @db.Uuid
+  sucursal_id            String                   @db.Uuid
+  numero_orden           String
+  mesa_id                String?                  @db.Uuid
+  cliente_id             String?                  @db.Uuid
+  mesero_id              String?                  @db.Uuid
+  origen                 origen_orden             @default(MESA)
+  estado                 estado_orden             @default(POR_CONFIRMAR)
+  subtotal               Decimal                  @default(0) @db.Decimal(12, 2)
+  descuento_cupon        Decimal                  @default(0) @db.Decimal(12, 2)
+  total                  Decimal                  @default(0) @db.Decimal(12, 2)
+  propina                Decimal                  @default(0) @db.Decimal(12, 2)
+  lista_precio_id        String?                  @db.Uuid
+  cupon_id               String?                  @db.Uuid
+  ingreso_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  confirmacion_at        DateTime?                @db.Timestamptz(6)
+  listo_at               DateTime?                @db.Timestamptz(6)
+  entrega_at             DateTime?                @db.Timestamptz(6)
+  alerta_sla             Boolean                  @default(false)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  canjes_cupones         canjes_cupones[]
+  comprobantes           comprobantes[]
+  detalles_orden         detalles_orden[]
+  movimientos_caja       movimientos_caja[]
+  movimientos_inventario movimientos_inventario[]
+  movimientos_puntos     movimientos_puntos[]
+  clientes               clientes?                @relation(fields: [cliente_id], references: [id], map: "fk_ordenes_cliente")
+  cupones                cupones?                 @relation(fields: [cupon_id], references: [id], map: "fk_ordenes_cupon")
+  empresas               empresas                 @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_ordenes_empresa")
+  listas_precios         listas_precios?          @relation(fields: [lista_precio_id], references: [id], map: "fk_ordenes_lista")
+  mesas                  mesas?                   @relation(fields: [mesa_id], references: [id], map: "fk_ordenes_mesa")
+  usuarios               usuarios?                @relation(fields: [mesero_id], references: [id], map: "fk_ordenes_mesero")
+  sucursales             sucursales               @relation(fields: [sucursal_id], references: [id], onDelete: Cascade, map: "fk_ordenes_sucursal")
+
+  @@unique([empresa_id, numero_orden], map: "uq_ordenes_empresa_numero")
+  @@index([cliente_id], map: "idx_ordenes_cliente")
+  @@index([empresa_id], map: "idx_ordenes_empresa")
+  @@index([sucursal_id, estado], map: "idx_ordenes_estado")
+  @@index([empresa_id, confirmacion_at, ingreso_at], map: "idx_ordenes_sla_pendiente", where: raw("alerta_sla = false AND estado IN ('POR_CONFIRMAR', 'EN_COCINA', 'LISTO')"))
+  @@index([mesa_id], map: "idx_ordenes_mesa")
+  @@index([mesero_id], map: "idx_ordenes_mesero")
+  @@index([sucursal_id], map: "idx_ordenes_sucursal")
+  @@index([empresa_id, sucursal_id, estado, created_at(sort: Desc)], map: "idx_ordenes_tenant_sucursal_estado")
+  @@index([empresa_id, created_at(sort: Desc)], map: "idx_ordenes_tenant_fecha")
+}
+
+enum estado_orden {
+  POR_CONFIRMAR
+  EN_COCINA
+  LISTO
+  ENTREGADO
+  ANULADA
+  CERRADA
+  PAGADA
+}
+
+enum origen_orden {
+  MESA
+  WEB
+  DELIVERY
+  BARRA
+}
+
+enum tipo_detalle_orden {
+  PLATO
+  COMBO
+}

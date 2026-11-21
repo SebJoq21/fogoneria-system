@@ -151,8 +151,17 @@ const RUTAS = [
 function moduloDe(archivo) {
   if (archivo.startsWith('docs/') || archivo.endsWith('.md')) return null;
   if (archivo.startsWith('.github/') || archivo.startsWith('scripts/')) return null;
-  if (archivo.startsWith('apps/api/prisma/') || archivo.startsWith('db/')) return null;
+  if (archivo.startsWith('db/')) return null;
   if (archivo.startsWith('apps/api/test/')) return null;
+
+  // Schema Prisma multi-archivo: cada módulo es dueño de su `<id>.prisma`;
+  // `core.prisma` y el resto de `prisma/` son compartidos.
+  const prismaModulo = /^apps\/api\/prisma\/schema\/([a-z0-9-]+)\.prisma$/.exec(archivo);
+  if (prismaModulo) {
+    if (prismaModulo[1] === 'core') return null;
+    return MODULOS[`api:${prismaModulo[1]}`] ?? prismaModulo[1];
+  }
+  if (archivo.startsWith('apps/api/prisma/')) return null;
 
   // Contratos por módulo: `packages/contracts/src/<m>.ts`.
   const contrato = /^packages\/contracts\/src\/([a-z-]+)\.ts$/.exec(archivo);

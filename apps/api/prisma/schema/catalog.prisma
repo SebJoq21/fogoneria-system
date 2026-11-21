@@ -1,0 +1,93 @@
+// Esquema Prisma del modulo catalog.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+model categorias {
+  id         String   @id(map: "pk_categorias") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id String   @db.Uuid
+  nombre     String
+  posicion   Int      @default(0)
+  activa     Boolean  @default(true)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  deleted_by String?   @db.Uuid
+  empresas   empresas  @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_categorias_empresa")
+  platos     platos[]
+
+  @@unique([empresa_id, nombre], map: "uq_categorias_empresa_nombre", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_categorias_empresa")
+}
+
+model grupos_modificadores {
+  id                          String                        @id(map: "pk_grupos_mod") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id                  String                        @db.Uuid
+  nombre                      String
+  obligatorio                 Boolean                       @default(false)
+  permite_multiple            Boolean                       @default(false)
+  activo                      Boolean                       @default(true)
+  created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  deleted_at                  DateTime?                     @db.Timestamptz(6)
+  deleted_by                  String?                       @db.Uuid
+  empresas                    empresas                      @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_grupos_empresa")
+  opciones_modificadores      opciones_modificadores[]
+  platos_grupos_modificadores platos_grupos_modificadores[]
+
+  @@unique([empresa_id, nombre], map: "uq_grupos_empresa_nombre", where: raw("deleted_at IS NULL"))
+  @@index([empresa_id], map: "idx_grupos_empresa")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model opciones_modificadores {
+  id                           String                         @id(map: "pk_opciones_mod") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grupo_id                     String                         @db.Uuid
+  nombre                       String
+  precio_extra                 Decimal                        @default(0) @db.Decimal(12, 2)
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  detalles_orden_modificadores detalles_orden_modificadores[]
+  grupos_modificadores         grupos_modificadores           @relation(fields: [grupo_id], references: [id], onDelete: Cascade, map: "fk_opciones_grupo")
+
+  @@unique([grupo_id, nombre], map: "uq_opciones_grupo_nombre")
+  @@index([grupo_id], map: "idx_opciones_grupo")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model platos {
+  id                          String                        @id(map: "pk_platos") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id                  String                        @db.Uuid
+  categoria_id                String                        @db.Uuid
+  sku                         String
+  nombre                      String
+  descripcion                 String?
+  foto_url                    String?
+  activo                      Boolean                       @default(true)
+  costo_real                  Decimal                       @default(0) @db.Decimal(12, 2)
+  created_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                      @default(now()) @db.Timestamptz(6)
+  deleted_at                  DateTime?                     @db.Timestamptz(6)
+  deleted_by                  String?                       @db.Uuid
+  combos_platos               combos_platos[]
+  detalles_orden              detalles_orden[]
+  escandallos_recetas         escandallos_recetas[]
+  categorias                  categorias                    @relation(fields: [categoria_id], references: [id], map: "fk_platos_categoria")
+  empresas                    empresas                      @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_platos_empresa")
+  platos_grupos_modificadores platos_grupos_modificadores[]
+  precios_platos              precios_platos[]
+
+  @@unique([empresa_id, sku], map: "uq_platos_empresa_sku", where: raw("deleted_at IS NULL"))
+  @@index([categoria_id], map: "idx_platos_categoria")
+  @@index([empresa_id], map: "idx_platos_empresa")
+  @@index([empresa_id, categoria_id, activo], map: "idx_platos_tenant_categoria_activo", where: raw("deleted_at IS NULL"))
+}
+
+model platos_grupos_modificadores {
+  plato_id             String               @db.Uuid
+  grupo_id             String               @db.Uuid
+  grupos_modificadores grupos_modificadores @relation(fields: [grupo_id], references: [id], onDelete: Cascade, map: "fk_pgm_grupo")
+  platos               platos               @relation(fields: [plato_id], references: [id], onDelete: Cascade, map: "fk_pgm_plato")
+
+  @@id([plato_id, grupo_id])
+  @@index([grupo_id], map: "idx_pgm_grupo")
+}

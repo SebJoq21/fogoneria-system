@@ -2,10 +2,19 @@
 
 ## 2026-11-21 — Paridad F6 (timeboxed): shell generado + providers piloto
 
-- **Shell:** `AppSidebar` consume `lib/modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` deriva títulos de nav/registry. `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
-- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes (`fogoneria:crm:v1:<tenant>` + migración de `ErpState` v2). `ModulesProvider` los consume y reexporta `customers`/`setCustomers`.
+- **Shell:** `AppSidebar` consume `lib/modules-nav.ts` (grupos/roles/iconos/rutas) con `components/dashboard/module-icons.ts`; `AppTopBar` deriva títulos de `modules-nav.ts`/registry. `app/layout.tsx` usa `FeatureProviders` de `features/registry.ts`.
+- **Providers:** `TenantProvider` movido a `features/tenant/provider.tsx`; `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) dueño del estado demo de clientes (`fogoneria:crm:v1:<tenant>`, migración desde `ErpState` v2 con purga legacy y sync por `BroadcastChannel`). `ModulesProvider` los consume y reexporta `customers`/`setCustomers`.
 - **Resto:** órdenes, cuentas, caja, gastos, inventario, promociones y comprobantes siguen en `ModulesProvider` (F6 completo pendiente).
 - Verificado: web **882** tests, `check:modules --strict`, `gen:modules --check`, boundaries 0, types, lint y build.
+
+## 2026-11-21 — Paridad F7: Prisma multi-archivo por módulo
+
+- **Spike:** Prisma 7.10.1 soporta schema multi-archivo (GA desde 6.7, sin flag); `prisma.config.ts:schema` acepta una carpeta y `generate`/`validate`/`migrate diff` la combinan. El `output` del cliente es relativo a la carpeta, así que quedó `../../src/generated/prisma`.
+- **Split:** `apps/api/prisma/schema/` con `core.prisma` (generator, datasource, `empresas`/`sucursales`/`usuarios`/`roles_empresa`/`secuencias` + enums compartidos) y 15 `<id>.prisma` (audit, billing, cash, catalog, crm, expenses, inventory, orders, pricing, promotions, receipts, reservations, saas, staff, tables). `auth`, `tenant`, `onboarding`, `bi` y `realtime` no tienen tablas propias.
+- **DDL intacto:** `prisma migrate diff --from-schema <monolito> --to-schema prisma/schema` = «No difference detected»; migraciones, RLS y triggers sin tocar. Sin PostgreSQL local en este entorno: `migrate diff --from-migrations` y `test:db` no se pudieron ejecutar (reportado).
+- **Gates:** `check:pr-scope` mapea `schema/<id>.prisma` a su módulo (`core.prisma` compartido). Verificado `api test` 683, `check-types`, `build`, `lint` y `check:modules --strict` 20/20/20/20.
+- **Docs:** `modelo-datos`, `arquitectura`, `plan-paridad-modulos` (Fase 7), `modules/README`, `AGENTS.md` (raíz y api), `apps/api/README` y `docs/decisiones.md`.
+- **Próximo:** completar F6 (providers por módulo); la convención de migraciones `<timestamp>_<id>_<detalle>` se aplica al agregar la primera tabla nueva.
 
 ## 2026-11-21 — Paridad F4/F5 + strict 20/20/20/20
 

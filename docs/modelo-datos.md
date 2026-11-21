@@ -3,7 +3,7 @@
 Modelo físico PostgreSQL 16 del ERP gastronómico multitenant. Esquema `fogoneria`.
 
 - **Fuente ejecutable:** `apps/api/prisma/migrations/**` (la inicial `20261019000000_init` y las cuatro de AYCDS-62)
-- **Modelo ORM:** `apps/api/prisma/schema.prisma` (generado con `prisma db pull`)
+- **Modelo ORM:** `apps/api/prisma/schema/` (multi-archivo por módulo: `core.prisma` + `<id>.prisma`; Prisma 7 los combina en `generate` y `migrate`)
 - **Esquema de referencia:** `db/fogoneria_schema.sql` (DDL + datos demo históricos; no incluye la 62)
 - **Alcance:** 41 tablas, 27 enums, 22 triggers `updated_at`, 4 vistas, índices únicos parciales por soft-delete, RLS por tenant
 
@@ -20,6 +20,18 @@ Modelo físico PostgreSQL 16 del ERP gastronómico multitenant. Esquema `fogoner
 | Inmutabilidad | Triggers contables con SQLSTATE `45000`; catálogo en `docs/errores-db.md` |
 | Auditoría | `created_at`/`updated_at`; triggers `set_updated_at()` en 22 tablas |
 | Nombres | snake_case en español, tablas en plural |
+
+## Organización del esquema Prisma
+
+`prisma.config.ts` apunta `schema` a la carpeta `prisma/schema/`, así que Prisma lee y combina todos los `.prisma` antes de generar el cliente o calcular migraciones (soporte GA desde Prisma 6.7, sin preview flag). Las migraciones siguen en `prisma/migrations` (forward-only) y no cambian con el split.
+
+| Archivo | Contenido |
+|---|---|
+| `core.prisma` | `generator`, `datasource` y lo compartido: `empresas`, `sucursales`, `usuarios`, `roles_empresa`, `secuencias` y sus enums |
+| `<id>.prisma` | Modelos del módulo (mismo `<id>` que `apps/api/src/modules/<id>`), con los enums que solo usa él |
+| Sin archivo | `auth`, `tenant`, `onboarding`, `bi` y `realtime` no tienen tablas propias (usan `core`, vistas o no persisten) |
+
+Reglas: un módulo solo edita su `<id>.prisma`; lo que usan dos o más módulos vive en `core.prisma`. Los modelos pueden relacionarse entre archivos sin imports. El `output` del cliente es relativo a la carpeta del schema (`../../src/generated/prisma`).
 
 ## Mapa de dominios
 

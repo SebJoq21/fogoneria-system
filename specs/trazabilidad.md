@@ -125,6 +125,7 @@
 
 | Commit | Qué |
 |---|---|
+| `refactor/paridad-f7` | Prisma multi-archivo por módulo (Fase 7): `schema/core.prisma` + `<id>.prisma`, DDL sin drift |
 | `22f4f32` | CI Fase A mergeada (#76) |
 | `39b58c7` | Repo de specs docs-as-code + trazabilidad (#74) |
 | `1a6d3d1` | `CatalogoProvider` extraído (etapa 3, #73) |
