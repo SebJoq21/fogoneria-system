@@ -330,13 +330,28 @@ for (const label of [...NAV_GROUPS, ...new Set(navEntries.map((entry) => entry.g
   if (entries.length > 0) groups.push({ label, entries });
 }
 
+const titleEntries = new Map();
+for (const entry of navEntries) titleEntries.set(entry.href, entry.label);
+for (const module of modules) {
+  const metadata = webMetadata.get(module.id);
+  if (metadata?.path && metadata.label && !titleEntries.has(metadata.path)) {
+    titleEntries.set(metadata.path, metadata.label);
+  }
+}
+for (const [href, label] of Object.entries(catalog.titles ?? {})) {
+  titleEntries.set(href, label);
+}
+const titleLines = [...titleEntries.entries()].map(
+  ([href, label]) => `  ${JSON.stringify(href)}: ${JSON.stringify(label)},`,
+);
+
 const modulesNav = `/**
  * GENERADO por scripts/gen-modules.mjs — no editar a mano.
  * Regenera con \`pnpm gen:modules\`.
  *
- * El shell todavía usa su lista de AppSidebar (Fase 6 conectará este nav).
- * Las entradas con \`module.ts\` (crm, catalog, pricing, tables, reservations) salen
- * de la metadata de la feature; el resto del catálogo, de \`modules/catalog.json\`.
+ * AppSidebar consume \`modulesNav\`; AppTopBar consume \`moduleTitles\`. Las
+ * entradas con \`module.ts\` salen de la metadata de la feature; el resto y las
+ * subrutas, de \`modules/catalog.json\`.
  */
 export type ModuleNavRole = 'superadmin' | 'admin' | 'sucursal' | 'cajero' | 'cocina' | 'mesero';
 
@@ -365,6 +380,11 @@ ${group.entries.join('\n')}
   )
   .join('\n')}
 ];
+
+/** Títulos exactos del topbar (nav + subrutas declaradas en el catálogo). */
+export const moduleTitles: Record<string, string> = {
+${titleLines.join('\n')}
+};
 `;
 
 /* -------------------------------- salida --------------------------------- */

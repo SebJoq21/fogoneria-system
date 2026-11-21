@@ -15,15 +15,22 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { useSession } from '@/components/dashboard/providers/session';
 import { initialCustomers, type Customer } from '@/lib/erp';
-import { ANON_TENANT_KEY, loadErpState } from '@/lib/persistence';
+import {
+  ANON_TENANT_KEY,
+  loadErpState,
+  saveErpState,
+  type ErpState,
+} from '@/lib/persistence';
 import { tenantKeyOf } from '@/lib/session-state';
 import { DEMO_EMPRESA_ID } from '@/lib/tenancy';
 
 const CRM_STORAGE_KEY = 'fogoneria:crm:v1';
+const CRM_SYNC_CHANNEL = 'fogoneria:crm-sync';
 
 type CrmContextValue = {
   customers: Customer[];
@@ -42,7 +49,26 @@ function demoTenant(tenantKey: string): boolean {
   return tenantKey === ANON_TENANT_KEY || tenantKey === DEMO_EMPRESA_ID;
 }
 
+function channelKey(tenantKey: string): string {
+  return `${CRM_SYNC_CHANNEL}:${tenantKey}`;
+}
+
+type LegacyErpState = ReturnType<typeof loadErpState> & { customers?: Customer[] };
+
+/**
+ * Lee `customers` del ErpState v2 y lo reescribe sin ese campo. Devuelve la
+ * lista para sembrar la nueva clave; una segunda pasada ya no encuentra nada.
+ */
+function purgeLegacyCustomers(tenantKey: string): Customer[] | null {
+  const legacy = loadErpState(tenantKey) as LegacyErpState;
+  if (!legacy || !Array.isArray(legacy.customers)) return null;
+  const { customers, ...rest } = legacy;
+  saveErpState(tenantKey, rest as ErpState);
+  return customers;
+}
+
 function readCustomers(tenantKey: string): Customer[] | null {
+  const legacy = purgeLegacyCustomers(tenantKey);
   try {
     const raw = localStorage.getItem(storageKey(tenantKey));
     if (raw) {
@@ -52,12 +78,14 @@ function readCustomers(tenantKey: string): Customer[] | null {
   } catch {
     /* almacenamiento no disponible o JSON inválido */
   }
-  // Migración desde el estado v2 que antes guardaba `customers` en ErpState.
-  const legacy = loadErpState(tenantKey) as (ReturnType<typeof loadErpState> & {
-    customers?: Customer[];
-  });
-  return legacy?.customers ?? null;
+  return legacy;
 }
+
+type CrmSyncMessage = {
+  type: 'state' | 'reset';
+  source: string;
+  customers: Customer[];
+};
 
 function saveCustomers(tenantKey: string, customers: Customer[]): void {
   try {
@@ -72,6 +100,9 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   const tenantKey = tenantKeyOf(currentUser);
   const [customers, setCustomersState] = useState<Customer[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const sourceRef = useRef(`crm-${Math.random().toString(36).slice(2)}`);
+  const applyingRemote = useRef(false);
+  const skipBroadcast = useRef(false);
 
   useEffect(() => {
     const saved = readCustomers(tenantKey);
@@ -81,8 +112,33 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
   }, [tenantKey]);
 
   useEffect(() => {
-    if (hydrated) saveCustomers(tenantKey, customers);
+    if (!hydrated) return;
+    saveCustomers(tenantKey, customers);
+    if (applyingRemote.current) {
+      applyingRemote.current = false;
+      return;
+    }
+    if (skipBroadcast.current) {
+      skipBroadcast.current = false;
+      return;
+    }
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(channelKey(tenantKey));
+    channel.postMessage({ type: 'state', source: sourceRef.current, customers } satisfies CrmSyncMessage);
+    channel.close();
   }, [customers, hydrated, tenantKey]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const channel = new BroadcastChannel(channelKey(tenantKey));
+    channel.onmessage = (event: MessageEvent<CrmSyncMessage>) => {
+      const message = event.data;
+      if (!message || message.source === sourceRef.current) return;
+      applyingRemote.current = true;
+      setCustomersState(message.customers ?? []);
+    };
+    return () => channel.close();
+  }, [tenantKey]);
 
   const setCustomers = useCallback((next: Customer[]) => {
     setCustomersState(next);
@@ -109,7 +165,14 @@ export function CrmProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* almacenamiento no disponible */
     }
-    setCustomersState(demoTenant(tenantKey) ? initialCustomers : []);
+    const next = demoTenant(tenantKey) ? initialCustomers : [];
+    skipBroadcast.current = true;
+    setCustomersState(next);
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel(channelKey(tenantKey));
+      channel.postMessage({ type: 'reset', source: sourceRef.current, customers: next } satisfies CrmSyncMessage);
+      channel.close();
+    }
   }, [tenantKey]);
 
   const value = useMemo(

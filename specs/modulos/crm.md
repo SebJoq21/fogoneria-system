@@ -48,7 +48,7 @@ Reglas:
 - `/app/clientes` → `ClientesPage`: búsqueda por nombre/teléfono, filtro por segmento, ficha con movimientos y ajuste.
 - `/app/modulos/fidelizacion/regla` → `LoyaltyPage` (**demo**); `crmApi.config()`/`actualizarConfig()` listos para conectarla.
 - `/app/modulos/fidelizacion` → `LoyaltyHubPage`.
-- F6: `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) es el dueño del estado demo de clientes; persiste `fogoneria:crm:v1:<tenant>` y migra la lista antigua de `ErpState` v2. `ModulesProvider` reexporta `customers`/`setCustomers` para compatibilidad.
+- F6: `CrmProvider`/`useCrm` (`features/crm/provider.tsx`) es el dueño del estado demo de clientes; persiste `fogoneria:crm:v1:<tenant>`, migra `customers` del `ErpState` v2 y **purga** el campo legacy para no duplicar la persistencia. Sincroniza entre pestañas con `BroadcastChannel` (`fogoneria:crm-sync:<tenant>`) ignorando el eco propio. `ModulesProvider` reexporta `customers`/`setCustomers` para compatibilidad.
 
 ## 6. Pruebas
 
@@ -74,7 +74,7 @@ Reglas:
 - Fase 1 de paridad (2026-11-21): `features/crm/module.ts` describe la entrada del registry/nav generado (`pnpm gen:modules`); la ruta `/app/clientes` y el estado en `ModulesProvider` no cambian.
 
 - `LoyaltyPage` sigue demo (reglas de fidelización).
-- `customers`/`coupons` del demo siguen en `ModulesProvider` hasta la Fase 4.
+- `coupons` del demo siguen en `ModulesProvider` hasta completar F6.
 - Los puntos otorgados por consumo dependen del worker: si el cron no corre, se puede forzar con `POST /crm/process`.
 
 ## 8. Trazabilidad

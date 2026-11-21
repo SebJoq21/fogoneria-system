@@ -1,6 +1,28 @@
 {
   "version": 2,
   "canonical": true,
+  "titles": {
+    "/app/mesas": "Mapa de mesas",
+    "/app/mesas/maestro": "Maestro de mesas",
+    "/app/cocina": "Cocina · KDS",
+    "/app/mozo": "Mis órdenes",
+    "/app/productos/platos": "Platos",
+    "/app/productos/platos/nuevo": "Nuevo plato",
+    "/app/productos/categorias": "Categorías",
+    "/app/productos/modificadores": "Modificadores",
+    "/app/productos/precios": "Listas de precios",
+    "/app/modulos/reservas/agenda": "Agenda de reservas",
+    "/app/modulos/inventario/stock": "Stock",
+    "/app/modulos/inventario/movimientos": "Movimientos de stock",
+    "/app/modulos/personal/directorio": "Directorio del equipo",
+    "/app/modulos/personal/roles": "Roles",
+    "/app/modulos/personal/turnos": "Turnos",
+    "/app/modulos/personal/asistencia": "Asistencia",
+    "/app/modulos/personal/propinas": "Propinas",
+    "/app/pagos": "Gestión de pagos",
+    "/app/soporte": "Soporte Técnico",
+    "/app/configuracion": "Configuración de la cuenta"
+  },
   "modules": [
     { "id": "auth", "kind": "ui", "owner": "@por-asignar", "status": "aligned", "routes": ["/", "/recuperar"], "legacy": ["packages/contracts/src/plataforma.ts"] },
     { "id": "tenant", "kind": "ui", "owner": "@por-asignar", "status": "aligned", "routes": [], "legacy": ["apps/web/components/dashboard/providers/tenant.tsx", "packages/contracts/src/plataforma.ts"] },

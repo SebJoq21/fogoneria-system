@@ -6,38 +6,14 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme";
 import { ROLE_LABEL } from "@/lib/auth";
 import { featureModules } from "@/features/registry";
-import { modulesNav } from "@/lib/modules-nav";
+import { moduleTitles, modulesNav } from "@/lib/modules-nav";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useModules } from "./ModulesProvider";
-
-/** Subrutas que no son entradas de nav (tabs, maestros y pantallas sueltas). */
-const detailTitles: Record<string, string> = {
-  "/app/cocina": "Cocina · KDS",
-  "/app/mozo": "Mis órdenes",
-  "/app/mesas": "Mapa de mesas",
-  "/app/mesas/maestro": "Maestro de mesas",
-  "/app/productos/platos/nuevo": "Nuevo plato",
-  "/app/productos/platos": "Platos",
-  "/app/productos/categorias": "Categorías",
-  "/app/productos/modificadores": "Modificadores",
-  "/app/productos/precios": "Listas de precios",
-  "/app/modulos/reservas/agenda": "Agenda de reservas",
-  "/app/modulos/inventario/stock": "Stock",
-  "/app/modulos/inventario/movimientos": "Movimientos de stock",
-  "/app/modulos/personal/directorio": "Directorio del equipo",
-  "/app/modulos/personal/roles": "Roles",
-  "/app/modulos/personal/turnos": "Turnos",
-  "/app/modulos/personal/asistencia": "Asistencia",
-  "/app/modulos/personal/propinas": "Propinas",
-  "/app/pagos": "Gestión de pagos",
-  "/app/soporte": "Soporte Técnico",
-  "/app/configuracion": "Configuración de la cuenta",
-};
 
 const navEntries = modulesNav.flatMap((group) => group.entries);
 
 function titleFor(pathname: string) {
-  if (detailTitles[pathname]) return detailTitles[pathname];
+  if (moduleTitles[pathname]) return moduleTitles[pathname];
   const navExact = navEntries.find((entry) => entry.href === pathname);
   if (navExact) return navExact.label;
   const feature = featureModules.find((module) => module.path === pathname);

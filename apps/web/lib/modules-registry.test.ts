@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { crmModule } from '@/features/crm/module';
 import { featureModules, pendingFeatureIds } from '@/features/registry';
-import { modulesNav } from './modules-nav';
+import { modulesNav, moduleTitles } from './modules-nav';
 
 /**
  * Fase 1 del plan de paridad: la metadata de `features/crm/module.ts` alimenta
@@ -46,5 +46,11 @@ describe('registry y nav generados', () => {
       label: 'Reservas',
       icon: 'CalendarDays',
     });
+  });
+
+  it('los títulos de detalle salen del catálogo generado', () => {
+    expect(moduleTitles['/app/productos/precios']).toBe('Listas de precios');
+    expect(moduleTitles['/app/pagos']).toBe('Gestión de pagos');
+    expect(moduleTitles['/app/mesas']).toBe('Mapa de mesas');
   });
 });
