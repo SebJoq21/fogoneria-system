@@ -2,7 +2,27 @@
 
 > **Objetivo:** que cada módulo tenga el **mismo ID, nombre y cantidad** en backend, frontend, contratos y spec, con una persona responsable y PRs que no se pisen. Un PR de módulo no debe tocar archivos compartidos ni obligar a rebase.
 
-## 1. Auditoría actual (2026-11-21, `development` `ca99e99`)
+## 0. Cierre y validación final (2026-11-21)
+
+| Criterio | Resultado |
+|---|---|
+| Paridad | **20/20/20/20** (manifiestos, backend, frontend, contratos) + 20 specs |
+| `check:modules --strict` | **verde y bloqueante** en `quality` |
+| `gen:modules --check` | verde (EOL normalizado) |
+| Fronteras | **0** históricas/nuevas; ninguna feature importa otra ni `components/erp` |
+| Sesión/BFF | sin cambios (`lib/session`, `lib/backend`, `proxy`, `app/api/session|backend`) |
+| Alias de contratos | 12 deprecados con targets válidos |
+| Prisma | multi-archivo por módulo; DDL idéntico, migraciones/RLS/triggers intactos |
+| Cobertura Sonar | **88.8 %** overall (líneas 92.9, ramas 83.2), nuevo código **90.1 %** |
+| Duplicación / ratings | **0.0 %** / A-A-A; 0 vulnerabilidades/code smells/hotspots |
+| Tests | API 683 unit + 112 e2e; Web 967; contratos 133 |
+| Auditorías | F0-F2, F3, F4-F5, F6, F6b, F6c, F6c2 y F6c3 con PASS; fixes aplicados y re-auditados |
+
+**Excepción documentada:** `ModulesProvider` ya no tiene estado de negocio ni `ErpState`, pero **no se retira del layout** todavía: 43 usos de `useModules()` y la orquestación de cobro/API. Plan de retiro en [`plan-f6c-pos.md`](plan-f6c-pos.md) §10.
+
+**Deuda menor:** UI compartida mapa/agenda en `components/dashboard/salon` (hasta el split fino); el registry generado puede colisionar si dos PRs añaden/modifican metadata de proveedor a la vez (se regenera); la convención de migraciones `<timestamp>_<id>_<detalle>` se aplica al agregar la primera tabla nueva.
+
+## 1. Auditoría inicial (2026-11-21, `development` `ca99e99`)
 
 | Capa | Cantidad | Estado |
 |---|---:|---|
