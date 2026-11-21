@@ -210,9 +210,19 @@ pnpm check:specs --base origin/development
   `audit` con `/app/auditoria`; `features/realtime` reexporta el transporte y
   el hook de comandas. `components/erp` quedó vacío: mozo a `orders` y
   staff/roles a `staff`.
+- **Fase 7 (Prisma multi-archivo):** el schema pasa de un archivo único a
+  `apps/api/prisma/schema/` (`core.prisma` + `<id>.prisma` por módulo, 16
+  archivos), con `prisma.config.ts:schema` apuntando a la carpeta y el `output`
+  del cliente ajustado a `../../src/generated/prisma`. El DDL no cambia:
+  `prisma migrate diff --from-schema <monolito> --to-schema prisma/schema`
+  responde «No difference detected» y no se tocaron migraciones ni triggers.
+  `check:pr-scope` atribuye `schema/<id>.prisma` a su módulo (`core.prisma`
+  sigue compartido). Falta cerrar el resto de la fase 7: migraciones nombradas
+  por módulo (`<timestamp>_<id>_<detalle>`), que se hará al agregar tablas.
 
 **Estado:** **20/20/20/20** (backend, frontend, contratos, specs), 12 alias
 deprecados, `check:modules --strict` verde y cableado en CI.
 
-**Siguiente:** Fase 6 (providers por módulo/retirar `ModulesProvider`) y
-Fase 7 (Prisma multi-archivo).
+**Siguiente:** Fase 6 (providers por módulo/retirar `ModulesProvider`); de la
+Fase 7 queda la convención de migraciones por módulo (`<timestamp>_<id>_<detalle>`),
+que se aplica al agregar la primera tabla nueva.
