@@ -1,0 +1,41 @@
+// Esquema Prisma del modulo reservations.
+// Los modelos pueden referenciar modelos de otros archivos: Prisma los
+// combina antes de generar el cliente y de calcular migraciones.
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model reservas {
+  id             String         @id(map: "pk_reservas") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id     String         @db.Uuid
+  sucursal_id    String         @db.Uuid
+  mesa_id        String         @db.Uuid
+  codigo         String
+  cliente_nombre String
+  telefono       String?
+  nro_comensales Int
+  fecha_hora     DateTime       @db.Timestamptz(6)
+  estado         estado_reserva @default(POR_CONFIRMAR)
+  canal          String         @default("Presencial")
+  notas          String?
+  creada_por     String?        @db.Uuid
+  created_at     DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime       @default(now()) @db.Timestamptz(6)
+  usuarios       usuarios?      @relation(fields: [creada_por], references: [id], map: "fk_reservas_creada")
+  empresas       empresas       @relation(fields: [empresa_id], references: [id], onDelete: Cascade, map: "fk_reservas_empresa")
+  mesas          mesas          @relation(fields: [mesa_id], references: [id], map: "fk_reservas_mesa")
+  sucursales     sucursales     @relation(fields: [sucursal_id], references: [id], onDelete: Cascade, map: "fk_reservas_sucursal")
+
+  @@unique([empresa_id, codigo], map: "uq_reservas_empresa_codigo")
+  @@index([empresa_id], map: "idx_reservas_empresa")
+  @@index([mesa_id], map: "idx_reservas_mesa")
+  @@index([sucursal_id], map: "idx_reservas_sucursal")
+  @@index([sucursal_id, fecha_hora], map: "idx_reservas_sucursal_fecha")
+  @@index([empresa_id, estado, fecha_hora], map: "idx_reservas_tenant_estado")
+}
+
+enum estado_reserva {
+  POR_CONFIRMAR
+  CONFIRMADA
+  EJECUTADA
+  CANCELADA
+  NO_SHOW
+}
