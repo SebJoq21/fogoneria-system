@@ -100,3 +100,31 @@ describe('createClient', () => {
     expect(error.code).toBe('DB_X');
   });
 });
+
+describe('createClient (bordes de fetch)', () => {
+  it('usa el fetch global y respeta el signal del init', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const controller = new AbortController();
+      const client = createClient({ baseUrl: '/bff' });
+      await client.request('/x', { method: 'GET', signal: controller.signal });
+      expect(fetchMock.mock.calls[0]![1]!.signal).toBe(controller.signal);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('cae al mensaje genérico con mensajes vacíos y código no string', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(json({ message: [] }, 400))
+      .mockResolvedValueOnce(json({ message: '   ' }, 401))
+      .mockResolvedValueOnce(json({ codigo: 123 }, 402));
+    const client = createClient({ baseUrl: '/bff', fetchImpl });
+
+    await expect(client.get('/x')).rejects.toThrow('Error 400');
+    await expect(client.get('/x')).rejects.toThrow('Error 401');
+    await expect(client.get('/x')).rejects.toMatchObject({ message: 'Error 402', code: undefined });
+  });
+});

@@ -61,6 +61,8 @@ beforeEach(() => {
   catalogo.crearGrupo.mockResolvedValue(undefined);
   catalogo.crearLista.mockResolvedValue(undefined);
   catalogo.fijarPrecio.mockResolvedValue(undefined);
+  catalogo.error = null;
+  catalogo.cargando = false;
   catalogo.platos = [
     { id: 'p-1', sku: 'LOM', nombre: 'Lomo', descripcion: '', categoriaId: 'c-1', imagen: '', estado: 'Activo', grupoIds: ['g-1'] },
   ];
@@ -106,9 +108,49 @@ describe('ModifiersView', () => {
     fireEvent.click(screen.getByText(/adir/));
     expect(catalogo.actualizarGrupo).toHaveBeenCalled();
   });
+
+  it('alterna obligatorio/múltiple y quita opciones o el grupo', () => {
+    render(<ModifiersView />);
+    fireEvent.click(screen.getByRole('switch', { name: 'Obligatorio' }));
+    expect(catalogo.actualizarGrupo).toHaveBeenCalledWith('g-1', { obligatorio: false });
+    fireEvent.click(screen.getByRole('switch', { name: 'Selección múltiple' }));
+    expect(catalogo.actualizarGrupo).toHaveBeenLastCalledWith('g-1', { multiple: true });
+
+    fireEvent.click(screen.getByLabelText('Quitar Medio'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Quitar' }).at(-1)!);
+    expect(catalogo.actualizarGrupo).toHaveBeenLastCalledWith('g-1', { opciones: [] });
+
+    fireEvent.click(screen.getByText('Quitar'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Desactivar' }).at(-1)!);
+    expect(catalogo.borrarGrupo).toHaveBeenCalledWith('g-1');
+  });
+
+  it('avisa si falla el guardado del grupo', async () => {
+    catalogo.actualizarGrupo.mockRejectedValue(new Error('sin permiso'));
+    render(<ModifiersView />);
+    fireEvent.click(screen.getByRole('switch', { name: 'Obligatorio' }));
+    await Promise.resolve();
+    expect(catalogo.notificar).toHaveBeenCalledWith('No se pudo actualizar el grupo', 'sin permiso');
+  });
 });
 
 describe('PriceListsView', () => {
+  it('activa una lista desde la carta y avisa si falla', async () => {
+    render(<PriceListsView />);
+    fireEvent.click(screen.getByText('Delivery'));
+    fireEvent.click(screen.getByText('Activar en carta'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Activar' }).at(-1)!);
+    expect(catalogo.activarLista).toHaveBeenCalledWith('l-2');
+
+    catalogo.activarLista.mockRejectedValue(new Error('otra activa'));
+    fireEvent.click(screen.getByText('Carta'));
+    fireEvent.click(screen.getByText('Delivery'));
+    fireEvent.click(screen.getByText('Activar en carta'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Activar' }).at(-1)!);
+    await Promise.resolve();
+    expect(catalogo.notificar).toHaveBeenCalledWith('No se pudo activar la lista', 'otra activa');
+  });
+
   it('crea una lista copiando la seleccionada', () => {
     render(<PriceListsView />);
     fireEvent.click(screen.getByText('+ Nueva lista'));
@@ -153,6 +195,40 @@ describe('ProductsView', () => {
     fireEvent.click(screen.getByText('Desactivar'));
     fireEvent.click(screen.getAllByText('Desactivar').at(-1)!);
     expect(catalogo.activarPlato).toHaveBeenCalledWith('p-1', false);
+  });
+
+  it('muestra error, carga y platos sin modificadores', () => {
+    catalogo.error = 'Catálogo caído';
+    catalogo.platos = [
+      { id: 'p-2', sku: 'CHI', nombre: 'Chicha', descripcion: '', categoriaId: 'c-1', imagen: '', estado: 'Inactivo', grupoIds: [] },
+    ];
+    render(<ProductsView />);
+    expect(screen.getByRole('alert').textContent).toBe('Catálogo caído');
+    expect(screen.getByText('—')).toBeTruthy();
+
+    cleanup();
+    catalogo.error = null;
+    catalogo.platos = [];
+    catalogo.cargando = true;
+    render(<ProductsView />);
+    expect(screen.getByText('Cargando catálogo…')).toBeTruthy();
+    catalogo.cargando = false;
+  });
+
+  it('activa un plato inactivo y avisa del error al guardar', async () => {
+    catalogo.platos = [
+      { id: 'p-2', sku: 'CHI', nombre: 'Chicha', descripcion: '', categoriaId: 'c-1', imagen: '', estado: 'Inactivo', grupoIds: [] },
+    ];
+    catalogo.guardarPlato.mockRejectedValue(new Error('SKU duplicado'));
+    render(<ProductsView />);
+    fireEvent.click(screen.getByText('Activar'));
+    fireEvent.click(screen.getAllByText('Activar').at(-1)!);
+    expect(catalogo.activarPlato).toHaveBeenCalledWith('p-2', true);
+
+    fireEvent.click(screen.getByText('Editar'));
+    fireEvent.click(screen.getByText('Guardar plato'));
+    await Promise.resolve();
+    expect(catalogo.notificar).toHaveBeenCalledWith('No se pudo guardar el plato', 'SKU duplicado');
   });
 });
 
