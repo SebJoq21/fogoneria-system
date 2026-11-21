@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Plan de paridad de módulos 1:1
+
+- **Auditoría:** 20 módulos backend, **12** features frontend, **14** contratos y **21** specs; no hay paridad.
+- **Plan:** `docs/plan-paridad-modulos.md` con catálogo canónico de 20 IDs, mapeo actual→objetivo, estrategia de rebase (generadores, contratos wildcard, Prisma multi-archivo, providers), fases 0-9 y criterios de aceptación.
+- **Artefactos:** `modules/catalog.json` (20 módulos, owner/estado/rutas/legado), `scripts/check-module-parity.mjs` (`pnpm check:modules`; `--strict` cuando termine) y `modules/README.md`.
+- **Baseline:** backend 20/20, frontend 12/20, contratos 14/20, specs 20/20 (+`plataforma` sobrante). Próximo: Fase 0/1 (metadata por módulo, generadores, piloto `crm`).
+- `development` en `ca99e99`, 0 PRs abiertos; sin cambios de código de producción.
+
 ## 2026-11-21 — Cierre cobertura 100 % útil y duplicación 0
 
 - **Sonar:** overall **87.2 %** (líneas 90.6, ramas 82.6), nuevo código **93.4 %**; gate **OK**; ratings **A**; 0 vulnerabilidades/code smells/hotspots.
