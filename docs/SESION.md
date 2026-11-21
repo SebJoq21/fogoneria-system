@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — F6c: diseño POS + piloto `AccountsProvider`
+
+- **Diseño:** `docs/plan-f6c-pos.md` — `AccountsProvider` (orders), `CashProvider` (turnos + movimientos por sucursal), `ReceiptsProvider`, `PromotionsProvider` y `CheckoutCoordinator` en capa compartida (`lib/checkout.ts` + hook), con orden del cobro, idempotencia, migración/purga, tests y fases F6c1–F6c3.
+- **Piloto (F6c1):** `features/orders/provider.tsx` (`AccountsProvider`/`useAccounts`) dueño de `accounts`, con `fogoneria:orders:v1:<tenant>` y `BroadcastChannel`; el loader de `ModulesProvider` migra/purga `accounts` del `ErpState` y aplica el remapeo slug→UUID de `prepareOps` sobre el provider.
+- **Sin mover todavía:** abrir/enviar/anular/cobrar siguen en `ModulesProvider` (escriben `scopes` y orquestan caja/comprobantes/CRM). `checkoutAccount` solo cambió `state.accounts` por `accounts` del provider.
+- **Estado:** providers fuera de `ModulesProvider`: tenant, orders/cuentas, expenses, inventory, crm y staff (6).
+- Verificado: web **910** tests, types, lint, build, `check:modules --strict` 20/20/20/20, `gen:modules --check`, boundaries 0 y `check:specs`.
+
 ## 2026-11-21 — Paridad F6b (timeboxed): gastos, inventario y personal fuera de `ModulesProvider`
 
 - **Migrados:** `ExpensesProvider` (gastos demo), `InventoryProvider` (insumos + kardex demo) y `StaffProvider` (roles del maestro de personal), todos sobre `lib/module-store.ts`: persistencia `fogoneria:<id>:v1:<tenant>`, `BroadcastChannel` `fogoneria:<id>-sync:<tenant>` con `sourceId`/dedupe/reset y guardia para no guardar el valor del tenant anterior al cambiar de empresa.

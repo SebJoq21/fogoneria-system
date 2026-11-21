@@ -39,7 +39,6 @@ import {
   SEED_BRANCH_SLUGS,
   SEED_SLUG_BRANCH_IDS,
   demoScopeFor,
-  initialAccounts,
   initialCashShifts,
   initialScopes,
   type Branch,
@@ -93,6 +92,7 @@ import { useCatalogoState } from "./providers/catalog";
 import { useCrm } from "@/features/crm/provider";
 import { useExpenses } from "@/features/expenses/provider";
 import { useInventory } from "@/features/inventory/provider";
+import { useAccounts } from "@/features/orders/provider";
 import { useStaff } from "@/features/staff/provider";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
@@ -317,7 +317,6 @@ function prepareOps(state: ErpState, branchIds: string[]): ErpState {
   return {
     ...state,
     scopes,
-    accounts: state.accounts.map((account) => ({ ...account, branchId: remap(account.branchId) })),
     cashShifts: state.cashShifts.map((shift) => ({ ...shift, branchId: remap(shift.branchId) })),
   };
 }
@@ -325,11 +324,13 @@ function prepareOps(state: ErpState, branchIds: string[]): ErpState {
 /** Estado de arranque de un tenant nuevo: sin mocks compartidos. */
 function buildEmptyState(): ErpState {
   return {
-    version: 2,    reservations: [],    coupons: [],
-    receipts: [],    combos: [],
+    version: 2,
+    reservations: [],
+    coupons: [],
+    receipts: [],
+    combos: [],
     tickets: [],
     scopes: {},
-    accounts: [],
     cashShifts: [],
     sunatContingencia: false,
   };
@@ -339,11 +340,13 @@ function buildEmptyState(): ErpState {
 function buildInitialState(empresaId: string | null): ErpState {
   if (empresaId !== null && empresaId !== DEMO_EMPRESA_ID) return buildEmptyState();
   return {
-    version: 2,    reservations: initialReservations,    coupons: initialCoupons,
-    receipts: initialReceipts,    combos: initialCombos,
+    version: 2,
+    reservations: initialReservations,
+    coupons: initialCoupons,
+    receipts: initialReceipts,
+    combos: initialCombos,
     tickets: initialTickets,
     scopes: initialScopes,
-    accounts: initialAccounts,
     cashShifts: initialCashShifts,
     sunatContingencia: false,
   };
@@ -382,6 +385,7 @@ export function ModulesProvider({
     resetInventory,
   } = useInventory();
   const { roles, setRoles, resetRoles } = useStaff();
+  const { accounts, setAccounts, resetAccounts } = useAccounts();
   const [payments] = useState<PlanPayment[]>(initialPayments);
   const [state, setState] = useState<ErpState>(() => buildInitialState(null));
   const applyingRemote = useRef(false);
@@ -444,6 +448,17 @@ export function ModulesProvider({
       changed = true;
     }
 
+    const accountsMigration = migrateLegacyArray(
+      next,
+      "accounts",
+      readModuleValue<TableAccount[]>("orders", tenantKey),
+    );
+    if (accountsMigration.migrated) {
+      saveModuleValue("orders", tenantKey, accountsMigration.migrated);
+      next = accountsMigration.state as LegacyModuleState;
+      changed = true;
+    }
+
     if (changed) saveErpState(tenantKey, next as ErpState);
     setState(next as ErpState);
   }, [tenantKey, currentUser]);
@@ -457,7 +472,19 @@ export function ModulesProvider({
     if (preparedBranches.current === signature) return;
     preparedBranches.current = signature;
     setState((prev) => prepareOps(prev, ids));
-  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches]);
+    // Las cuentas viven en su provider (F6c1): mismo remapeo slug→UUID que
+    // hacía `prepareOps`, sin reescribir si ya están canónicas.
+    setAccounts((prev) => {
+      let changed = false;
+      const next = prev.map((account) => {
+        const branchId = SEED_SLUG_BRANCH_IDS[account.branchId] ?? account.branchId;
+        if (branchId === account.branchId) return account;
+        changed = true;
+        return { ...account, branchId };
+      });
+      return changed ? next : prev;
+    });
+  }, [hasSession, tenantLoading, tenantError, empresaId, realBranches, setAccounts]);
 
   /* Persistir + difundir a otras pestañas de la misma empresa */
   useEffect(() => {
@@ -566,10 +593,7 @@ export function ModulesProvider({
         });
         if (requestId !== ordersRequest.current) return;
         setLiveOrders(list.items.map((order) => orderFromApi(order, { nameOf: platoNameOf })));
-        setState((s) => ({
-          ...s,
-          accounts: reconcileAccounts(s.accounts, list.items, platoNameOf),
-        }));
+        setAccounts((prev) => reconcileAccounts(prev, list.items, platoNameOf));
       } catch (error) {
         if (requestId !== ordersRequest.current || signal?.aborted) return;
         setOrdersError(
@@ -579,7 +603,7 @@ export function ModulesProvider({
         if (requestId === ordersRequest.current) setOrdersLoading(false);
       }
     },
-    [activeBranchId, currentUser, platoNameOf],
+    [activeBranchId, currentUser, platoNameOf, setAccounts],
   );
 
   /* Cargar comandas al iniciar sesión y al cambiar de sucursal. */
@@ -713,9 +737,9 @@ export function ModulesProvider({
     };
   }, [state.scopes, activeBranchId, isGeneral, branchIds]);
 
-  const accounts = useMemo(
-    () => (isGeneral ? state.accounts : state.accounts.filter((a) => matchesBranch(a.branchId, activeBranchId))),
-    [state.accounts, activeBranchId, isGeneral],
+  const activeAccounts = useMemo(
+    () => (isGeneral ? accounts : accounts.filter((a) => matchesBranch(a.branchId, activeBranchId))),
+    [accounts, activeBranchId, isGeneral],
   );
 
   const cashShifts = useMemo(
@@ -756,8 +780,11 @@ export function ModulesProvider({
   const setCashMovements = useCallback<React.Dispatch<React.SetStateAction<CashMovement[]>>>(
     (v) => setState((s) => ({ ...s, scopes: applyWrite(s.scopes, branchIds, activeBranchId, "cash", v) })),
     [activeBranchId, branchIds],
-  );  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
-  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
+  );
+  const setReservations = useCallback((r: Reservation[]) => setPlain("reservations", r), [setPlain]);
+  const setCoupons = useCallback((c: Coupon[]) => setPlain("coupons", c), [setPlain]);
+  const setReceipts = useCallback((r: Receipt[]) => setPlain("receipts", r), [setPlain]);
+  const setCombos = useCallback((c: Combo[]) => setPlain("combos", c), [setPlain]);
   const setTickets = useCallback((t: Ticket[]) => setPlain("tickets", t), [setPlain]);
 
   const addTicket = useCallback(
@@ -780,11 +807,13 @@ export function ModulesProvider({
     resetExpenses();
     resetInventory();
     resetRoles();
+    resetAccounts();
     setState(buildInitialState(currentUser?.empresaId ?? null));
     void refreshCatalog();
   }, [
     currentUser,
     refreshCatalog,
+    resetAccounts,
     resetCustomers,
     resetExpenses,
     resetInventory,
@@ -823,23 +852,24 @@ export function ModulesProvider({
         customerId: null,
         motivoAnulacion: null,
       };
-      setState((s) => {
-        const scopes = input.tableId
-          ? patchTableStatus(s.scopes, writeBranchId, input.tableId, "ocupada")
-          : s.scopes;
-        return { ...s, accounts: [account, ...s.accounts], scopes };
-      });
+      setAccounts((prev) => [account, ...prev]);
+      if (input.tableId) {
+        setState((s) => ({
+          ...s,
+          scopes: patchTableStatus(s.scopes, writeBranchId, input.tableId!, "ocupada"),
+        }));
+      }
       return id;
     },
-    [writeBranchId],
+    [setAccounts, writeBranchId],
   );
 
-  const patchAccount = useCallback((accountId: string, fn: (a: TableAccount) => TableAccount) => {
-    setState((s) => ({
-      ...s,
-      accounts: s.accounts.map((a) => (a.id === accountId ? fn(a) : a)),
-    }));
-  }, []);
+  const patchAccount = useCallback(
+    (accountId: string, fn: (a: TableAccount) => TableAccount) => {
+      setAccounts((prev) => prev.map((a) => (a.id === accountId ? fn(a) : a)));
+    },
+    [setAccounts],
+  );
 
   const addAccountItems = useCallback(
     (accountId: string, items: AccountItem[]) => {
@@ -871,7 +901,7 @@ export function ModulesProvider({
   /** Modo demo (sin sesión): arma la comanda en el estado local. */
   const localSendToKitchen = useCallback(
     (accountId: string): Order | null => {
-      const account = state.accounts.find((a) => a.id === accountId);
+      const account = accounts.find((a) => a.id === accountId);
       const pending = account?.items.filter((i) => !i.sent) ?? [];
       if (!account || pending.length === 0) return null;
       const order: Order = {
@@ -893,13 +923,15 @@ export function ModulesProvider({
         channel: account.tableId ? "Mesa" : "Llevar",
         waiter: account.waiter,
       };
-      setState((s) => ({
-        ...s,
-        accounts: s.accounts.map((a) =>
+      setAccounts((prev) =>
+        prev.map((a) =>
           a.id === accountId
             ? { ...a, items: a.items.map((i) => (i.sent ? i : { ...i, sent: true })) }
             : a,
         ),
+      );
+      setState((s) => ({
+        ...s,
         scopes: {
           ...s.scopes,
           [account.branchId]: {
@@ -910,7 +942,7 @@ export function ModulesProvider({
       }));
       return order;
     },
-    [state.accounts],
+    [accounts, setAccounts],
   );
 
   /**
@@ -920,7 +952,7 @@ export function ModulesProvider({
    */
   const createOrderFromAccount = useCallback(
     async (accountId: string): Promise<Order | null> => {
-      const account = state.accounts.find((a) => a.id === accountId);
+      const account = accounts.find((a) => a.id === accountId);
       if (!account) return null;
       const items = orderItemsFromAccount(account);
       if (items.length === 0) return null;
@@ -932,9 +964,8 @@ export function ModulesProvider({
       });
 
       // La línea queda enviada solo si el servidor aceptó la comanda.
-      setState((s) => ({
-        ...s,
-        accounts: s.accounts.map((a) =>
+      setAccounts((prev) =>
+        prev.map((a) =>
           a.id === accountId
             ? {
                 ...a,
@@ -943,11 +974,11 @@ export function ModulesProvider({
               }
             : a,
         ),
-      }));
+      );
       await refreshOrders();
       return orderFromApi(created, { nameOf: platoNameOf });
     },
-    [platoNameOf, refreshOrders, state.accounts],
+    [accounts, platoNameOf, refreshOrders, setAccounts],
   );
 
   /** Con sesión real manda la comanda a la API; sin sesión queda el modo demo. */
@@ -1077,27 +1108,26 @@ export function ModulesProvider({
 
   const annulAccount = useCallback(
     (accountId: string, motivo: string) => {
-      const account = state.accounts.find((a) => a.id === accountId);
+      const account = accounts.find((a) => a.id === accountId);
       if (!account) return;
 
-      setState((s) => {
-        const scopes = account.tableId
-          ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
-          : s.scopes;
-        return {
+      setAccounts((prev) =>
+        prev.map((a) =>
+          a.id === accountId
+            ? { ...a, status: "anulada", closedAt: nowIso(), motivoAnulacion: motivo }
+            : a,
+        ),
+      );
+      if (account.tableId) {
+        setState((s) => ({
           ...s,
-          accounts: s.accounts.map((a) =>
-            a.id === accountId
-              ? { ...a, status: "anulada", closedAt: nowIso(), motivoAnulacion: motivo }
-              : a,
-          ),
-          scopes,
-        };
-      });
+          scopes: patchTableStatus(s.scopes, account.branchId, account.tableId!, "libre"),
+        }));
+      }
 
       void closeAccountOrders(account, "ANULADA");
     },
-    [closeAccountOrders, state.accounts],
+    [accounts, closeAccountOrders, setAccounts],
   );
 
   /* ---------- Facturación electrónica SUNAT ---------- */
@@ -1173,7 +1203,7 @@ export function ModulesProvider({
 
   const checkoutAccount = useCallback(
     (input: CheckoutInput): Receipt | null => {
-      const account = state.accounts.find((a) => a.id === input.accountId);
+      const account = accounts.find((a) => a.id === input.accountId);
       if (!account || account.status !== "abierta") return null;
       const base = accountTotals(account);
       const coupon = input.couponCode
@@ -1224,6 +1254,23 @@ export function ModulesProvider({
 
       if (input.customerId) addPoints(input.customerId, Math.floor(total));
 
+      setAccounts((prev) =>
+        prev.map((a) =>
+          a.id === account.id
+            ? {
+                ...a,
+                status: "cobrada",
+                closedAt: at,
+                payments,
+                tip: round2(input.tip),
+                discount,
+                discountConcept: coupon ? `Cupón ${coupon.code}` : "",
+                couponCode: coupon?.code ?? null,
+                customerId: input.customerId,
+              }
+            : a,
+        ),
+      );
       setState((s) => {
         const scopes = account.tableId
           ? patchTableStatus(s.scopes, account.branchId, account.tableId, "libre")
@@ -1231,21 +1278,6 @@ export function ModulesProvider({
         return {
           ...s,
           receipts: [receipt, ...s.receipts],
-          accounts: s.accounts.map((a) =>
-            a.id === account.id
-              ? {
-                  ...a,
-                  status: "cobrada",
-                  closedAt: at,
-                  payments,
-                  tip: round2(input.tip),
-                  discount,
-                  discountConcept: coupon ? `Cupón ${coupon.code}` : "",
-                  couponCode: coupon?.code ?? null,
-                  customerId: input.customerId,
-                }
-              : a,
-          ),
           coupons: coupon
             ? s.coupons.map((c) => (c.code === coupon.code ? { ...c, used: c.used + 1 } : c))
             : s.coupons,
@@ -1263,13 +1295,14 @@ export function ModulesProvider({
       return receipt;
     },
     [
-      state.accounts,
+      accounts,
       state.coupons,
       state.receipts,
       openCashShift,
       enviarSunat,
       closeAccountOrders,
       addPoints,
+      setAccounts,
     ],
   );
 
@@ -1280,7 +1313,7 @@ export function ModulesProvider({
       if (!receipt || receipt.status === "Anulada") return;
       const at = nowIso();
       const account = receipt.accountId
-        ? state.accounts.find((a) => a.id === receipt.accountId)
+        ? accounts.find((a) => a.id === receipt.accountId)
         : undefined;
       const methods: { method: string; amount: number }[] = account?.payments.length
         ? account.payments.map((p) => ({ method: p.method, amount: p.amount }))
@@ -1341,7 +1374,7 @@ export function ModulesProvider({
       }));
       if (nota) enviarSunat(nota);
     },
-    [state.receipts, state.accounts, enviarSunat, branchIds],
+    [accounts, state.receipts, enviarSunat, branchIds],
   );
 
   /* ---------- Turno de caja ---------- */
@@ -1490,7 +1523,7 @@ export function ModulesProvider({
       setExpenses,
       combos: state.combos,
       setCombos,
-      accounts,
+      accounts: activeAccounts,
       openAccount,
       addAccountItems,
       updateAccountItem,
@@ -1578,7 +1611,7 @@ export function ModulesProvider({
       toggleSunatContingencia,
       setExpenses,
       setCombos,
-      accounts,
+      activeAccounts,
       openAccount,
       addAccountItems,
       updateAccountItem,

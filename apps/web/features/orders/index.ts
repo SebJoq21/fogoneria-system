@@ -1,6 +1,7 @@
 import { OrdersBoardPage } from './OrdersBoardPage';
 
 export { OrdersBoardPage };
+export { AccountsProvider, useAccounts } from './provider';
 export { MozoView } from './MozoView';
 export { AccountPanel } from './mozo/AccountPanel';
 export { AddItemModal } from './mozo/AddItemModal';

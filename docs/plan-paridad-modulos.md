@@ -223,8 +223,6 @@ pnpm check:specs --base origin/development
 **Estado:** **20/20/20/20** (backend, frontend, contratos, specs), 12 alias
 deprecados, `check:modules --strict` verde y cableado en CI.
 
-**Fase 6 (timeboxed):** el shell consume `modules-nav.ts` (sidebar/topbar y títulos de detalle generados) y `features/registry.ts` (`FeatureProviders`); `TenantProvider`, `CrmProvider`, `ExpensesProvider`, `InventoryProvider` y `StaffProvider` viven en sus features (persistencia por tenant, `BroadcastChannel` y purga legacy en el loader de `ModulesProvider`). El resto del estado sigue en `ModulesProvider`: `orders` y `cash` están acoplados a `scopes` por sucursal, cuentas locales y checkout, y `receipts`/`promotions` cuelgan del mismo flujo.
+**Fase 6 (timeboxed):** el shell consume `modules-nav.ts` (sidebar/topbar y títulos de detalle generados) y `features/registry.ts` (`FeatureProviders`); `TenantProvider`, `CrmProvider`, `ExpensesProvider`, `InventoryProvider`, `AccountsProvider` (cuentas de mesa, F6c1) y `StaffProvider` viven en sus features (persistencia por tenant, `BroadcastChannel` y purga legacy en el loader de `ModulesProvider`). El resto del estado sigue en `ModulesProvider`: caja, comprobantes y promociones están acoplados a `scopes` y al cobro; el diseño y las fases para cerrarlo están en `docs/plan-f6c-pos.md`.
 
-**Siguiente:** completar la Fase 6 (separar `orders`/`cash`/`receipts`/`promotions` y retirar
-`ModulesProvider`); de la Fase 7 queda la convención de migraciones por módulo
-(`<timestamp>_<id>_<detalle>`), que se aplica al agregar la primera tabla nueva.
+**Siguiente:** F6c2 (`CashProvider` + `ReceiptsProvider` + `PromotionsProvider` + `CheckoutCoordinator`) y F6c3 (dueño de `scopes`, retiro de `ModulesProvider`); de la Fase 7 queda la convención de migraciones por módulo (`<timestamp>_<id>_<detalle>`), que se aplica al agregar la primera tabla nueva.

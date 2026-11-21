@@ -131,6 +131,7 @@ vi.mock('@/lib/facturacion', async (importOriginal) => {
 });
 
 import { ModulesProvider, useModules } from './ModulesProvider';
+import { AccountsProvider } from '@/features/orders/provider';
 
 let ctx: ReturnType<typeof useModules>;
 
@@ -144,9 +145,11 @@ function Sonda() {
 
 function montar() {
   return render(
-    <ModulesProvider initialPayments={[]}>
-      <Sonda />
-    </ModulesProvider>,
+    <AccountsProvider>
+      <ModulesProvider initialPayments={[]}>
+        <Sonda />
+      </ModulesProvider>
+    </AccountsProvider>,
   );
 }
 

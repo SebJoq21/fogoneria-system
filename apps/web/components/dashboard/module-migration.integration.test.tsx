@@ -69,6 +69,7 @@ vi.mock('@/lib/realtime', () => ({ connectOrdersRealtime: () => () => {} }));
 import { CrmProvider } from '@/features/crm/provider';
 import { ExpensesProvider } from '@/features/expenses/provider';
 import { InventoryProvider } from '@/features/inventory/provider';
+import { AccountsProvider } from '@/features/orders/provider';
 import { StaffProvider } from '@/features/staff/provider';
 import { ModulesProvider } from './ModulesProvider';
 
@@ -80,6 +81,27 @@ const legacyCustomer = {
   visits: 2,
   segment: 'Nuevo',
   lastVisit: 'Ayer',
+};
+
+const legacyAccount = {
+  id: 'CT-99',
+  branchId: 'miraflores',
+  tableId: 2,
+  tableApiId: null,
+  label: 'Mesa 2',
+  customer: 'Ana',
+  waiter: 'Luis',
+  openedAt: '2026-11-20T12:00:00.000Z',
+  closedAt: null,
+  status: 'abierta',
+  items: [],
+  payments: [],
+  tip: 0,
+  discount: 0,
+  discountConcept: '',
+  couponCode: null,
+  customerId: null,
+  motivoAnulacion: null,
 };
 
 beforeEach(() => localStorage.clear());
@@ -102,7 +124,7 @@ describe('migración de slices en el arranque del shell', () => {
         combos: [],
         tickets: [],
         scopes: {},
-        accounts: [],
+        accounts: [legacyAccount],
         cashShifts: [],
         sunatContingencia: false,
       }),
@@ -112,11 +134,13 @@ describe('migración de slices en el arranque del shell', () => {
       <CrmProvider>
         <ExpensesProvider>
           <InventoryProvider>
-            <StaffProvider>
-              <ModulesProvider initialPayments={[]}>
-                <div />
-              </ModulesProvider>
-            </StaffProvider>
+            <AccountsProvider>
+              <StaffProvider>
+                <ModulesProvider initialPayments={[]}>
+                  <div />
+                </ModulesProvider>
+              </StaffProvider>
+            </AccountsProvider>
           </InventoryProvider>
         </ExpensesProvider>
       </CrmProvider>
@@ -132,12 +156,14 @@ describe('migración de slices en el arranque del shell', () => {
       movements: [{ id: 8 }],
     });
     expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:orders:v1:anon') ?? '[]')).toHaveLength(1);
     const legacy = JSON.parse(localStorage.getItem('fogoneria:erp:v2:anon') ?? '{}');
     expect(legacy.customers).toBeUndefined();
     expect(legacy.expenses).toBeUndefined();
     expect(legacy.ingredients).toBeUndefined();
     expect(legacy.movements).toBeUndefined();
     expect(legacy.roles).toBeUndefined();
+    expect(legacy.accounts).toBeUndefined();
 
     unmount();
     render(shell);
@@ -146,5 +172,6 @@ describe('migración de slices en el arranque del shell', () => {
     );
     expect(JSON.parse(localStorage.getItem('fogoneria:expenses:v1:anon') ?? '[]')).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:orders:v1:anon') ?? '[]')).toHaveLength(1);
   });
 });

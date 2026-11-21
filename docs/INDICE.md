@@ -20,6 +20,7 @@ Portada de la documentación histórica y operativa del proyecto. Para el **esta
 - **[arquitectura.md](arquitectura.md)** — mapa del sistema: rutas web, módulos API, BFF, sesión, WebSockets, datos.
 - **[MODULARIZACION.md](MODULARIZACION.md)** — fases 0–4, reglas de dependencia, baseline de fronteras y criterios de aceptación por módulo.
 - **[plan-paridad-modulos.md](plan-paridad-modulos.md)** — catálogo canónico de 20 módulos, paridad backend/frontend/contratos/specs, estrategia de rebase y plan por fases.
+- **[plan-f6c-pos.md](plan-f6c-pos.md)** — diseño de F6c: `AccountsProvider`, `CashProvider`, `CheckoutCoordinator`, migración y fases para retirar `ModulesProvider`.
 - **[decisiones.md](decisiones.md)** — decisiones vigentes (ADR en una línea): Prisma, RLS, sesión, precios, caja, comprobantes, CRM, BI…
 - **[PLAN-MODULOS-Y-PROPIEDAD.md](PLAN-MODULOS-Y-PROPIEDAD.md)** — inventario por módulo, regla «un PR = un módulo», severidades y observaciones.
 

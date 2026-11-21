@@ -14,7 +14,7 @@ import type {
 } from "./erp";
 import type { Combo } from "./erp-catalog";
 import type { Ticket } from "./dashboard";
-import type { CashShift, TableAccount } from "./domain";
+import type { CashShift } from "./domain";
 import type { BranchScope } from "./tenancy";
 
 export const ERP_STORAGE_KEY = "fogoneria:erp:v2";
@@ -41,7 +41,6 @@ export type ErpState = {
   combos: Combo[];
   tickets: Ticket[];
   scopes: Record<string, BranchScope>;
-  accounts: TableAccount[];
   cashShifts: CashShift[];
   /** Modo contingencia SUNAT: los CPE quedan en cola y no se envían. */
   sunatContingencia: boolean;
