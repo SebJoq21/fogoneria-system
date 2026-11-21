@@ -80,7 +80,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { tenantKeyOf } from "@/lib/session-state";
 import { matchesBranch } from "@/lib/tenant-scope";
-import { useCatalogoState, type ProductInput } from "./providers/catalog";
+import { useCatalogoState } from "./providers/catalog";
 import { useNotifications } from "./providers/notifications";
 import { useSession } from "./providers/session";
 import { useTenant } from "./providers/tenant";
@@ -127,9 +127,11 @@ export type CheckoutInput = {
 
 /* El tipo se mantiene exportado desde aquí por compatibilidad; el estado de
    catálogo vive en `CatalogoProvider` (Fase 4 etapa 3). */
+import type { CatalogoActions } from "./providers/catalog";
+
 export type { ProductInput } from "./providers/catalog";
 
-type ModulesContext = {
+type ModulesContext = CatalogoActions & {
   payments: PlanPayment[];
   tickets: Ticket[];
   addTicket: (subject: string) => void;
@@ -141,29 +143,6 @@ type ModulesContext = {
   priceLists: PriceList[];
   catalogLoading: boolean;
   catalogError: string | null;
-  refreshCatalog: () => Promise<void>;
-  saveProduct: (input: ProductInput) => Promise<void>;
-  setProductActive: (id: string, active: boolean) => Promise<void>;
-  saveCategory: (input: { id?: string; name: string; position: number }) => Promise<void>;
-  deleteCategory: (id: string) => Promise<void>;
-  createModifierGroup: (input: { name: string; required: boolean; multi: boolean }) => Promise<void>;
-  updateModifierGroup: (
-    id: string,
-    input: {
-      name?: string;
-      required?: boolean;
-      multi?: boolean;
-      // `id` viaja a la API, que sincroniza las opciones por id: sin él se
-      // recrearían (y el borrado de una opción usada en órdenes da 409).
-      options?: { id?: string; name: string; extra: number }[];
-    },
-  ) => Promise<void>;
-  deleteModifierGroup: (id: string) => Promise<void>;
-  createPriceList: (name: string, fromListId?: string) => Promise<void>;
-  activatePriceList: (id: string) => Promise<void>;
-  setPrice: (listId: string, platoId: string, price: number) => Promise<void>;
-  priceOf: (productId: string) => number;
-  categoryNameOf: (categoryId: string) => string;
   /* Multitenant: sucursales de la empresa (1 RUC → N locales + vista general) */
   company: { legalName: string; ruc: string };
   tenant: Tenant | null;
