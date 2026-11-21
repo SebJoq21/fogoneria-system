@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Cierre cobertura 100 % útil y duplicación 0
+
+- **Sonar:** overall **87.2 %** (líneas 90.6, ramas 82.6), nuevo código **93.4 %**; gate **OK**; ratings **A**; 0 vulnerabilidades/code smells/hotspots.
+- **Duplicación:** **0.0 %** (0 líneas, 0 bloques) tras extraer `branch-scope`, helpers de filtros, `order-mapping` y tipos de catálogo (#123).
+- **API:** 98.04/91.75; **Web:** 89.4/77.3; **contratos:** 100/98.3. Tests: **677 / 832 / 111**.
+- **Fase 6:** `test:db` emite lcov, CI publica `coverage-db`, Sonar lo consume; thresholds API 96/90/96/96, Web 85/75/80/85, contratos 100/95/100/100 (#125).
+- `development` en `ee054c9`, CI success, **0 PRs abiertos**. Plan cerrado en [`docs/plan-cobertura-100.md`](plan-cobertura-100.md).
+
 ## 2026-11-20 — Cierre seguridad/Sonar al 100 %
 
 - **Dependabot:** 46 → **1** (moderada `minimatch` 9, dev tooling); **0 high**. `pnpm audit --audit-level high` es **bloqueante** (#111, #113).
