@@ -69,6 +69,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- Metadata (2026-11-21): `features/cash/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
+
 - Paridad de módulos (2026-11-21): feature `features/cash/` y contrato `packages/contracts/src/cash.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - No hay arqueo por denominación de billetes (solo total contado).

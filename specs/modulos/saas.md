@@ -11,8 +11,8 @@ Consola del superadmin: listar empresas, ver su suscripción, suspender/reactiva
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/saas/` | real |
-| Web | `apps/web/features/plataforma/SaasPage.tsx` | real |
-| Contrato | `packages/contracts/src/plataforma.ts` (`EmpresaSaas`, `MetricasSaas`, `estadoEmpresaTone`) | sí |
+| Web | `apps/web/features/saas/SaasPage.tsx` (facturación en `features/billing`) | real |
+| Contrato | `packages/contracts/src/saas.ts` (`EmpresaSaas`, `MetricasSaas`) | sí |
 | Datos | `empresas`, `suscripciones_eventos`, `auditoria` | `20261019000000_init` |
 
 ## 3. API
@@ -43,7 +43,7 @@ Reglas:
 
 - `/saas` standalone (sin `DashboardShell`), solo `superadmin`; `proxy.ts` redirige a cualquier otro rol.
 - KPIs reales, grilla de empresas con estado, `ConfirmDialog` en suspender/reactivar y feedback visible.
-- `plataformaApi` en `features/plataforma/api.ts`.
+- `lib/platform-api.ts` concentra el cliente de onboarding/SaaS/tenant; las features `auth`, `tenant`, `onboarding`, `saas` y `billing` exponen APIs delgadas.
 
 ## 6. Pruebas
 
@@ -56,7 +56,7 @@ Reglas:
 | Suite | Archivo |
 |---|---|
 | Unit | `src/modules/saas/saas.service.spec.ts` |
-| Web | `features/plataforma/plataforma.test.ts` |
+| Web | `lib/platform-api.test.ts`, `lib/platform-mappers.test.ts` |
 | e2e | pendiente de verificar (no hay `saas.e2e-spec.ts`) |
 
 ## 7. Deuda conocida

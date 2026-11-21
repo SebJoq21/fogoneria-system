@@ -5,7 +5,7 @@ import {
   salaEmpresa,
   salaOrden,
   salaSucursal,
-} from './tiempo-real';
+} from './realtime';
 
 describe('contrato de tiempo real', () => {
   it('fija el namespace y los nombres de evento una sola vez', () => {

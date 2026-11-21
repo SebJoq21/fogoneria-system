@@ -11,8 +11,8 @@ Resolver la **empresa** y sus **sucursales** desde el JWT y exponerlas al shell 
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/tenant/` + `src/common/context/` | real |
-| Web | `components/dashboard/providers/tenant.tsx` + `lib/tenant-api.ts` + `lib/tenant-scope.ts` | real |
-| Contrato | `packages/contracts/src/plataforma.ts` (`Empresa`, `Sucursal`) | sí |
+| Web | `features/tenant/BranchSwitcher.tsx` + `components/dashboard/providers/tenant.tsx` + `lib/tenant-api.ts` | real |
+| Contrato | `packages/contracts/src/tenant.ts` (`Empresa`, `Sucursal`) | sí |
 | Datos | `empresas`, `sucursales` | RLS por empresa |
 
 ## 3. API

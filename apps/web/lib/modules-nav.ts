@@ -57,6 +57,7 @@ export const modulesNav: ModuleNavGroup[] = [
       { href: "/app/gastos", label: "Gastos", icon: "TrendingDown", roles: ["admin","sucursal"] },
       { href: "/app/modulos/personal", label: "Personal", icon: "Contact", roles: ["admin","sucursal"] },
       { href: "/app/analiticas", label: "Analíticas", icon: "ChartColumn", roles: ["admin","sucursal"] },
+      { href: "/app/auditoria", label: "Auditoría", icon: "ScrollText", roles: ["admin"] },
     ],
   },
 ];

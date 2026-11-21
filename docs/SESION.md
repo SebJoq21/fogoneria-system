@@ -1,5 +1,13 @@
 # SESION — estado entre sesiones
 
+## 2026-11-21 — Paridad F4/F5 + strict 20/20/20/20
+
+- **Hardening:** BOM quitado de 5 páginas de productos; duplicado de `tables` fuera del barrel; `module.ts` en las 8 features que faltaban.
+- **F4:** `features/auth`, `tenant`, `onboarding`, `saas` y `billing`; contratos `auth/tenant/onboarding/saas/billing` con alias `plataforma`; `lib/platform-api.ts` concentra el HTTP y la sesión (`lib/session.ts`, BFF, `proxy.ts`) no se movió. `/saas` compone SaaS + `BillingSummary`.
+- **F5:** `GET /audit` read-only (admin, Swagger y controller spec), `features/audit` con `/app/auditoria`; `features/realtime` reexporta transporte/hook; `components/erp` eliminado (mozo → `orders`, staff/roles → `staff`).
+- **Strict:** `check:modules --strict` **20/20/20/20** verde y cableado en CI; 12 alias deprecados.
+- Verificado: api **683** unit + **112** e2e; web **878**; contracts **133**; lint, check-types, builds, boundaries 0 y specs.
+
 ## 2026-11-21 — Paridad F3 + hardening
 
 - **Hardening:** `check-pr-scope` con IDs canónicos y alias (catalog/pricing, tables/reservations, platform); `check-specs` mapea las 14 features; `gen:modules --check` corre en CI y normaliza EOL (LF/CRLF); `registry.spec` verifica que `AppModule` importa `MODULE_REGISTRY`; README 9/20 corregido.

@@ -11,7 +11,7 @@ Personal del restaurante: plan de turnos, marcación de asistencia y reparto del
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/staff/` | real |
-| Web | `apps/web/features/staff/` (`AttendancePage`, `ShiftsPage`) | real |
+| Web | `apps/web/features/staff/` (`AttendancePage`, `ShiftsPage`, `StaffModule`, `RolesView`, `StaffWorkspace`) | real/demo |
 | Contrato | `packages/contracts/src/staff.ts` | sí |
 | Datos | `empleados`, `roles_empresa`, `turnos_plan`, `asistencias`, `pozos_propinas`, `repartos_propinas`, `ordenes.propina` | `20261019000000_init` |
 
@@ -51,7 +51,7 @@ Reglas:
 
 - `/app/modulos/personal/asistencia` → `AttendancePage`: KPIs, marcación y pozos.
 - `/app/modulos/personal/turnos` → `ShiftsPage`: asignar/quitar turno por empleado, día y bloque.
-- `/app/modulos/personal/{directorio,roles,propinas}` → `StaffModule`/`RolesView` (**demo**).
+- `/app/modulos/personal/{directorio,roles,propinas}` → `StaffModule`/`RolesView` de `features/staff` (**demo**).
 
 ## 6. Pruebas
 
@@ -70,11 +70,12 @@ Reglas:
 | Unit | `staff.service.spec.ts`, `staff.rules.spec.ts` |
 | e2e | `test/staff.e2e-spec.ts` |
 | DB | `test/db/propinas.db-spec.ts` |
-| Web | `features/staff/staff.test.ts` |
+| Web | `features/staff/staff.test.ts`, `features/staff/staff-roles.test.tsx`, `features/staff/RolesView.rtl.test.tsx` |
 
 ## 7. Deuda conocida
 
 - Paridad de módulos (2026-11-21): feature `features/staff/` y contrato `packages/contracts/src/staff.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
+- Fase 5 (2026-11-21): `StaffModule`, `RolesView` y `StaffWorkspace` se movieron desde `components/erp` a la feature.
 
 - Directorio, roles y propinas siguen demo (observación 6 del plan).
 - No hay horario contractual ni control de horas extra.

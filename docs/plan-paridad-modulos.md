@@ -45,7 +45,7 @@ Los archivos viejos se mantienen como **alias deprecados** (`export * from './nu
 
 ### 1.4 Vistas fuera de feature
 
-`components/erp/`: `MozoView`, `AccountPanel`, `AddItemModal`, `BookingsWorkspace`, `StaffModule`, `RolesView`, `StaffWorkspace`, `CartaVirtualView`. Deben mudarse a `features/orders`, `features/tables|reservations`, `features/staff` y `features/catalog`. Las features no pueden importar `components/erp/*` (regla ya vigilada por `check:boundaries`).
+`components/erp/`: `MozoView`, `AccountPanel`, `AddItemModal`, `BookingsWorkspace`, `StaffModule`, `RolesView`, `StaffWorkspace`, `CartaVirtualView`. **(Resuelto en F3/F5: `components/erp` quedó eliminado.)**
 
 ## 2. Catálogo canónico (mismo ID en las 3 capas)
 
@@ -184,7 +184,7 @@ pnpm check:specs --base origin/development
 
 ## 9. Próximo paso
 
-**Ejecutado (2026-11-21, ramas `refactor/paridad-f0-f2` y `refactor/paridad-f3`):**
+**Ejecutado (2026-11-21, ramas `refactor/paridad-f0-f2`, `refactor/paridad-f3` y `refactor/paridad-f4-f5`):**
 
 - **Fase 0:** `modules/<id>/module.json` en los 20 módulos; `pnpm gen:modules` genera
   el registry de la API (`MODULE_REGISTRY`, consumido por `app.module.ts`), el
@@ -202,9 +202,17 @@ pnpm check:specs --base origin/development
   `components/dashboard/salon` hasta el split fino. `check:pr-scope` y
   `check:specs` usan los IDs canónicos; `gen:modules --check` corre en CI con
   EOL normalizado.
+- **Fase 4 (plataforma 1→5):** `auth`, `tenant`, `onboarding`, `saas` y
+  `billing` como features y contratos propios; `plataforma.ts` queda como alias.
+  La sesión (`lib/session.ts`, BFF y `proxy.ts`) **no se movió**. La API HTTP
+  compartida vive en `lib/platform-api.ts`.
+- **Fase 5 (audit/realtime):** `GET /audit` read-only para admin, feature
+  `audit` con `/app/auditoria`; `features/realtime` reexporta el transporte y
+  el hook de comandas. `components/erp` quedó vacío: mozo a `orders` y
+  staff/roles a `staff`.
 
-**Estado:** 20/20 manifiestos y backend, **14/20** frontend, **13/20** contratos
-canónicos (+10 alias), 20/20 specs canónicas.
+**Estado:** **20/20/20/20** (backend, frontend, contratos, specs), 12 alias
+deprecados, `check:modules --strict` verde y cableado en CI.
 
-**Siguiente:** Fase 4 (`plataforma` → auth/tenant/onboarding/saas/billing),
-Fase 5 (`audit`/`realtime`), Fase 6 (providers) y Fase 7 (Prisma multi-archivo).
+**Siguiente:** Fase 6 (providers por módulo/retirar `ModulesProvider`) y
+Fase 7 (Prisma multi-archivo).

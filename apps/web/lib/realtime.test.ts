@@ -6,7 +6,7 @@ import {
   salaOrden,
   salaSucursal,
   type EventoTiempoReal,
-} from "@fogoneria/contracts/tiempo-real";
+} from "@fogoneria/contracts/realtime";
 import {
   REALTIME_EVENT,
   REALTIME_NAMESPACE,

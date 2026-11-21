@@ -2,7 +2,7 @@
   "id": "staff",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "in-progress",
+  "status": "aligned",
   "routes": [
     "/app/modulos/personal/asistencia",
     "/app/modulos/personal/turnos",

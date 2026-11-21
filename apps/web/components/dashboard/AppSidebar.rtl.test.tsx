@@ -9,7 +9,7 @@ const sesion = vi.hoisted(() => ({
   currentUser: null as null | { role: string; name: string },
 }));
 vi.mock('./ModulesProvider', () => ({ useModules: () => sesion }));
-vi.mock('./BranchSwitcher', () => ({ BranchSwitcher: () => <div>sucursal</div> }));
+vi.mock('@/features/tenant', () => ({ BranchSwitcher: () => <div>sucursal</div> }));
 
 import { AppSidebar } from './AppSidebar';
 

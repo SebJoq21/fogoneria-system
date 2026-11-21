@@ -63,6 +63,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- Metadata (2026-11-21): `features/inventory/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
+
 - Paridad de módulos (2026-11-21): feature `features/inventory/` y contrato `packages/contracts/src/inventory.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - **Falta el maestro de insumos**: no hay `GET/POST/PATCH /inventory/items` ni ajuste con motivo (observación 1; cierra el 20 % de AYCDS-24).

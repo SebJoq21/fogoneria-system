@@ -5,19 +5,19 @@ import {
   salaEmpresa,
   salaOrden,
   salaSucursal,
-} from '@fogoneria/contracts/tiempo-real';
+} from '@fogoneria/contracts/realtime';
 import type {
   MesaEstadoEvento,
   OrdenActualizadaEvento,
   OrdenCreadaEvento,
   OrdenSlaEvento,
   SobreEvento,
-} from '@fogoneria/contracts/tiempo-real';
+} from '@fogoneria/contracts/realtime';
 
 /**
  * Contrato de eventos en vivo (AYCDS-14).
  *
- * La fuente única vive en `@fogoneria/contracts/tiempo-real` (nombres, sobre y
+ * La fuente única vive en `@fogoneria/contracts/realtime` (nombres, sobre y
  * rooms); aquí solo se conservan los alias que ya usaba la API y la fábrica del
  * sobre con `eventId` del servidor. El detalle operativo está en
  * `docs/websockets.md`.

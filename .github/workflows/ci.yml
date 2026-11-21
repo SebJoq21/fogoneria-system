@@ -70,9 +70,8 @@ jobs:
       - name: Registros de módulos al día
         run: pnpm gen:modules --check
 
-      - name: Paridad de módulos (reporte)
-        # Advisory hasta la Fase 8: reporta el avance 20/20/20/20 sin bloquear.
-        run: pnpm check:modules
+      - name: Paridad de módulos (gate)
+        run: pnpm check:modules --strict
 
       - name: Generar cliente Prisma
         run: pnpm --filter api db:generate

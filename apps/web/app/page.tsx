@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { LoginPage } from "@/features/plataforma";
+import { LoginPage } from "@/features/auth";
 import { ROLE_HOME, type AppRole } from "@/lib/auth";
 
 export default async function Home() {

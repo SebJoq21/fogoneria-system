@@ -11,8 +11,8 @@ Autenticar usuarios contra la base, emitir el access token JWT y el ticket efím
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/auth/` | real |
-| Web | `apps/web/features/plataforma/LoginPage.tsx` + BFF `app/api/session/` | real |
-| Contrato | `packages/contracts/src/plataforma.ts` (`RespuestaLogin`, `rolDesdeApi`) | sí |
+| Web | `apps/web/features/auth/LoginPage.tsx` + `RecoverPage.tsx` + BFF `app/api/session/` | real |
+| Contrato | `packages/contracts/src/auth.ts` (`RespuestaLogin`, `rolDesdeApi`) | sí |
 | Datos | `usuarios`, `empresas` | `20261019000000_init`, `20261020130000_email_global` |
 
 ## 3. API
@@ -66,7 +66,7 @@ Reglas:
 
 - Jira: AYCDS-48 (auth), AYCDS-55 (sesión), AYCDS-14 (ticket WS).
 - PRs: #2 (`feat/api-david`), #4/#5 (sesión HttpOnly), #13 (ticket WS).
-- Specs: [plataforma](plataforma.md) · [roles](../producto/roles-permisos.md).
+- Specs: [auth](auth.md) · [roles](../producto/roles-permisos.md).
 
 ## 9. Próximos pasos
 

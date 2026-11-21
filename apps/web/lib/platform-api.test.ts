@@ -14,7 +14,7 @@ vi.mock('@fogoneria/sdk', async (importOriginal) => {
   return { ...actual, createClient: () => cliente };
 });
 
-import { plataformaApi } from './api';
+import { plataformaApi } from './platform-api';
 
 const empresaApi = {
   id: 'e-1',

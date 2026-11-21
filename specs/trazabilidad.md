@@ -20,7 +20,7 @@
 | AYCDS-61 | API SaaS + ciclo de suscripción | saas, billing | #2 | Listo | `saas.service.spec.ts`, `billing.service.spec.ts` |
 | AYCDS-62 | Índices, RLS, soft-delete e inmutabilidad | datos | #6 | Listo | `migrations/2026102012*`, `test/db/**`, [rls-modelo](../docs/rls-modelo.md) |
 | AYCDS-63 | UI catálogo contra la API | catalog | #3 | Listo | `features/catalog/**` |
-| AYCDS-65 | UI consola SaaS | plataforma | #3, #7 | Listo | `features/plataforma/SaasPage.tsx` |
+| AYCDS-65 | UI consola SaaS | saas | #3, #7 | Listo | `features/saas/SaasPage.tsx` |
 | AYCDS-66 | QA aislamiento y RBAC + acta 1 | QA | #7, #8 | **Parcial** (acta sin firmas) | [acta-qa-aycds-66](../docs/acta-qa-aycds-66.md) |
 
 ## 2. Semanas 9–10 (Sprint 3)
@@ -31,7 +31,7 @@
 | AYCDS-16 | API mesas y reservas | tables, reservations | #11 | Listo | `test/db/tables-reservas.db-spec.ts` |
 | AYCDS-20 | Órdenes POS e inmutabilidad | orders, pricing | #12 | Listo | `orders.service.spec.ts`, `orders-pos.db-spec.ts` |
 | AYCDS-22 | Alta de comandas en concurrencia | orders, `common/sequences` | #16 | Listo | [explain-orders](../docs/explain-orders.md), `sequences-concurrency.db-spec.ts` |
-| AYCDS-25 | Panel del mesero contra la API | orders (mozo) | #17 (`b56865b`) | Listo | `components/erp/MozoView.tsx`, `lib/order-mapping.ts` |
+| AYCDS-25 | Panel del mesero contra la API | orders (mozo) | #17 (`b56865b`) | Listo | `features/orders/MozoView.tsx`, `lib/order-mapping.ts` |
 | AYCDS-26 | Mapa de mesas + agenda de reservas | tables, reservations | #18 | Listo | `features/tables/**`, `features/reservations/**`, `lib/table-mapping.ts` |
 | AYCDS-28 | E2E del flujo mesero→cocina→mesa | QA | — | **Pendiente** (0 %) | — |
 
@@ -100,7 +100,7 @@
 | `output: standalone` condicional en Vercel | #67 | `apps/web/next.config.ts` |
 | Variables de la web en `globalEnv` de Turbo | #68 | `turbo.json` |
 | Script idempotente de roles RLS | #69 | `apps/api/prisma/rls-roles.ts` |
-| Login limpio + recuperación por soporte | #71 | `features/plataforma/{LoginPage,RecoverPage}.tsx`, `lib/support.ts` |
+| Login limpio + recuperación por soporte | #71 | `features/auth/{LoginPage,RecoverPage}.tsx`, `lib/support.ts` |
 | Runbook Vercel + Railway | #72 | [despliegue](../docs/despliegue.md) |
 | Repo de specs docs-as-code + trazabilidad | #74 | [specs/README](README.md), `docs/INDICE.md` |
 | CI Fase A: check agregado, Docker/Trivy, CodeQL y Dependabot | #76 | `.github/workflows/{ci,codeql}.yml`, `.github/dependabot.yml` |

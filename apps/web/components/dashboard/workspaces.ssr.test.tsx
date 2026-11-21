@@ -33,7 +33,7 @@ vi.mock('@/components/dashboard/summaries/charts', () => ({ MiniBars: () => null
 
 import { BookingsWorkspace } from '@/features/reservations';
 import { CartaVirtualView } from '@/features/catalog';
-import { StaffWorkspace } from './StaffWorkspace';
+import { StaffWorkspace } from '@/features/staff';
 
 describe('BookingsWorkspace', () => {
   it('calcula ocupación con mesas y muestra el maestro solo a sucursal', () => {

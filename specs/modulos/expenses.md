@@ -62,6 +62,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- Metadata (2026-11-21): `features/expenses/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
+
 - Paridad de módulos (2026-11-21): feature `features/expenses/` y contrato `packages/contracts/src/expenses.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - La UI no consume `/expenses` (observación 2 del plan de módulos).

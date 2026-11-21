@@ -328,7 +328,7 @@ onboarding    1   POST /onboarding (público, rate limit)
 |---|---|
 | `apps/api/src/modules/<m>/` | según mapa (`catalog`→catalogo, `cash`→caja, …) |
 | `apps/web/lib/<m>-api.ts` | según mapa |
-| `apps/web/components/erp/catalog/**` | catalogo |
+| `apps/web/features/catalog/**` | catalog |
 | `OrdersView`, `MozoView`, `AccountPanel`, `useOrdersRealtime` | ordenes |
 | `BookingsModule`, `SalonTablesView` | mesas |
 | `CajaView` / `ComprobantesView` | caja / comprobantes |

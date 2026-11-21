@@ -11,8 +11,8 @@ Mantener el ciclo de vida de la suscripción sin intervención manual: vencer tr
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/billing/` (`billing.service.ts`, `billing.scheduler.ts`) | real |
-| Web | — | no aplica |
-| Contrato | — | no aplica |
+| Web | `apps/web/features/billing/BillingSummary.tsx` (sección de `/saas`) | real |
+| Contrato | `packages/contracts/src/billing.ts` (`PlanEmpresa`, `ResumenFacturacion`) | sí |
 | Datos | `empresas`, `suscripciones_eventos`, `auditoria` | `20261019000000_init` |
 
 ## 3. API
@@ -29,6 +29,11 @@ Reglas:
 
 - `empresas.estado`, `trial_fin`, `plan_actual`.
 - `suscripciones_eventos` (append-only por política de auditoría).
+
+## 4.1. UI y rutas
+
+- `/saas` compone `SaasPage` (empresas) con `BillingSummary` (`features/billing`): MRR, activas, trial y suspendidas.
+- Solo `SUPERADMIN`; sin ruta propia para facturación.
 
 ## 5. Pruebas
 

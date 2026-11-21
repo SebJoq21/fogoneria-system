@@ -2,7 +2,7 @@
   "id": "receipts",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "in-progress",
+  "status": "aligned",
   "routes": [
     "/app/comprobantes"
   ]

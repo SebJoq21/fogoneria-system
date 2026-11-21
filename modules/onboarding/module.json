@@ -2,7 +2,7 @@
   "id": "onboarding",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "pending",
+  "status": "aligned",
   "routes": [
     "/onboarding"
   ]

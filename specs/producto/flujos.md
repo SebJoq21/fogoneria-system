@@ -15,7 +15,7 @@ navegador → / (LoginPage) → POST /api/session
 - `proxy.ts` valida firma, expiración (15 min deslizante, 8 h tope) y `canViewPath` en cada request.
 - El navegador **nunca** ve el access token: todo pasa por el BFF.
 - Recuperación: `/recuperar` abre un `mailto:` a soporte; no hay reset automático.
-- Specs: [auth](../modulos/auth.md) · [plataforma](../modulos/plataforma.md) · [roles](roles-permisos.md).
+- Specs: [auth](../modulos/auth.md) · [tenant](../modulos/tenant.md) · [roles](roles-permisos.md).
 
 ## 2. Onboarding de una empresa
 
@@ -24,7 +24,7 @@ navegador → / (LoginPage) → POST /api/session
 3. La API valida RUC y duplicados (409), y en una transacción crea: empresa `TRIAL` (`mrr 0`), sucursal matriz, admin `ADMIN_GLOBAL`, lista de precios «Carta», lead `GANADO` y evento de auditoría.
 4. Auto-login y redirect por rol.
 - Límites: rate limit 5/10 min por IP; body de 4 MB solo en esa ruta; el DTO **no** acepta `plan` (400).
-- Specs: [onboarding](../modulos/onboarding.md) · [plataforma](../modulos/plataforma.md).
+- Specs: [onboarding](../modulos/onboarding.md) · [tenant](../modulos/tenant.md).
 
 ## 3. Comanda: mesero → cocina → caja
 

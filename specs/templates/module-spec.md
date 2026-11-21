@@ -16,7 +16,7 @@
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/{{modulo}}/` | {{real / sin controller}} |
-| Web | `apps/web/features/{{feature}}/` o `apps/web/components/erp/{{vista}}` | {{real / demo / mixto}} |
+| Web | `apps/web/features/{{feature}}/` | {{real / demo / mixto}} |
 | Contrato | `packages/contracts/src/{{contrato}}.ts` | {{sí / no aplica}} |
 | Datos | tablas `{{tabla}}` | {{migración}} |
 

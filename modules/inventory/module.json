@@ -2,7 +2,7 @@
   "id": "inventory",
   "kind": "ui",
   "owner": "@por-asignar",
-  "status": "in-progress",
+  "status": "aligned",
   "routes": [
     "/app/modulos/inventario/stock",
     "/app/modulos/inventario/movimientos"

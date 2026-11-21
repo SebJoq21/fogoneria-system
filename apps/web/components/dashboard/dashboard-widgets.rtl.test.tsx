@@ -38,7 +38,7 @@ vi.mock('@/components/dashboard/ModulesProvider', () => ({ useModules: () => est
 vi.mock('@/components/dashboard/providers/notifications', () => ({ useNotifications: () => avisos }));
 
 import { AppTopBar } from './AppTopBar';
-import { BranchSwitcher } from './BranchSwitcher';
+import { BranchSwitcher } from '@/features/tenant';
 import { MenuPreview } from './MenuPreview';
 import { MetricsCharts } from './MetricsCharts';
 import { Toasts } from '@/components/ui/Toast';
