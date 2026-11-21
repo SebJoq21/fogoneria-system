@@ -74,3 +74,5 @@ Reglas:
 2. Añadir e2e de bloqueo con reserva activa.
 
 > **2026-11-20:** `BookingsModule` usa `Number.parseInt` para el número de mesa (`S7773`); sin cambio de contrato.
+>
+> **2026-11-20:** el test de la agenda fija el reloj en el borde UTC/Lima (`01:20Z` = 20:20 en Lima) para que el filtro por día de Lima no dependa de la hora de ejecución.
