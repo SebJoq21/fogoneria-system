@@ -68,6 +68,7 @@ Reglas:
 ## 7. Deuda conocida
 
 - F6c2: `PromotionsProvider`/`usePromotions` (`features/promotions/provider.tsx`) es dueño de combos y cupones demo; persiste `fogoneria:promotions:v1:<tenant>` y expone `consumeCoupon`/`restoreCoupon`. La poda de combos sigue en `ModulesProvider` porque necesita el catálogo (se monta debajo de `FeatureProviders`).
+- F6c3: tests de sync entre pestañas y de cambio de tenant para combos/cupones.
 
 - Metadata (2026-11-21): `features/promotions/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
 
