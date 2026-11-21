@@ -79,9 +79,12 @@ vi.mock('@/lib/reservations-api', () => ({
 }));
 
 import { CrmProvider } from '@/features/crm/provider';
+import { CashProvider } from '@/features/cash/provider';
 import { ExpensesProvider } from '@/features/expenses/provider';
 import { InventoryProvider } from '@/features/inventory/provider';
 import { AccountsProvider } from '@/features/orders/provider';
+import { PromotionsProvider } from '@/features/promotions/provider';
+import { ReceiptsProvider } from '@/features/receipts/provider';
 import { StaffProvider } from '@/features/staff/provider';
 import { ModulesProvider } from './ModulesProvider';
 
@@ -131,14 +134,64 @@ describe('migración de slices en el arranque del shell', () => {
         ingredients: [{ id: 8, name: 'Sal', category: 'Insumos', stock: 1, min: 1, unit: 'kg', state: 'Óptimo' }],
         movements: [{ id: 8, datetime: 'Hoy', type: 'Entrada', ingredient: 'Sal', qty: '+1 kg', reason: 'Compra' }],
         roles: [{ id: 8, name: 'Rol legacy', description: 'Demo' }],
-        coupons: [],
-        receipts: [],
-        combos: [],
+        coupons: [{ code: 'LEGACY10', discount: '10% OFF', used: 1, limit: 10, expires: '30 Nov 2026' }],
+        receipts: [
+          {
+            id: 'B001-50',
+            type: '03',
+            at: '2026-11-20T12:00:00.000Z',
+            date: 'Hoy',
+            customer: 'Ana',
+            docType: '',
+            docNumber: '',
+            subtotal: 50,
+            igv: 9,
+            total: 59,
+            status: 'Pagada',
+            source: 'Mesa 1',
+            estadoSunat: 'aceptado',
+            intentosEnvio: 1,
+          },
+        ],
+        combos: [
+          { id: 50, name: 'Combo legacy', description: 'Demo', productIds: [], price: 10, status: 'Activo' },
+        ],
         tickets: [],
-        scopes: {},
+        scopes: {
+          miraflores: {
+            orders: [],
+            tables: [],
+            cash: [
+              {
+                id: 50,
+                at: '2026-11-20T12:00:00.000Z',
+                datetime: 'Hoy 12:00',
+                concept: 'Venta legacy',
+                kind: 'Ingreso',
+                amount: 59,
+                method: 'Efectivo',
+              },
+            ],
+          },
+        },
         accounts: [legacyAccount],
-        cashShifts: [],
-        sunatContingencia: false,
+        cashShifts: [
+          {
+            id: 'CH-legacy',
+            branchId: 'miraflores',
+            status: 'abierto',
+            openedBy: 'Rosa',
+            openedAt: '2026-11-20T09:00:00.000Z',
+            openingFund: 200,
+            closedBy: null,
+            closedAt: null,
+            countedCash: null,
+            expectedCash: null,
+            difference: null,
+            observations: '',
+          },
+        ],
+        sunatContingencia: true,
       }),
     );
 
@@ -147,11 +200,17 @@ describe('migración de slices en el arranque del shell', () => {
         <ExpensesProvider>
           <InventoryProvider>
             <AccountsProvider>
-              <StaffProvider>
-                <ModulesProvider initialPayments={[]}>
-                  <div />
-                </ModulesProvider>
-              </StaffProvider>
+              <CashProvider>
+                <ReceiptsProvider>
+                  <PromotionsProvider>
+                    <StaffProvider>
+                      <ModulesProvider initialPayments={[]}>
+                        <div />
+                      </ModulesProvider>
+                    </StaffProvider>
+                  </PromotionsProvider>
+                </ReceiptsProvider>
+              </CashProvider>
             </AccountsProvider>
           </InventoryProvider>
         </ExpensesProvider>
@@ -169,6 +228,18 @@ describe('migración de slices en el arranque del shell', () => {
     });
     expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:orders:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:cash:v1:anon') ?? '{}')).toMatchObject({
+      shifts: [{ id: 'CH-legacy' }],
+      movementsByBranch: { miraflores: [{ id: 50 }] },
+    });
+    expect(JSON.parse(localStorage.getItem('fogoneria:receipts:v1:anon') ?? '{}')).toMatchObject({
+      receipts: [{ id: 'B001-50' }],
+      sunatContingencia: true,
+    });
+    expect(JSON.parse(localStorage.getItem('fogoneria:promotions:v1:anon') ?? '{}')).toMatchObject({
+      combos: [{ id: 50 }],
+      coupons: [{ code: 'LEGACY10' }],
+    });
     const legacy = JSON.parse(localStorage.getItem('fogoneria:erp:v2:anon') ?? '{}');
     expect(legacy.customers).toBeUndefined();
     expect(legacy.expenses).toBeUndefined();
@@ -176,6 +247,12 @@ describe('migración de slices en el arranque del shell', () => {
     expect(legacy.movements).toBeUndefined();
     expect(legacy.roles).toBeUndefined();
     expect(legacy.accounts).toBeUndefined();
+    expect(legacy.cashShifts).toBeUndefined();
+    expect(legacy.receipts).toBeUndefined();
+    expect(legacy.coupons).toBeUndefined();
+    expect(legacy.combos).toBeUndefined();
+    expect(legacy.sunatContingencia).toBeUndefined();
+    expect(legacy.scopes.miraflores.cash).toBeUndefined();
 
     unmount();
     render(shell);
@@ -185,6 +262,9 @@ describe('migración de slices en el arranque del shell', () => {
     expect(JSON.parse(localStorage.getItem('fogoneria:expenses:v1:anon') ?? '[]')).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:staff:v1:anon') ?? '[]')).toHaveLength(1);
     expect(JSON.parse(localStorage.getItem('fogoneria:orders:v1:anon') ?? '[]')).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:cash:v1:anon') ?? '{}').shifts).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:receipts:v1:anon') ?? '{}').receipts).toHaveLength(1);
+    expect(JSON.parse(localStorage.getItem('fogoneria:promotions:v1:anon') ?? '{}').combos).toHaveLength(1);
   });
 });
 
@@ -205,11 +285,17 @@ function shell() {
       <ExpensesProvider>
         <InventoryProvider>
           <AccountsProvider>
-            <StaffProvider>
-              <ModulesProvider initialPayments={[]}>
-                <div />
-              </ModulesProvider>
-            </StaffProvider>
+            <CashProvider>
+              <ReceiptsProvider>
+                <PromotionsProvider>
+                  <StaffProvider>
+                    <ModulesProvider initialPayments={[]}>
+                      <div />
+                    </ModulesProvider>
+                  </StaffProvider>
+                </PromotionsProvider>
+              </ReceiptsProvider>
+            </CashProvider>
           </AccountsProvider>
         </InventoryProvider>
       </ExpensesProvider>

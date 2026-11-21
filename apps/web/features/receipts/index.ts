@@ -6,6 +6,7 @@
  */
 
 export { ComprobantesPage } from './ComprobantesPage';
+export { ReceiptsProvider, useReceipts } from './provider';
 export {
   comprobanteARecibo,
   comprobantesApi,

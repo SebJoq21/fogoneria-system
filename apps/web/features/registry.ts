@@ -29,8 +29,11 @@ import { staffModule } from './staff/module';
 import { biModule } from './bi/module';
 import { TenantProvider } from './tenant/provider';
 import { AccountsProvider } from './orders/provider';
+import { CashProvider } from './cash/provider';
+import { ReceiptsProvider } from './receipts/provider';
 import { ExpensesProvider } from './expenses/provider';
 import { InventoryProvider } from './inventory/provider';
+import { PromotionsProvider } from './promotions/provider';
 import { CrmProvider } from './crm/provider';
 import { StaffProvider } from './staff/provider';
 
@@ -79,8 +82,11 @@ export const pendingFeatureIds = [];
 export const featureProviders: FeatureProvider[] = [
   { id: "tenant", Provider: TenantProvider },
   { id: "orders", Provider: AccountsProvider },
+  { id: "cash", Provider: CashProvider },
+  { id: "receipts", Provider: ReceiptsProvider },
   { id: "expenses", Provider: ExpensesProvider },
   { id: "inventory", Provider: InventoryProvider },
+  { id: "promotions", Provider: PromotionsProvider },
   { id: "crm", Provider: CrmProvider },
   { id: "staff", Provider: StaffProvider },
 ];

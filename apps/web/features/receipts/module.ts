@@ -9,4 +9,5 @@ export const receiptsModule = {
   path: '/app/comprobantes',
   roles: ['admin', 'sucursal', 'cajero'],
   group: 'Administración',
+  provider: 'ReceiptsProvider',
 };

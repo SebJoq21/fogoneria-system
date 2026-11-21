@@ -63,7 +63,6 @@ export const BRANCH_IDS = initialBranches.map((b) => b.id);
 export type BranchScope = {
   orders: Order[];
   tables: Table[];
-  cash: CashMovement[];
 };
 
 const surcoOrders: Order[] = [
@@ -104,9 +103,16 @@ const sanIsidroCash: CashMovement[] = [
 ];
 
 export const initialScopes: Record<string, BranchScope> = {
-  miraflores: { orders: initialOrders, tables: initialTables, cash: initialCashMovements },
-  surco: { orders: surcoOrders, tables: surcoTables, cash: surcoCash },
-  "san-isidro": { orders: sanIsidroOrders, tables: sanIsidroTables, cash: sanIsidroCash },
+  miraflores: { orders: initialOrders, tables: initialTables },
+  surco: { orders: surcoOrders, tables: surcoTables },
+  "san-isidro": { orders: sanIsidroOrders, tables: sanIsidroTables },
+};
+
+/** Movimientos de caja demo por sucursal (dueño: `features/cash/provider`). */
+export const initialCashMovementsByBranch: Record<string, CashMovement[]> = {
+  miraflores: initialCashMovements,
+  surco: surcoCash,
+  "san-isidro": sanIsidroCash,
 };
 
 /**

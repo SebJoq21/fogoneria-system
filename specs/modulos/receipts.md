@@ -61,6 +61,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- F6c2: `ReceiptsProvider`/`useReceipts` (`features/receipts/provider.tsx`) es dueño de comprobantes y contingencia SUNAT; persiste `fogoneria:receipts:v1:<tenant>`. La anulación la orquesta `ModulesProvider` (cuentas + caja) con `patchReceipt`/`addReceipt` + `reverseMovements`.
+
 - Metadata (2026-11-21): `features/receipts/module.ts` describe la entrada de nav del registry generado; no cambia el estado.
 
 - Paridad de módulos (2026-11-21): feature `features/receipts/` y contrato `packages/contracts/src/receipts.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.

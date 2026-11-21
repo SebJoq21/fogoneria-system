@@ -7,14 +7,8 @@
    Las notificaciones son avisos en memoria (`NotificationsProvider`) y no se
    persisten. Sin sesión (offline/demo) se usa `ANON_TENANT_KEY`. */
 
-import type {
-  Coupon,
-  Receipt,
-  Reservation,
-} from "./erp";
-import type { Combo } from "./erp-catalog";
+import type { Reservation } from "./erp";
 import type { Ticket } from "./dashboard";
-import type { CashShift } from "./domain";
 import type { BranchScope } from "./tenancy";
 
 export const ERP_STORAGE_KEY = "fogoneria:erp:v2";
@@ -32,18 +26,14 @@ export function erpSyncChannel(tenantKey: string): string {
 }
 
 /* El catálogo (platos, categorías, modificadores y precios) ya no se
-   persiste en el cliente: es la fuente de verdad de la API (tarea 63). */
+   persiste en el cliente: es la fuente de verdad de la API (tarea 63).
+   F6c2: caja, comprobantes y promociones viven en sus providers; aquí solo
+   quedan la operación demo por sucursal (comandas/mesas) y el shell. */
 export type ErpState = {
   version: 2;
   reservations: Reservation[];
-  coupons: Coupon[];
-  receipts: Receipt[];
-  combos: Combo[];
   tickets: Ticket[];
   scopes: Record<string, BranchScope>;
-  cashShifts: CashShift[];
-  /** Modo contingencia SUNAT: los CPE quedan en cola y no se envían. */
-  sunatContingencia: boolean;
 };
 
 export function loadErpState(tenantKey: string): ErpState | null {

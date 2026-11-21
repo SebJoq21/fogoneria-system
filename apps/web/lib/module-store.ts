@@ -17,7 +17,16 @@ import {
 import { useSession } from '@/components/dashboard/providers/session';
 import type { ErpState } from '@/lib/persistence';
 import { loadErpState } from '@/lib/persistence';
-import type { Ingredient, StockMovement } from '@/lib/erp';
+import type {
+  CashMovement,
+  Coupon,
+  Ingredient,
+  Receipt,
+  StockMovement,
+} from '@/lib/erp';
+import type { Combo } from '@/lib/erp-catalog';
+import type { CashShift } from '@/lib/domain';
+import type { BranchScope } from '@/lib/tenancy';
 import { tenantKeyOf } from '@/lib/session-state';
 import { DEMO_EMPRESA_ID } from '@/lib/tenancy';
 
@@ -70,6 +79,18 @@ export function mergeById<T extends { id: number | string }>(
   return [...byId.values()];
 }
 
+/** Merge por una clave arbitraria (cupones usan `code`, no `id`). */
+export function mergeByKey<T, K extends keyof T>(
+  legacy: T[] | null,
+  existing: T[] | null,
+  key: K,
+): T[] {
+  const byKey = new Map<T[K], T>();
+  for (const item of legacy ?? []) byKey.set(item[key], item);
+  for (const item of existing ?? []) byKey.set(item[key], item);
+  return [...byKey.values()];
+}
+
 export function migrateLegacyArray<T extends { id: number | string }>(
   state: LegacyErpState,
   field: string,
@@ -104,6 +125,122 @@ export function migrateLegacyInventory(
     migrated: {
       ingredients: mergeById(legacyIngredients, existing?.ingredients ?? null),
       movements: mergeById(legacyMovements, existing?.movements ?? null),
+    },
+  };
+}
+
+export type CashStoreState = {
+  shifts: CashShift[];
+  movementsByBranch: Record<string, CashMovement[]>;
+};
+
+export type ReceiptsStoreState = {
+  receipts: Receipt[];
+  sunatContingencia: boolean;
+};
+
+export type PromotionsStoreState = {
+  combos: Combo[];
+  coupons: Coupon[];
+};
+
+/**
+ * F6c2: saca caja del `ErpState` (`cashShifts` + `scopes[*].cash`). Los scopes
+ * quedan solo con comandas/mesas; el resto se fusiona con la clave del módulo.
+ */
+export function migrateLegacyCash(
+  state: LegacyErpState,
+  existing: CashStoreState | null,
+): { state: ErpState; migrated: CashStoreState | null } {
+  const legacyShifts = Array.isArray(state.cashShifts) ? (state.cashShifts as CashShift[]) : null;
+  const scopes = state.scopes as
+    | Record<string, BranchScope & { cash?: unknown }>
+    | undefined;
+  const legacyMovements: Record<string, CashMovement[]> = {};
+  let hasMovements = false;
+  for (const [branchId, scope] of Object.entries(scopes ?? {})) {
+    if (Array.isArray(scope?.cash)) {
+      legacyMovements[branchId] = scope.cash as CashMovement[];
+      hasMovements = true;
+    }
+  }
+  if (!legacyShifts && !hasMovements) return { state, migrated: null };
+
+  const rest = { ...state };
+  delete rest.cashShifts;
+  if (scopes) {
+    const nextScopes: Record<string, BranchScope> = {};
+    for (const [branchId, scope] of Object.entries(scopes)) {
+      const withoutCash = { ...scope };
+      delete (withoutCash as { cash?: unknown }).cash;
+      nextScopes[branchId] = withoutCash as BranchScope;
+    }
+    (rest as { scopes: Record<string, BranchScope> }).scopes = nextScopes;
+  }
+
+  const movementsByBranch: Record<string, CashMovement[]> = {
+    ...(existing?.movementsByBranch ?? {}),
+  };
+  for (const [branchId, list] of Object.entries(legacyMovements)) {
+    movementsByBranch[branchId] = mergeById(list, movementsByBranch[branchId] ?? null);
+  }
+  return {
+    state: rest as ErpState,
+    migrated: {
+      shifts: mergeById(legacyShifts, existing?.shifts ?? null),
+      movementsByBranch,
+    },
+  };
+}
+
+/** F6c2: comprobantes + contingencia SUNAT fuera del `ErpState`. */
+export function migrateLegacyReceipts(
+  state: LegacyErpState,
+  existing: ReceiptsStoreState | null,
+): { state: ErpState; migrated: ReceiptsStoreState | null } {
+  const hasReceipts = Array.isArray(state.receipts);
+  const hasContingencia = typeof state.sunatContingencia === 'boolean';
+  if (!hasReceipts && !hasContingencia) return { state, migrated: null };
+  const rest = { ...state };
+  if (hasReceipts) delete rest.receipts;
+  if (hasContingencia) delete rest.sunatContingencia;
+  return {
+    state: rest as ErpState,
+    migrated: {
+      receipts: mergeById(
+        hasReceipts ? (state.receipts as Receipt[]) : null,
+        existing?.receipts ?? null,
+      ),
+      sunatContingencia:
+        existing?.sunatContingencia ??
+        (hasContingencia ? (state.sunatContingencia as boolean) : false),
+    },
+  };
+}
+
+/** F6c2: combos y cupones fuera del `ErpState` (merge por id / code). */
+export function migrateLegacyPromotions(
+  state: LegacyErpState,
+  existing: PromotionsStoreState | null,
+): { state: ErpState; migrated: PromotionsStoreState | null } {
+  const hasCombos = Array.isArray(state.combos);
+  const hasCoupons = Array.isArray(state.coupons);
+  if (!hasCombos && !hasCoupons) return { state, migrated: null };
+  const rest = { ...state };
+  if (hasCombos) delete rest.combos;
+  if (hasCoupons) delete rest.coupons;
+  return {
+    state: rest as ErpState,
+    migrated: {
+      combos: mergeById(
+        hasCombos ? (state.combos as Combo[]) : null,
+        existing?.combos ?? null,
+      ),
+      coupons: mergeByKey(
+        hasCoupons ? (state.coupons as Coupon[]) : null,
+        existing?.coupons ?? null,
+        'code',
+      ),
     },
   };
 }

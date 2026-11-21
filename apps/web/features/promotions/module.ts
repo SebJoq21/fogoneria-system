@@ -9,4 +9,5 @@ export const promotionsModule = {
   path: '/app/promociones',
   roles: ['admin', 'sucursal'],
   group: 'Carta',
+  provider: 'PromotionsProvider',
 };
