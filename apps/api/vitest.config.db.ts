@@ -17,5 +17,20 @@ export default defineConfig({
     testTimeout: 30_000,
     hookTimeout: 30_000,
     fileParallelism: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage/db',
+      // Mismo criterio que la suite unitaria: no se mide lo generado ni los specs.
+      exclude: [
+        'src/generated/**',
+        'test/**',
+        'src/**/*.spec.ts',
+        'src/**/*.db-spec.ts',
+        'prisma/seed.ts',
+        'prisma/rls-roles.ts',
+        'scripts/**',
+      ],
+    },
   },
 });

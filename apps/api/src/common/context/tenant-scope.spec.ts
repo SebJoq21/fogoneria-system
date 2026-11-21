@@ -52,4 +52,17 @@ describe('tenant-scope', () => {
       }),
     ).toEqual({ empresa_id: 'otra' });
   });
+
+  it('cubre los bordes sin scope, sin where y sin empresa', () => {
+    const sinEmpresa = { ...context, empresaId: null, sucursalId: null };
+    expect(tenantWhere(undefined, context)).toBeNull();
+    expect(tenantWhere({ empresa: false, sucursal: false }, context)).toBeNull();
+    expect(mergeTenantWhere(undefined, context, undefined)).toEqual({});
+    expect(mergeTenantWhere({ empresa: true, sucursal: true }, context, {})).toEqual({
+      empresa_id: 'e1',
+      sucursal_id: 's1',
+    });
+    expect(injectTenantData(undefined, context, undefined)).toEqual({});
+    expect(injectTenantData({ empresa: true, sucursal: true }, sinEmpresa, {})).toEqual({});
+  });
 });
