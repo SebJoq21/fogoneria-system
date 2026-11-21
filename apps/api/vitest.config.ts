@@ -15,9 +15,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: './coverage',
-      // El cliente de Prisma es código generado: no entra en el lcov que lee
-      // Sonar (ni en el denominador de Vitest).
-      exclude: [...configDefaults.exclude, 'src/generated/**'],
+      // Higiene de medición (Fase 0): no se mide lo que no es producción.
+      // `coverage.include` global (todo `src/**`) bajaría el reporte a ~49 %
+      // en web y rompería los thresholds; se mide el código ejercitado y se
+      // excluye el mismo conjunto que Sonar.
+      exclude: [
+        ...configDefaults.exclude,
+        'src/generated/**',
+        'src/**/*.spec.ts',
+        'prisma/seed.ts',
+        'prisma/rls-roles.ts',
+        'scripts/**',
+      ],
       // Ratchet aprobado en G3 (medido: 76.02/59.54/69.58/77.55).
       thresholds: {
         statements: 71,

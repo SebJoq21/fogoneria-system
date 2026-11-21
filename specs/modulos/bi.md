@@ -52,6 +52,8 @@ Reglas:
 
 ## 6. Pruebas
 
+- Cobertura Fase 1 (2026-11-20): tests de hooks (BI, RRHH, catálogo), DTO de precios y componentes del shell con RTL/jsdom; sin cambios de comportamiento.
+
 - Cobertura (2026-11-20): se añadieron tests de controlador, DTO, mapper y ramas de error para subir la cobertura de Sonar; sin cambios de comportamiento.
 
 | Suite | Archivo |
