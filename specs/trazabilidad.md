@@ -143,3 +143,4 @@
 | `cobertura-65-p2` | Segunda ola de cobertura: providers SSR, Prisma/tenant extension, ramas de servicios y páginas de auth/RRHH |
 | `cobertura-65` | Tests de cobertura API/Web/contratos para Sonar (rama `test/cobertura-65`) |
 | `eec5632` | Ola salón (mesas, reservas, KDS) |
+| 33f54bc | Cobertura DB en Sonar y ratchet de thresholds (configs compartidas) |

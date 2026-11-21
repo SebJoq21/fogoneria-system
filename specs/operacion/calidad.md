@@ -14,8 +14,8 @@
 | `pnpm --filter api test:e2e` | 15 archivos con Prisma mockeado (realtime levanta Socket.io real) | contrato HTTP/WS roto |
 | `pnpm --filter api test:db` | 18 `*.db-spec.ts` contra PostgreSQL real (RLS forzado) | aislamiento, trigger o migración rota |
 | `pnpm --filter web test` | 33 archivos Vitest, 268 tests (features, lib, proxy, route handlers) | test rojo |
-| `pnpm --filter api test:cov` | unit + cobertura v8 con thresholds **71/54/64/72** | cobertura bajo el ratchet |
-| `pnpm --filter web test:coverage` | 268 tests + cobertura v8 con thresholds **57/53/52/58** | cobertura bajo el ratchet |
+| `pnpm --filter api test:cov` | unit + cobertura v8 con thresholds **96/90/96/96** | cobertura bajo el ratchet |
+| `pnpm --filter web test:coverage` | 832 tests + cobertura v8 con thresholds **85/75/80/85** | cobertura bajo el ratchet |
 | `pnpm --filter web e2e` | Playwright (Chromium) contra API + web + PostgreSQL sembrado; login real y RBAC por rol | flujo de navegador roto |
 | `pnpm --filter api openapi:export` | compila la API y escribe `docs/openapi.json` desde `AppModule` sin abrir puerto | documento OpenAPI inválido |
 | `pnpm check:specs` | `scripts/check-specs.mjs`: cobertura, estructura y enlaces de `specs/**` + diff del PR contra la spec del módulo | módulo/feature sin spec, enlace roto o código sin spec actualizada |
@@ -144,11 +144,13 @@ Plan de seguridad y Sonar: [`docs/plan-seguridad-sonar.md`](../../docs/plan-segu
 
 **Dependabot** (`.github/dependabot.yml`) — npm (raíz pnpm), github-actions y Docker (API/web), semanal, grupos minor+patch.
 
-Sonar **`SonarCloud`** — push/PR, `needs: quality`; instala dependencias (el analizador TS resuelve los `tsconfig` de los workspaces), descarga `coverage-api`/`coverage-web`/`coverage-contracts`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=false` temporal). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla. El análisis excluye `.github/**`, `scripts/**`, `apps/api/scripts/**`, migraciones SQL, configs y specs: son infra validada por sus propios jobs y no deben arrastrar `new_coverage`.
+Sonar **`SonarCloud`** - push/PR, `needs: quality`; instala dependencias (el analizador TS resuelve los `tsconfig` de los workspaces), descarga `coverage-api`/`coverage-web`/`coverage-contracts`/`coverage-db`, ejecuta `SonarSource/sonarqube-scan-action` con `SONAR_TOKEN` y `sonar-project.properties` (`qualitygate.wait=false` temporal). Automatic Analysis está desactivado: este job es la única vía de análisis. Sin token (forks/Dependabot) el scan se omite y el job no falla. El análisis excluye `.github/**`, `scripts/**`, `apps/api/scripts/**`, migraciones SQL, configs y specs: son infra validada por sus propios jobs y no deben arrastrar `new_coverage`.
 
-> **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 71/54/64/72; Web 57/53/52/58).
+> **Gate de cobertura:** el gate custom `Fogoneria` (coverage overall ≥65, ratings, duplicación y hotspots, sin `new_coverage`) está creado en SonarCloud, pero la organización rechaza asignarlo por API (`Organization ... is not allowed to modify Quality gates`). Mientras no se asigne, el **check externo** usa el gate default Sonar way (`new_coverage ≥80`) y puede quedar rojo en PRs de infra; el gate efectivo de cobertura es el de **Vitest** (API 96/90/96/96; Web 85/75/80/85; contratos 100/95/100/100).
 >
 > **2026-11-20:** cobertura overall Sonar **65.6 %** (nuevo código 81.1 %), 0 vulnerabilidades/code smells/hotspots, ratings A; gate default **OK**. Tests: API 594, Web 646, contratos 111.
+>
+> **2026-11-21:** duplicación **0.0 %**, Sonar overall **~88.7 %** (PR #124), API **98/91.75**, Web **89.4/77.3**, contratos **100/98.3**. El lcov de `test:db` (`apps/api/coverage/db/lcov.info`) se publica como `coverage-db` y entra en Sonar.
 
 > **Dependency Review:** activo como job del CI (`fail-on-severity: high`). El Dependency Graph ya está poblado por `pnpm-lock.yaml`; `pnpm audit --audit-level high` es bloqueante dentro de `quality` (0 altas; queda 1 moderado de `minimatch` 9 en dev tooling).
 
