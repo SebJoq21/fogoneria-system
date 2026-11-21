@@ -144,3 +144,4 @@
 | `cobertura-65` | Tests de cobertura API/Web/contratos para Sonar (rama `test/cobertura-65`) |
 | `eec5632` | Ola salón (mesas, reservas, KDS) |
 | 33f54bc | Cobertura DB en Sonar y ratchet de thresholds (configs compartidas) |
+| `cobertura-100-f7` | Fase 7 safe wins: lcov de SDK/kernel, exclusiones del starter y tests web de shell/workspaces |

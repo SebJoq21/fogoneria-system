@@ -55,6 +55,8 @@ Reglas:
 
 ## 6. Pruebas
 
+- Cobertura p7 (2026-11-21): ramas de error/vacío de Products, PriceLists y Modifiers con RTL; sin cambios de comportamiento.
+
 - Cobertura p4 (2026-11-20): ramas de datos, errores 400/404/409, filtros y transiciones con Prisma mockeado; sin cambios de comportamiento.
 
 - Cobertura p3 (2026-11-20): RTL de las páginas del módulo con provider y APIs mockeados (estados, permisos y acciones); sin cambios de comportamiento.
