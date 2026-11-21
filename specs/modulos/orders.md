@@ -66,6 +66,8 @@ Reglas:
 
 ## 7. Deuda conocida
 
+- F6c1: `AccountsProvider`/`useAccounts` (`features/orders/provider.tsx`) es dueño de las cuentas de mesa demo; persiste `fogoneria:orders:v1:<tenant>` y sincroniza por `BroadcastChannel`. Las acciones (abrir/enviar/anular/cobrar) siguen en `ModulesProvider` hasta que `scopes` tenga dueño (ver `docs/plan-f6c-pos.md`).
+
 - Paridad de módulos (2026-11-21): feature `features/orders/` y contrato `packages/contracts/src/orders.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - «Cerrar cuenta» en el panel del mesero intenta `PAGADA` por `PATCH` y recibe 400 (observación 4 del plan): derivar a Caja o guiar al usuario.

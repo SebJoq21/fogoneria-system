@@ -9,4 +9,5 @@ export const ordersModule = {
   path: '/app/ordenes',
   roles: ['admin', 'sucursal'],
   group: 'Principal',
+  provider: 'AccountsProvider',
 };
