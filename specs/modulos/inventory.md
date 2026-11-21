@@ -1,6 +1,6 @@
 # inventory — especificación
 
-**Estado:** Mixto (kardex/semáforo reales; maestro demo) · **Última revisión:** 2026-11-19
+**Estado:** Mixto (kardex/semáforo reales; maestro demo) · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,8 +11,8 @@ Descontar insumos según la receta cuando la comanda se entrega y avisar cuando 
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/inventory/` (`inventory.service`, `stock-alerts.service`) | real |
-| Web | `apps/web/features/inventario/` (`MovementsPage` real, `InventoryPage` demo, `InventoryHubPage`) | Mixto |
-| Contrato | `packages/contracts/src/inventario.ts` | sí |
+| Web | `apps/web/features/inventory/` (`MovementsPage` real, `InventoryPage` demo, `InventoryHubPage`) | Mixto |
+| Contrato | `packages/contracts/src/inventory.ts` | sí |
 | Datos | `insumos`, `stocks_sucursal`, `movimientos_inventario`, `escandallos_recetas`, `combos_platos`, `alertas_stock` | `20261019000000_init`, `20261110120000_alertas_stock` |
 
 ## 3. API
@@ -59,9 +59,11 @@ Reglas:
 | Unit | `inventory.service.spec.ts`, `inventory.movements.spec.ts`, `stock-alerts.service.spec.ts` |
 | e2e | `test/inventory-alerts.e2e-spec.ts` |
 | DB | `kardex.db-spec.ts`, `alertas-stock.db-spec.ts` |
-| Web | `features/inventario/inventario.test.ts` |
+| Web | `features/inventory/inventory.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/inventory/` y contrato `packages/contracts/src/inventory.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - **Falta el maestro de insumos**: no hay `GET/POST/PATCH /inventory/items` ni ajuste con motivo (observación 1; cierra el 20 % de AYCDS-24).
 - AYCDS-23 (merma/rendimiento) y AYCDS-29 (pruebas cruzadas inventario↔ventas) siguen pendientes.

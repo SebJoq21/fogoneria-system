@@ -1,5 +1,7 @@
 # Decisiones vigentes
 
+- [2026-11-21] **Paridad de módulos F0–F2: manifiesto + generadores + renombres con alias.** `modules/<id>/module.json` es la pieza del dueño; `pnpm gen:modules` genera el registry de la API (consumido por `app.module.ts`), el registry de features y `modules-nav.ts`. Los IDs canónicos mandan en las tres capas y los subpaths antiguos de contratos quedan como alias `@deprecated` durante una release. `check:modules` reporta el avance y será gate (`--strict`) en la Fase 8; los splits de `catalogo`/`salon`/`plataforma` y los providers por módulo siguen pendientes.
+
 - [2026-09-12] Fase 3 backend = **Postgres + Prisma**. No introducir otro ORM sin revertir esto. `docker-compose.yml` local levanta PostgreSQL 16 en `localhost:5433` con `fogoneria_shadow` (tarea 58 parcial; faltan Dockerfiles y CI).
 - [2026-10-19] Prisma **7.10.1** con `prisma.config.ts`, generator `prisma-client` y `@prisma/adapter-pg`; esquema PostgreSQL `fogoneria` vía `DATABASE_URL?schema=fogoneria`.
 - [2026-10-19] Las migraciones en `apps/api/prisma/migrations` son la **fuente ejecutable**; `db/fogoneria_schema.sql` queda como referencia del DDL y del seed histórico.

@@ -1,4 +1,4 @@
-import { ComprobantesPage } from "@/features/comprobantes";
+import { ComprobantesPage } from "@/features/receipts";
 
 export default function ComprobantesRoute() {
   return (

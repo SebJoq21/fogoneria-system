@@ -1,0 +1,9 @@
+{
+  "id": "receipts",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "in-progress",
+  "routes": [
+    "/app/comprobantes"
+  ]
+}

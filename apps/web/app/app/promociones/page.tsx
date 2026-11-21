@@ -1,4 +1,4 @@
-import { PromocionesPage } from "@/features/promociones";
+import { PromocionesPage } from "@/features/promotions";
 
 export default function PromocionesRoutePage() {
   return (

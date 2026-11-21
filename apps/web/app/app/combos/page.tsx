@@ -1,4 +1,4 @@
-import { CombosPage } from "@/features/promociones";
+import { CombosPage } from "@/features/promotions";
 
 export default function CombosRoutePage() {
   return (

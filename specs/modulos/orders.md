@@ -1,6 +1,6 @@
 # orders — especificación
 
-**Estado:** API real (KDS y mesero); cuentas aún locales · **Última revisión:** 2026-11-19
+**Estado:** API real (KDS y mesero); cuentas aún locales · **Última revisión:** 2026-11-21
 
 ## 1. Propósito
 
@@ -11,9 +11,9 @@ Registrar la comanda, resolver su precio en el servidor, numerarla por empresa y
 | Capa | Dónde vive | Estado |
 |---|---|---|
 | Backend | `apps/api/src/modules/orders/` | real |
-| Web KDS | `apps/web/features/ordenes/` (`OrdersBoardPage`) | real |
+| Web KDS | `apps/web/features/orders/` (`OrdersBoardPage`) | real |
 | Web mesero | `apps/web/components/erp/MozoView.tsx` + `components/erp/mozo/**` | real (comandas), cuentas locales |
-| Contrato | `packages/contracts/src/ordenes.ts` | sí |
+| Contrato | `packages/contracts/src/orders.ts` | sí |
 | Datos | `ordenes`, `detalles_orden`, `detalles_orden_modificadores`, `secuencias` | `20261019000000_init`, `20261027120000_secuencias_tenant`, `20261028120000_ordenes_anulacion_estricta`, `20261106120000_ordenes_sla_indice`, `20261106160000_caja_turnos_propina` |
 
 ## 3. API
@@ -62,9 +62,11 @@ Reglas:
 | Unit | `orders.service.spec.ts`, `orders.sla.spec.ts`, `orders.sla.cron.spec.ts`, `dto/create-order.dto.spec.ts` |
 | e2e | `test/orders.e2e-spec.ts` |
 | DB | `orders-pos.db-spec.ts`, `orders-sla.db-spec.ts`, `sequences-concurrency.db-spec.ts` |
-| Web | `features/ordenes/ordenes.test.ts`, `lib/order-mapping.test.ts`, `lib/orders-api.test.ts` |
+| Web | `features/orders/orders.test.ts`, `lib/order-mapping.test.ts`, `lib/orders-api.test.ts` |
 
 ## 7. Deuda conocida
+
+- Paridad de módulos (2026-11-21): feature `features/orders/` y contrato `packages/contracts/src/orders.ts` con el mismo ID que el backend. El subpath antiguo queda como alias `@deprecated` durante una release.
 
 - «Cerrar cuenta» en el panel del mesero intenta `PAGADA` por `PATCH` y recibe 400 (observación 4 del plan): derivar a Caja o guiar al usuario.
 - Los modificadores viajan como nota; el recargo se cobra en caja. Falta `items[].modificadores` si se quiere recargo en la comanda.

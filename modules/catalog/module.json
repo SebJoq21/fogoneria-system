@@ -1,0 +1,11 @@
+{
+  "id": "catalog",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/app/productos/platos",
+    "/app/productos/categorias",
+    "/app/productos/modificadores"
+  ]
+}

@@ -184,4 +184,18 @@ pnpm check:specs --base origin/development
 
 ## 9. Próximo paso
 
-Aprobar el catálogo de 20 IDs y el mapa de owners; ejecutar **Fase 0** (manifiesto + `check:modules` + mapa de owners) y el **piloto `crm`** antes de tocar renombres.
+**Ejecutado (2026-11-21, rama `refactor/paridad-f0-f2`):**
+
+- **Fase 0:** `modules/<id>/module.json` en los 20 módulos; `pnpm gen:modules` genera
+  el registry de la API (`MODULE_REGISTRY`, consumido por `app.module.ts`), el
+  registry de features y `lib/modules-nav.ts`; `pnpm check:modules` valida
+  manifiestos y reporta el avance; step advisory en el job `quality`.
+- **Fase 1 (piloto `crm`):** `features/crm/module.ts` alimenta el registry y la
+  entrada de navegación generada; `/app/clientes` sigue igual.
+- **Fase 2 (renombres 1:1):** `orders`, `cash`, `receipts`, `expenses`,
+  `inventory`, `promotions` y `staff` en features y contratos, con alias
+  deprecados en los subpaths antiguos. Sin splits ni cambios de estado.
+
+**Siguiente:** Fase 3 (splits `catalog`/`pricing` y `tables`/`reservations`,
+mover `components/erp/*`), después Fase 4 (`plataforma`), Fase 5
+(`audit`/`realtime`), Fase 6 (providers) y Fase 7 (Prisma multi-archivo).

@@ -1,0 +1,11 @@
+{
+  "id": "orders",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "in-progress",
+  "routes": [
+    "/app/ordenes",
+    "/app/cocina",
+    "/app/mozo"
+  ]
+}

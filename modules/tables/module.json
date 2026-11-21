@@ -1,0 +1,10 @@
+{
+  "id": "tables",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/app/mesas",
+    "/app/mesas/maestro"
+  ]
+}

@@ -10,14 +10,14 @@ const estado = vi.hoisted(() => ({
 vi.mock('@/components/dashboard/ModulesProvider', () => ({ useModules: () => estado }));
 
 const api = vi.hoisted(() => ({ movimientos: vi.fn(), stock: vi.fn() }));
-vi.mock('@/features/inventario/api', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/features/inventario/api')>()),
+vi.mock('@/features/inventory/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/inventory/api')>()),
   inventarioApi: api,
 }));
 
 import { SettingsView } from './SettingsView';
 import { SupportView } from './SupportView';
-import { MovementsPage } from '@/features/inventario/MovementsPage';
+import { MovementsPage } from '@/features/inventory/MovementsPage';
 import type { Ticket } from '@/lib/dashboard';
 
 const movimiento = (overrides: Record<string, unknown> = {}) => ({

@@ -5,7 +5,7 @@ NestJS 12 + ESM puro (`"type": "module"`, `module/nodenext`). Vitest 4 (no Jest)
 ## Dónde está qué
 
 - `src/main.ts` + `src/bootstrap.ts` + `src/swagger.ts` — bootstrap, prefijo `/api/v1`, CORS, `ValidationPipe`, Swagger en `/api/docs`. Puerto `3001`.
-- `src/app.module.ts` — wiring de módulos, guards globales (`JwtAuthGuard`, `RolesGuard`) e interceptor de tenant.
+- `src/app.module.ts` — wiring de módulos, guards globales (`JwtAuthGuard`, `RolesGuard`) e interceptor de tenant. Los 20 módulos de negocio entran por `MODULE_REGISTRY` (`src/modules/registry.ts`, **generado** con `pnpm gen:modules` desde `modules/catalog.json`); no volver a enumerarlos a mano.
 - `src/config/env.validation.ts` — valida `DATABASE_URL`, `JWT_SECRET`, `PORT`, `CORS_ORIGIN`, `DATABASE_SCHEMA`, `DATABASE_POOL_MAX` (conexiones por cliente de Prisma; default 10).
 - `src/prisma/` — `PrismaService` (adapter pg, `raw` y `scoped`) + extensión de tenant.
 - `src/common/` — `context/` (AsyncLocalStorage + scope), `decorators/`, `guards/`, `dto/`, `types/`, `utils/`.

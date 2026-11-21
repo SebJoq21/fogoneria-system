@@ -1,6 +1,6 @@
 "use client";
 
-import { OrdersBoardPage } from "@/features/ordenes";
+import { OrdersBoardPage } from "@/features/orders";
 
 /** KDS de cocina: comandas de SU sucursal (branchId fijo de sesión).
  *  Al marcar "listo" se notifica al mesero (campana). */

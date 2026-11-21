@@ -43,8 +43,8 @@
 | AYCDS-39 | Reversión financiera por triggers | datos, cash, inventory | #23 | Listo | `reversion-financiera.db-spec.ts` |
 | AYCDS-34 | Caja: turnos, arqueo y cobro | cash | #24 | Listo | `cash.service.spec.ts`, `caja.db-spec.ts` |
 | AYCDS-36 | Comprobantes: correlativo y anulación | receipts | #26 | Listo | `receipts.service.spec.ts`, `comprobantes.db-spec.ts` |
-| AYCDS-41 | UI KDS Kanban con SLA | ordenes | #25 | Listo | `features/ordenes/**` |
-| AYCDS-46 | UI caja + comprobantes contra API | caja, comprobantes | #30, #38 | Listo | `features/caja/**`, `features/comprobantes/**` |
+| AYCDS-41 | UI KDS Kanban con SLA | orders | #25 | Listo | `features/orders/**` |
+| AYCDS-46 | UI caja + comprobantes contra API | cash, receipts | #30, #38 | Listo | `features/cash/**`, `features/receipts/**` |
 | AYCDS-50 | Acta CT-FG-03 (caja/comprobantes) | QA | #39 | **Parcial** (acta mergeada, firma pendiente) | [acta-qa-aycds-50](../docs/acta-qa-aycds-50.md) |
 
 ## 4. Semanas 13–14 (inventario, gastos y comercial)
@@ -56,8 +56,8 @@
 | AYCDS-17 | Gastos con cruce a caja | expenses, cash | #31 | Listo | `expenses.service.spec.ts`, `gastos.db-spec.ts` |
 | AYCDS-19 | Combos anti-inflación y cupones | promotions, orders | #29 | Listo | `promotions.rules.spec.ts`, `promotions.e2e-spec.ts` |
 | AYCDS-23 | Modelo de escandallos N-M | datos | — | **Pendiente** (tabla existe; falta merma/rendimiento) | `escandallos_recetas` |
-| AYCDS-24 | UI kardex + semáforo | inventario | #40 | **Parcial 80 %** (maestro y ajustes demo) | `features/inventario/MovementsPage.tsx` |
-| AYCDS-27 | UI gastos, combos y promos | gastos, promociones | — | **Pendiente** (clientes listos) | `features/gastos/api.ts`, `features/promociones/api.ts` |
+| AYCDS-24 | UI kardex + semáforo | inventory | #40 | **Parcial 80 %** (maestro y ajustes demo) | `features/inventory/MovementsPage.tsx` |
+| AYCDS-27 | UI gastos, combos y promos | expenses, promotions | — | **Pendiente** (clientes listos) | `features/expenses/api.ts`, `features/promotions/api.ts` |
 | AYCDS-29 | Pruebas cruzadas kardex↔ventas | QA | — | **Pendiente** | — |
 
 ## 5. Semanas 15–16 (CRM, RRHH, BI y cierre)
@@ -69,7 +69,7 @@
 | AYCDS-35 | API BI (P&L, ranking, métodos) | bi | #36 | Listo | `bi.service.spec.ts`, `bi-endpoints.db-spec.ts` |
 | AYCDS-38 | Vistas BI + backup/restore | bi, datos | #35 | Listo | `migrations/20261107120000_vistas_bi`, [respaldo-recuperacion](../docs/respaldo-recuperacion.md) |
 | AYCDS-40 | UI CRM (clientes, ficha, puntos) | crm | #41 | Listo | `features/crm/ClientesPage.tsx` |
-| AYCDS-45 | UI RRHH y analíticas | rrhh, bi | #42, #43 | Listo | `features/rrhh/**`, `features/bi/**` |
+| AYCDS-45 | UI RRHH y analíticas | staff, bi | #42, #43 | Listo | `features/staff/**`, `features/bi/**` |
 | AYCDS-49 | QA integral CT-01…09 + deploy Docker | QA | — | **Pendiente** | — |
 | AYCDS-52 | Ensayo y sustentación | docs | — | **Pendiente** | — |
 
@@ -78,11 +78,11 @@
 | Fase | Alcance | PR | Evidencia |
 |---|---|---|---|
 | 0 | `@fogoneria/{kernel,sdk,contracts}` + gate de fronteras | #48 | `scripts/check-module-boundaries.mjs`, baseline 24 |
-| 1 | Piloto RRHH | #49, #51 | `features/rrhh/**`, `staff/index.ts` |
+| 1 | Piloto RRHH | #49, #51 | `features/staff/**`, `staff/index.ts` |
 | 2 | Catálogo + precios | #50, #52 | `features/catalogo/**`, `PRICING_PORT` |
-| 3 · salón | mesas, reservas, KDS | #54, #57 | `features/salon`, `features/ordenes` |
-| 3 · dinero | receipts, cash, expenses | #56, #59 | `features/{caja,comprobantes,gastos}` |
-| 3 · operación | inventory, promotions | #58, #61 | `features/{inventario,promociones}` |
+| 3 · salón | mesas, reservas, KDS | #54, #57 | `features/salon`, `features/orders` |
+| 3 · dinero | receipts, cash, expenses | #56, #59 | `features/{cash,receipts,expenses}` |
+| 3 · operación | inventory, promotions | #58, #61 | `features/{inventory,promotions}` |
 | 3 · personas | crm | #60 | `features/crm` |
 | 3 · lectura | bi, realtime | #62, #63, #65 | `features/bi`, `@fogoneria/contracts/tiempo-real` |
 | 3 · plataforma | auth, tenant, saas, billing, onboarding, audit | #64 | baseline **0** |

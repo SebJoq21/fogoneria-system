@@ -16,7 +16,7 @@ import {
   type ColumnaKds,
   type OrdenKds,
   type TableroKds,
-} from "@fogoneria/contracts/ordenes";
+} from "@fogoneria/contracts/orders";
 import type {
   ApiBoardOrder,
   ApiOrder,

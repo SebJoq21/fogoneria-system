@@ -6,23 +6,23 @@
  * extensión de este archivo no resuelven en runtime. Usa siempre el subpath.
  */
 export * from './bi';
-export * from './caja';
+export * from './cash';
 export * from './catalogo';
-export * from './comprobantes';
+export * from './receipts';
 export * from './crm';
-export * from './gastos';
-export * from './inventario';
+export * from './expenses';
+export * from './inventory';
 export * from './mesas';
-export * from './ordenes';
+export * from './orders';
 export * from './plataforma';
-export * from './promociones';
+export * from './promotions';
 export * from './reservas';
-export * from './rrhh';
+export * from './staff';
 export * from './tiempo-real';
 
 /**
  * `caja` e `inventario` tienen cada uno su `etiquetaTipoMovimiento` (movimientos
  * de caja vs. kardex). El root conserva el de caja por compatibilidad; el
- * inventario se consume por `@fogoneria/contracts/inventario`.
+ * inventario se consume por `@fogoneria/contracts/inventory`.
  */
-export { etiquetaTipoMovimiento } from './caja';
+export { etiquetaTipoMovimiento } from './cash';

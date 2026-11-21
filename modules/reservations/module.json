@@ -1,0 +1,9 @@
+{
+  "id": "reservations",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "pending",
+  "routes": [
+    "/app/modulos/reservas/agenda"
+  ]
+}

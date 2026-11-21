@@ -11,7 +11,8 @@
     "check:specs": "node scripts/check-specs.mjs",
     "db:backup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/backup.ps1",
     "db:restore": "powershell -NoProfile -ExecutionPolicy Bypass -File ./db/scripts/backup/restore.ps1",
-    "check:modules": "node scripts/check-module-parity.mjs"
+    "check:modules": "node scripts/check-module-parity.mjs",
+    "gen:modules": "node --no-warnings scripts/gen-modules.mjs"
   },
   "devDependencies": {
     "@babel/preset-typescript": "8.0.7",

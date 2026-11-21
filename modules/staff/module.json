@@ -1,0 +1,13 @@
+{
+  "id": "staff",
+  "kind": "ui",
+  "owner": "@por-asignar",
+  "status": "in-progress",
+  "routes": [
+    "/app/modulos/personal/asistencia",
+    "/app/modulos/personal/turnos",
+    "/app/modulos/personal/directorio",
+    "/app/modulos/personal/roles",
+    "/app/modulos/personal/propinas"
+  ]
+}

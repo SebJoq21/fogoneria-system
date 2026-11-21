@@ -1,4 +1,4 @@
-import { GastosPage } from "@/features/gastos";
+import { GastosPage } from "@/features/expenses";
 
 export default function GastosRoute() {
   return (
